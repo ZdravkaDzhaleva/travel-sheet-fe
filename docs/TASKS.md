@@ -65,10 +65,11 @@ Pure function `workingDaysInMonth(year, month, holidays: Date[]): Date[]` — al
 - **Done when:** unit tests cover a normal month, a month with a mid-week holiday, and a holiday landing on a weekend (no double-removal). 100% of branches.
 - `domain/calendar/working-day-calendar.ts` + 13-test spec covering all branches; timezone-safe local-date key; 71 total tests pass.
 
-### [ ] T2.2 — RouteDistance
+### [x] T2.2 — RouteDistance
 Pure `legDistance(aId, bId, legs): number` (undirected lookup, throws if missing) and `routeDistance(stopIds: number[], legs): number` summing Office→…→Office consecutive legs incl. return.
 - **Deps:** T1.1
 - **Done when:** tests verify undirected lookup (A→B == B→A), a single-stop round trip = 2× the pair, a multi-stop chain, and a clear error on a missing leg.
+- `domain/generation/route-distance.ts` + `missing-route-leg.error.ts`; 15 tests covering undirected lookup, 2× single-stop, multi-stop chain, missing-leg error; 86 total pass.
 
 ### [ ] T2.3 — FuelBalanceCalculator
 Pure helpers: `consumed(km, avg) = round(km*avg/100, 2)`; `applyTrip(balance, km, avg)`; `applyFuel(balance, liters)`. All rounding to 2 decimals; never returns negative without flagging.
