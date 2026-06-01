@@ -49,10 +49,11 @@ Create `test-fixtures/` with reusable sample data mirroring the real supporting 
 
 ## Phase 1 — Domain entities
 
-### [ ] T1.1 — Entity types
+### [x] T1.1 — Entity types
 In `domain/entities/`, define plain TS interfaces/types (no classes, no decorators): `Company`, `Vehicle`, `Location` (with `LocationType` union), `RouteLeg`, `Invoice`, `FuelEvent`, `Holiday`, `GeneratedRow` (with a `RowKind` = opening|fuel|trip|zero), `MonthSheet`. Mirror §6a fields exactly; `SeatCount: string` (per D2).
 - **Deps:** T0.2
 - **Done when:** types compile; a spec constructs one of each from literals.
+- 9 entity files + barrel index; `entities.spec.ts` constructs all types from literals using `expectTypeOf`; implemented as T0.5 dependency.
 
 ---
 
