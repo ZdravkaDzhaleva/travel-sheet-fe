@@ -139,10 +139,11 @@ Load Company, the single active Vehicle (`IsActive`), Locations, and RouteLegs v
 - **Done when:** returns typed master data; tests cover the 0/>1 active-vehicle errors.
 - `application/master-data.service.ts` (@Injectable, parallel Promise.all loads + active-vehicle uniqueness validation, exposes `company/vehicle/locations/routeLegs/loading/error` readonly signals + a `ready` computed) + `master-data.errors.ts` (NoCompanyError, NoActiveVehicleError, MultipleActiveVehiclesError with count). 7 tests via TestBed-stubbed SheetsStore. 265 total pass, lint clean.
 
-### [ ] T4.2 — CalendarService
+### [x] T4.2 — CalendarService
 Resolve working days for a (year, month): call HolidayProvider, then WorkingDayCalendar. Surface fallback/warnings.
 - **Deps:** T3.5, T2.1
 - **Done when:** returns the correct working-day list for a sample 2026 month; warning surfaces when the override fallback is used.
+- `application/calendar.service.ts` (@Injectable, `workingDaysFor(year, month)` returns `{workingDays, source, warnings}` passing through HolidayProvider's source + warnings). 5 tests covering Jan 2026 = 21 working days, Feb 2026 = 20, override warning surfacing, source='none' with both warnings, and cross-check warning preservation. 270 total pass, lint clean.
 
 ### [ ] T4.3 — InvoiceService
 Upload flow: file → DriveStore → get `DriveFileId` → append metadata row via SheetsStore. List/edit/delete invoice metadata.
