@@ -59,10 +59,11 @@ In `domain/entities/`, define plain TS interfaces/types (no classes, no decorato
 
 ## Phase 2 — Pure domain (the core; highest test priority)
 
-### [ ] T2.1 — WorkingDayCalendar
+### [x] T2.1 — WorkingDayCalendar
 Pure function `workingDaysInMonth(year, month, holidays: Date[]): Date[]` — all weekdays Mon–Fri in the month minus the supplied holiday dates. No I/O (holidays are passed in).
 - **Deps:** T1.1
 - **Done when:** unit tests cover a normal month, a month with a mid-week holiday, and a holiday landing on a weekend (no double-removal). 100% of branches.
+- `domain/calendar/working-day-calendar.ts` + 13-test spec covering all branches; timezone-safe local-date key; 71 total tests pass.
 
 ### [ ] T2.2 — RouteDistance
 Pure `legDistance(aId, bId, legs): number` (undirected lookup, throws if missing) and `routeDistance(stopIds: number[], legs): number` summing Office→…→Office consecutive legs incl. return.
