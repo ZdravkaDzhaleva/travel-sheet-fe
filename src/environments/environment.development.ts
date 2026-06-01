@@ -12,4 +12,7 @@ export const environment = {
     messagingSenderId: 'FILL_ME_MESSAGING_SENDER_ID',
     appId:             'FILL_ME_APP_ID',
   },
+  // Google OAuth Web client ID — find in Google Cloud Console → APIs & Services → Credentials.
+  // Public identifier, but kept FILL_ME to avoid accidental commits of project IDs.
+  googleOAuthClientId: 'FILL_ME_GOOGLE_OAUTH_CLIENT_ID',
 };
