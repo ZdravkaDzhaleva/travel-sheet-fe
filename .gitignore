@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Angular / Node
+node_modules/
+dist/
+.angular/
+
+# Environment / secrets
+.env
+*.env.local
+service-account-key*.json
+client_secret*.json
+
+# IDE
+.idea/
+.vscode/
+
+# Test coverage
+coverage/
