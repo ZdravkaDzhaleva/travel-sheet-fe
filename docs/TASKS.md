@@ -105,10 +105,11 @@ Pure `toSheetCells(rows, company, vehicle, period): CellModel[]` producing the e
 - **Done when:** manual sign-in yields a token that calls a trivial Sheets read; token refresh works after expiry.
 - `core/auth/google-auth.ts` (Injectable `GoogleAuth` with `signInWithGoogle/signOut/getAccessToken`), `google-auth.types.ts` (minimal GIS surface + `GoogleAuthError` + `CachedAccessToken`), `token-cache.ts` (pure `buildCachedToken`/`isCachedTokenValid` with 60s safety margin). Added `googleOAuthClientId` placeholder to both env files; gsi/client script in index.html. 11 new tests (cache helpers + smoke). Manual real-OAuth E2E pending real credentials. 182 total pass, lint clean.
 
-### [ ] T3.2 — Low-level Google clients
+### [x] T3.2 — Low-level Google clients
 `core/google`: thin typed wrappers over Sheets `values.get`/`values.update`/`batchUpdate` and Drive `files.create`. Inject the access token from T3.1.
 - **Deps:** T3.1
 - **Done when:** an integration smoke test reads a range from the real supporting sheet.
+- `core/google/google-http.ts` (shared `googleFetch<T>` + typed `GoogleApiError`), `sheets.client.ts` (valuesGet/valuesUpdate/batchUpdate, USER_ENTERED on updates), `drive.client.ts` (createFile via multipart upload + exported `buildMultipartBody`). All use `inject(GoogleAuth)` for token. 16 unit tests (URL/method/headers/body assertions + non-2xx error path) via TestBed-stubbed GoogleAuth. Real-sheet smoke is a manual check pending creds. 198 total pass, lint clean.
 
 ### [ ] T3.3 — SheetsStore
 `infrastructure/sheets.store.ts`: read Company/Vehicle/Location/Route/Invoice (map columns via `supporting.map`) into domain entities; `appendInvoice(row)`; `writeSheet(cells, sheetName)`; `readPreviousMonthClosing(year, month, vehicle): number | null` — the single permitted workbook read-back (returns the prior `м_MM` sheet's `Крайно количество` cell if that sheet exists and matches the vehicle plate in its row 9, else `null`). **The annual workbook is pre-created (empty) by the user in the Drive folder under the hardcoded name** — the app does NOT create the workbook. `writeSheet` adds the `м_MM` tab, or clears+rewrites it if it already exists. Read-only on supporting master data; the only writes to supporting are app-managed Invoice rows. Never reads the workbook back except via `readPreviousMonthClosing`.
