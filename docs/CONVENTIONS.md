@@ -28,6 +28,14 @@
 - Currency values from invoices are carried as-is for display; no FX, no recomputation.
 - Comparisons against the balance window use the config constants `BALANCE_MIN`/`BALANCE_MAX` — never literal `0`/`8` in code.
 
+## 4a. Dates & timezone (domain-critical)
+The app runs in Bulgaria (EET/EEST = UTC+2/+3). Dates are calendar dates, not instants — getting this wrong shifts a day across the timezone boundary and silently corrupts working-day calendars, invoice dates, and month boundaries (often only failing in summer or only in winter).
+- **Never use `toISOString()` to derive a calendar date string.** It converts to UTC and can roll the date back a day. For a `YYYY-MM-DD` string, build it from **local** parts: `getFullYear()` / `getMonth()+1` / `getDate()`, zero-padded. This applies to production code AND test helpers (the bug that bit T2.1 was in a test's `isoDate` helper).
+- Treat domain dates as timezone-agnostic calendar dates (year/month/day). Don't attach times; don't round-trip through UTC.
+- When parsing the Nager.Date `YYYY-MM-DD` strings, construct local dates (e.g. `new Date(y, m-1, d)`), not `new Date("YYYY-MM-DD")` (the latter parses as UTC midnight).
+- Month boundaries (first/last working day, period string in D7) are computed in local terms.
+- Tests asserting on dates compare local `YYYY-MM-DD` strings via the shared helper, never raw `Date` objects or ISO strings.
+
 ## 5. Cyrillic template strings
 - Every Bulgarian string written into the workbook (`П Ъ Т Е Н   Л И С Т`, `Начално количество`, `Зареждане гориво …`, `Крайно количество`, `Общо количество`, column headers, `Водач`/`Одобрил`) is a named constant in `core/config/workbook.template.ts`. No Cyrillic string literals scattered in logic.
 - The fuel-row sentence is built by one formatter function with a single template; tests assert it byte-for-byte (see §7).
