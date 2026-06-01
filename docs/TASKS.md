@@ -83,10 +83,11 @@ Pure predicate(s) deciding when a working day becomes a zero-trip row, per §6b 
 - **Done when:** tests cover each trigger condition independently.
 - `domain/generation/zero-trip-rules.ts` — four predicates (`hasNoDestination`, `targetAlreadyMet`, `wouldOverconsume`, `weeklyMinimumsStillSatisfiable`) + OR-composed `isZeroTripDay`; 20 tests, each trigger fired independently from a no-trigger baseline; 123 total pass.
 
-### [ ] T2.5 — TripGenerator (the heart)
+### [x] T2.5 — TripGenerator (the heart)
 Pure `generate({workingDays, fuelEvents, locations, routeLegs, vehicle, openingBalance}): GeneratedRow[]` per §6b. Distribution = "whatever burns the right amount of fuel" toward closing balance ∈ [0,8], never negative, within D1 caps. Emit opening row, fuel rows on their dates (verbatim from metadata), one trip/zero row per working day, ordered; same-day order opening→fuel→trip. On infeasibility, throw a typed `InfeasibleMonthError`.
 - **Deps:** T2.1, T2.2, T2.3, T2.4
 - **Done when:** invariant tests pass (ARCHITECTURE §8): one row/working day; balance never <0; closing ∈ [0,8]; fuel rows exact; routes well-formed and within caps; totals reconcile. Plus an over-fueled fixture that asserts `InfeasibleMonthError`.
+- `domain/generation/trip-generator.ts` (greedy distance allocator aiming for closing = (min+max)/2; merges working-day timeline with fuel-event dates so weekend fuel rows still emit) + `infeasible-month.error.ts`; 18 tests including the full §8 invariant suite on Jan 2026 and the over-fueled InfeasibleMonth case; 141 total pass, lint clean.
 
 ### [ ] T2.6 — RowMapper
 Pure `toSheetCells(rows, company, vehicle, period): CellModel[]` producing the exact §6 layout (A1–A3, A5, D7, rows 9/10/12, data from 13, totals, signatures), with the §6 row-type string patterns and bold rules. Deterministic given its input rows.
