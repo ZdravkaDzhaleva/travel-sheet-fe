@@ -89,10 +89,11 @@ Pure `generate({workingDays, fuelEvents, locations, routeLegs, vehicle, openingB
 - **Done when:** invariant tests pass (ARCHITECTURE §8): one row/working day; balance never <0; closing ∈ [0,8]; fuel rows exact; routes well-formed and within caps; totals reconcile. Plus an over-fueled fixture that asserts `InfeasibleMonthError`.
 - `domain/generation/trip-generator.ts` (greedy distance allocator aiming for closing = (min+max)/2; merges working-day timeline with fuel-event dates so weekend fuel rows still emit) + `infeasible-month.error.ts`; 18 tests including the full §8 invariant suite on Jan 2026 and the over-fueled InfeasibleMonth case; 141 total pass, lint clean.
 
-### [ ] T2.6 — RowMapper
+### [x] T2.6 — RowMapper
 Pure `toSheetCells(rows, company, vehicle, period): CellModel[]` producing the exact §6 layout (A1–A3, A5, D7, rows 9/10/12, data from 13, totals, signatures), with the §6 row-type string patterns and bold rules. Deterministic given its input rows.
 - **Deps:** T1.1
 - **Done when:** for a fixed `GeneratedRow[]`, asserts exact cell coordinates/values; verifies the `Зареждане гориво …` and `Начално/Крайно/Общо количество` strings byte-for-byte.
+- `domain/mapping/cell-model.ts` + `row-mapper.ts`; added `ROW_OPENING_KM_MARK = 'х'` constant to workbook.template.ts; 30 tests covering header region, vehicle/seats, column headers, every row kind (opening/fuel/trip/zero) with exact A1 coords + values + bold + FMT_LITERS pattern, closing/total rows, signatures, determinism. 171 total pass, lint clean.
 
 ---
 
