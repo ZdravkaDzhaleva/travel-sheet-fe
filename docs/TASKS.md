@@ -71,10 +71,11 @@ Pure `legDistance(aId, bId, legs): number` (undirected lookup, throws if missing
 - **Done when:** tests verify undirected lookup (A→B == B→A), a single-stop round trip = 2× the pair, a multi-stop chain, and a clear error on a missing leg.
 - `domain/generation/route-distance.ts` + `missing-route-leg.error.ts`; 15 tests covering undirected lookup, 2× single-stop, multi-stop chain, missing-leg error; 86 total pass.
 
-### [ ] T2.3 — FuelBalanceCalculator
+### [x] T2.3 — FuelBalanceCalculator
 Pure helpers: `consumed(km, avg) = round(km*avg/100, 2)`; `applyTrip(balance, km, avg)`; `applyFuel(balance, liters)`. All rounding to 2 decimals; never returns negative without flagging.
 - **Deps:** T1.1
 - **Done when:** tests match hand-computed values; a sequence (open → fuel → several trips) reproduces a known running balance.
+- `domain/generation/round2.ts` (shared rounding helper), `fuel-balance.ts` (`consumed`/`applyFuel`/`applyTrip` with `wentNegative` flag); 17 tests including a 6-step running-balance sequence; lint + 103 tests pass.
 
 ### [ ] T2.4 — ZeroTripRules
 Pure predicate(s) deciding when a working day becomes a zero-trip row, per §6b (no destination needed, target already met, would overconsume, weekly minimums still satisfiable). Pure inputs only.
