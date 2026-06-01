@@ -133,10 +133,11 @@ Pure `toSheetCells(rows, company, vehicle, period): CellModel[]` producing the e
 
 ## Phase 4 — Application services
 
-### [ ] T4.1 — MasterDataService
+### [x] T4.1 — MasterDataService
 Load Company, the single active Vehicle (`IsActive`), Locations, and RouteLegs via SheetsStore; expose as signals. Error if 0 or >1 active vehicle.
 - **Deps:** T3.3
 - **Done when:** returns typed master data; tests cover the 0/>1 active-vehicle errors.
+- `application/master-data.service.ts` (@Injectable, parallel Promise.all loads + active-vehicle uniqueness validation, exposes `company/vehicle/locations/routeLegs/loading/error` readonly signals + a `ready` computed) + `master-data.errors.ts` (NoCompanyError, NoActiveVehicleError, MultipleActiveVehiclesError with count). 7 tests via TestBed-stubbed SheetsStore. 265 total pass, lint clean.
 
 ### [ ] T4.2 — CalendarService
 Resolve working days for a (year, month): call HolidayProvider, then WorkingDayCalendar. Surface fallback/warnings.
