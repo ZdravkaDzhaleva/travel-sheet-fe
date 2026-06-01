@@ -99,10 +99,11 @@ Pure `toSheetCells(rows, company, vehicle, period): CellModel[]` producing the e
 
 ## Phase 3 — Infrastructure (Google + HTTP)
 
-### [ ] T3.1 — GoogleAuth
+### [x] T3.1 — GoogleAuth
 `core/auth`: wrap Firebase Auth (Google sign-in) + GIS token client to obtain an access token with the §oauth scopes. Expose `getAccessToken()` with silent re-consent on expiry.
 - **Deps:** T0.3, T0.4
 - **Done when:** manual sign-in yields a token that calls a trivial Sheets read; token refresh works after expiry.
+- `core/auth/google-auth.ts` (Injectable `GoogleAuth` with `signInWithGoogle/signOut/getAccessToken`), `google-auth.types.ts` (minimal GIS surface + `GoogleAuthError` + `CachedAccessToken`), `token-cache.ts` (pure `buildCachedToken`/`isCachedTokenValid` with 60s safety margin). Added `googleOAuthClientId` placeholder to both env files; gsi/client script in index.html. 11 new tests (cache helpers + smoke). Manual real-OAuth E2E pending real credentials. 182 total pass, lint clean.
 
 ### [ ] T3.2 — Low-level Google clients
 `core/google`: thin typed wrappers over Sheets `values.get`/`values.update`/`batchUpdate` and Drive `files.create`. Inject the access token from T3.1.
