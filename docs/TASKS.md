@@ -123,10 +123,11 @@ Pure `toSheetCells(rows, company, vehicle, period): CellModel[]` producing the e
 - **Done when:** a file upload returns a usable file ID visible in Drive.
 - `infrastructure/drive.store.ts` (`@Injectable DriveStore.uploadInvoice(blob, name?)` returning `DriveFileId`) + `drive-store.errors.ts` (`DriveFolderNotFoundError`). Lazily resolves DRIVE_FOLDER_NAME via DriveClient.findByName (cached); falls back to `file.name` for File blobs or `"invoice"` otherwise; omits empty mimeType. 8 unit tests; real-Drive upload smoke remains manual. 234 total pass, lint clean.
 
-### [ ] T3.5 — HolidayProvider (with §7a hardening)
+### [x] T3.5 — HolidayProvider (with §7a hardening)
 `infrastructure/holiday.provider.ts`: fetch Nager.Date for `{year}/BG`; apply ALL §7a rules — HTTPS-pinned host, JSON-only, per-entry schema validation (`YYYY-MM-DD`, real date, in-year), payload bound (≤60), timeout + fallback to supporting-sheet override, optional cross-check. Returns `Date[]`.
 - **Deps:** T0.3, T1.1
 - **Done when:** sanitization unit tests pass for malformed/oversized/non-HTTPS/garbage payloads; timeout triggers the override fallback; happy path returns the correct 2026 BG set.
+- `infrastructure/holiday.provider.ts` (`@Injectable HolidayProvider.getHolidays(year)` returns `{dates, source, warnings}`) plus exported pure helpers (`isPinned`, `validateNagerPayload`, `crossCheck`) and a hardcoded 2026 expected set. AbortController timeout, content-type and explicit JSON.parse checks, full validation pipeline (rules 1–6), graceful fallback to `HolidayOverrides!A2:A` and source='none' when override also fails. 24 unit tests covering each §7a rule + cross-check warning + override fallback + double-failure. 258 total pass, lint clean.
 
 ---
 
