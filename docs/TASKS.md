@@ -33,10 +33,11 @@ Create `core/config/`: `workspace.config.ts` (Drive folder name, supporting-shee
 - **Done when:** all config compiles and is imported by a trivial smoke spec; no real IDs/secrets committed (use env or placeholder).
 - 6 config files + 24-assertion smoke spec; all placeholders, no real IDs; `ng test` and `ng lint` pass.
 
-### [ ] T0.4 — Firebase Auth SDK setup
+### [x] T0.4 — Firebase Auth SDK setup
 Install the `firebase` package and initialize the app for **Auth only**: put the Firebase web config (apiKey, authDomain, projectId, …) in `environment.ts` / `environment.prod.ts`, call `initializeApp` + `getAuth` at bootstrap. **Note:** the Firebase web config is *not* secret — it ships in the client bundle and is safe to commit (Firebase security comes from Auth rules and authorized domains). The actual secrets to keep out of git are the **Google OAuth client setup** and any **service-account keys** — never commit those. Hosting config (`firebase.json`, `.firebaserc`) is NOT created here — it belongs to deployment (T6.3).
 - **Deps:** T0.1
 - **Done when:** app boots with Firebase initialized; a manual Google sign-in round-trips a user object (fully exercised later in T3.1). No service-account keys or OAuth client secrets committed.
+- `firebase` installed; `environment.ts`/`environment.development.ts` with FILL_ME placeholders; `initializeApp`+`getAuth` in `app.config.ts`; 5-assertion smoke spec passes; no secrets committed.
 
 ### [ ] T0.5 — Test fixtures
 Create `test-fixtures/` with reusable sample data mirroring the real supporting sheet: one Company, the active Vehicle (GLC), the 6 Locations, the 15 RouteLegs, a small set of Invoices/FuelEvents, and a known 2026 holiday list. Export typed factory helpers (e.g. `makeLocations()`, `makeRouteLegs()`) so Phase 2 specs share one source of truth instead of redefining fixtures.
