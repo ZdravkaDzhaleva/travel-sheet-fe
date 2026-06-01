@@ -117,10 +117,11 @@ Pure `toSheetCells(rows, company, vehicle, period): CellModel[]` producing the e
 - **Done when:** loads all master data into typed entities; writes a test `м_MM` sheet into the pre-created test workbook matching the template; re-running replaces the sheet cleanly; `readPreviousMonthClosing` returns the correct value when the prior sheet exists/matches and `null` otherwise.
 - `infrastructure/sheets.store.ts` (5 loaders, appendInvoice, writeSheet with delete-and-readd, readPreviousMonthClosing with plate check) + `sheets-store.errors.ts` (WorkbookNotFoundError, MasterDataParseError). Lazily resolves workbook ID via Drive folder + name lookup, cached. Extended SheetsClient with `valuesAppend`/`getSpreadsheet` and DriveClient with `findByName`. Added `MONTH_SHEET_PREFIX` + `monthSheetName()` to workbook.template. 28 unit tests; real-workbook integration smoke remains manual. 226 total pass, lint clean.
 
-### [ ] T3.4 — DriveStore
+### [x] T3.4 — DriveStore
 `infrastructure/drive.store.ts`: upload an invoice file to the configured Drive folder; return `DriveFileId`.
 - **Deps:** T3.2
 - **Done when:** a file upload returns a usable file ID visible in Drive.
+- `infrastructure/drive.store.ts` (`@Injectable DriveStore.uploadInvoice(blob, name?)` returning `DriveFileId`) + `drive-store.errors.ts` (`DriveFolderNotFoundError`). Lazily resolves DRIVE_FOLDER_NAME via DriveClient.findByName (cached); falls back to `file.name` for File blobs or `"invoice"` otherwise; omits empty mimeType. 8 unit tests; real-Drive upload smoke remains manual. 234 total pass, lint clean.
 
 ### [ ] T3.5 — HolidayProvider (with §7a hardening)
 `infrastructure/holiday.provider.ts`: fetch Nager.Date for `{year}/BG`; apply ALL §7a rules — HTTPS-pinned host, JSON-only, per-entry schema validation (`YYYY-MM-DD`, real date, in-year), payload bound (≤60), timeout + fallback to supporting-sheet override, optional cross-check. Returns `Date[]`.
