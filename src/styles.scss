@@ -1,0 +1,33 @@
+:root {
+  /* Brand core */
+  --lr-dark:        rgb(57, 57, 57);
+  --lr-on-dark:     rgb(255, 255, 255);
+  --lr-gold:        rgb(173, 148, 108);
+  --lr-on-light:    rgb(57, 57, 57);
+  --lr-light:       rgb(255, 255, 255);
+
+  /* Gold gradient — for wordmark/accents only */
+  --lr-gold-deep:   rgb(155, 132, 100);
+  --lr-gold-bright: rgb(244, 214, 116);
+  --lr-gold-gradient: linear-gradient(135deg,
+      var(--lr-gold-deep) 0%, var(--lr-gold) 45%, var(--lr-gold-bright) 100%);
+
+  /* Semantic tokens — components reference THESE */
+  --app-bg:              var(--lr-dark);
+  --app-surface:         var(--lr-light);
+  --app-text:            var(--lr-on-dark);
+  --app-text-on-surface: var(--lr-on-light);
+  --app-accent:          var(--lr-gold);
+  --app-accent-text:     var(--lr-on-light);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--app-bg);
+  color: var(--app-text);
+  font-family: sans-serif;
+}
