@@ -111,10 +111,11 @@ Pure `toSheetCells(rows, company, vehicle, period): CellModel[]` producing the e
 - **Done when:** an integration smoke test reads a range from the real supporting sheet.
 - `core/google/google-http.ts` (shared `googleFetch<T>` + typed `GoogleApiError`), `sheets.client.ts` (valuesGet/valuesUpdate/batchUpdate, USER_ENTERED on updates), `drive.client.ts` (createFile via multipart upload + exported `buildMultipartBody`). All use `inject(GoogleAuth)` for token. 16 unit tests (URL/method/headers/body assertions + non-2xx error path) via TestBed-stubbed GoogleAuth. Real-sheet smoke is a manual check pending creds. 198 total pass, lint clean.
 
-### [ ] T3.3 — SheetsStore
+### [x] T3.3 — SheetsStore
 `infrastructure/sheets.store.ts`: read Company/Vehicle/Location/Route/Invoice (map columns via `supporting.map`) into domain entities; `appendInvoice(row)`; `writeSheet(cells, sheetName)`; `readPreviousMonthClosing(year, month, vehicle): number | null` — the single permitted workbook read-back (returns the prior `м_MM` sheet's `Крайно количество` cell if that sheet exists and matches the vehicle plate in its row 9, else `null`). **The annual workbook is pre-created (empty) by the user in the Drive folder under the hardcoded name** — the app does NOT create the workbook. `writeSheet` adds the `м_MM` tab, or clears+rewrites it if it already exists. Read-only on supporting master data; the only writes to supporting are app-managed Invoice rows. Never reads the workbook back except via `readPreviousMonthClosing`.
 - **Deps:** T3.2, T1.1
 - **Done when:** loads all master data into typed entities; writes a test `м_MM` sheet into the pre-created test workbook matching the template; re-running replaces the sheet cleanly; `readPreviousMonthClosing` returns the correct value when the prior sheet exists/matches and `null` otherwise.
+- `infrastructure/sheets.store.ts` (5 loaders, appendInvoice, writeSheet with delete-and-readd, readPreviousMonthClosing with plate check) + `sheets-store.errors.ts` (WorkbookNotFoundError, MasterDataParseError). Lazily resolves workbook ID via Drive folder + name lookup, cached. Extended SheetsClient with `valuesAppend`/`getSpreadsheet` and DriveClient with `findByName`. Added `MONTH_SHEET_PREFIX` + `monthSheetName()` to workbook.template. 28 unit tests; real-workbook integration smoke remains manual. 226 total pass, lint clean.
 
 ### [ ] T3.4 — DriveStore
 `infrastructure/drive.store.ts`: upload an invoice file to the configured Drive folder; return `DriveFileId`.
