@@ -51,6 +51,12 @@ export const ROW_TOTAL_LABEL      = 'Общо количество';
 // Opening row's "km" cell (column D) holds the Cyrillic letter 'х' as a marker.
 export const ROW_OPENING_KM_MARK  = 'х';
 
+// Per-month sheet name prefix: sheets are named `м_MM` (e.g. `м_01`).
+export const MONTH_SHEET_PREFIX   = 'м_';
+export function monthSheetName(month: number): string {
+  return `${MONTH_SHEET_PREFIX}${String(month).padStart(2, '0')}`;
+}
+
 // Fuel row template — build with formatFuelRow()
 // Pattern: "Зареждане гориво - {vendor} - {liters} л * {price} лв/л = {total} лв общо"
 export const FUEL_ROW_PREFIX      = 'Зареждане гориво';

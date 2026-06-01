@@ -19,6 +19,17 @@ export interface DriveFile {
 const DRIVE_UPLOAD_URL =
   'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,kind';
 
+const DRIVE_FILES_BASE = 'https://www.googleapis.com/drive/v3/files';
+
+interface DriveFilesListResponse {
+  readonly files: readonly DriveFile[];
+}
+
+export interface FindByNameOptions {
+  readonly parentId?: string;
+  readonly mimeType?: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class DriveClient {
   private readonly auth = inject(GoogleAuth);
@@ -40,6 +51,33 @@ export class DriveClient {
       token,
     );
   }
+
+  /** Returns the first non-trashed file matching `name` (and the optional parent / mime-type), or null. */
+  async findByName(
+    name: string,
+    opts: FindByNameOptions = {},
+  ): Promise<DriveFile | null> {
+    const token = await this.auth.getAccessToken();
+    const url = `${DRIVE_FILES_BASE}?q=${encodeURIComponent(buildFindQuery(name, opts))}` +
+      `&fields=files(id,name,mimeType,kind)&pageSize=10`;
+    const res = await googleFetch<DriveFilesListResponse>(
+      url,
+      { method: 'GET' },
+      token,
+    );
+    return res.files.length > 0 ? res.files[0] : null;
+  }
+}
+
+export function buildFindQuery(
+  name: string,
+  opts: FindByNameOptions,
+): string {
+  const esc = name.replace(/'/g, "\\'");
+  const parts = [`name = '${esc}'`, 'trashed = false'];
+  if (opts.mimeType) parts.push(`mimeType = '${opts.mimeType}'`);
+  if (opts.parentId) parts.push(`'${opts.parentId}' in parents`);
+  return parts.join(' and ');
 }
 
 function newBoundary(): string {

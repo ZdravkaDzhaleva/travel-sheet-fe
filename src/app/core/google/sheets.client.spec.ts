@@ -112,4 +112,40 @@ describe('SheetsClient', () => {
       expect(JSON.parse(init?.body as string)).toEqual({ requests });
     });
   });
+
+  describe('valuesAppend', () => {
+    it('POSTs to /values/{range}:append with USER_ENTERED and a {values} body', async () => {
+      fetchSpy.mockResolvedValue(
+        jsonResponse(200, { spreadsheetId: 's', updates: { updatedRows: 1 } }),
+      );
+      const client = makeClient();
+      const values = [[1, 'a']];
+      await client.valuesAppend('s', 'Invoice!A:K', values);
+      const [url, init] = fetchSpy.mock.calls[0];
+      expect(url).toBe(
+        'https://sheets.googleapis.com/v4/spreadsheets/s/values/Invoice!A%3AK:append?valueInputOption=USER_ENTERED',
+      );
+      expect(init?.method).toBe('POST');
+      expect(JSON.parse(init?.body as string)).toEqual({ values });
+    });
+  });
+
+  describe('getSpreadsheet', () => {
+    it('GETs the spreadsheet metadata with a partial-response fields filter', async () => {
+      fetchSpy.mockResolvedValue(
+        jsonResponse(200, {
+          spreadsheetId: 's',
+          sheets: [{ properties: { sheetId: 0, title: 'Sheet1' } }],
+        }),
+      );
+      const client = makeClient();
+      const res = await client.getSpreadsheet('s');
+      const [url, init] = fetchSpy.mock.calls[0];
+      expect(url).toBe(
+        'https://sheets.googleapis.com/v4/spreadsheets/s?fields=spreadsheetId,sheets.properties(sheetId,title)',
+      );
+      expect(init?.method).toBe('GET');
+      expect(res.sheets[0].properties.title).toBe('Sheet1');
+    });
+  });
 });

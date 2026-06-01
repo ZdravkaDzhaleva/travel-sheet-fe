@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { DriveClient, buildMultipartBody } from './drive.client';
+import { DriveClient, buildMultipartBody, buildFindQuery } from './drive.client';
 import { GoogleAuth } from '../auth/google-auth';
 import { GoogleApiError } from './google-http';
 
@@ -93,5 +93,59 @@ describe('buildMultipartBody', () => {
     );
     const text = await readBody(body);
     expect(text).toContain('Content-Type: application/octet-stream');
+  });
+});
+
+describe('buildFindQuery', () => {
+  it('always pins to non-trashed', () => {
+    expect(buildFindQuery('x', {})).toContain('trashed = false');
+  });
+
+  it('includes name with single quotes escaped', () => {
+    expect(buildFindQuery("foo's", {})).toContain("name = 'foo\\'s'");
+  });
+
+  it('adds mimeType clause when supplied', () => {
+    const q = buildFindQuery('x', { mimeType: 'application/vnd.google-apps.spreadsheet' });
+    expect(q).toContain("mimeType = 'application/vnd.google-apps.spreadsheet'");
+  });
+
+  it('adds parent clause when supplied', () => {
+    const q = buildFindQuery('x', { parentId: 'folder-1' });
+    expect(q).toContain("'folder-1' in parents");
+  });
+});
+
+describe('DriveClient.findByName', () => {
+  let fetchSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    fetchSpy = vi.spyOn(globalThis, 'fetch');
+  });
+  afterEach(() => fetchSpy.mockRestore());
+
+  it('returns the first matching DriveFile', async () => {
+    fetchSpy.mockResolvedValue(
+      jsonResponse(200, {
+        files: [{ id: 'f1', name: 'A', mimeType: 'application/vnd.google-apps.spreadsheet' }],
+      }),
+    );
+    const out = await makeClient().findByName('A');
+    expect(out?.id).toBe('f1');
+  });
+
+  it('returns null when no files match', async () => {
+    fetchSpy.mockResolvedValue(jsonResponse(200, { files: [] }));
+    const out = await makeClient().findByName('missing');
+    expect(out).toBeNull();
+  });
+
+  it('GETs the files endpoint with q encoded and required fields', async () => {
+    fetchSpy.mockResolvedValue(jsonResponse(200, { files: [] }));
+    await makeClient().findByName('A', { parentId: 'folder-1' });
+    const [url, init] = fetchSpy.mock.calls[0];
+    expect(init?.method).toBe('GET');
+    const u = String(url);
+    expect(u).toContain('https://www.googleapis.com/drive/v3/files?q=');
+    expect(u).toContain('fields=files(id,name,mimeType,kind)');
   });
 });

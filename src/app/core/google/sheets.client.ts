@@ -26,6 +26,27 @@ export interface BatchUpdateResponse {
   readonly replies?: readonly unknown[];
 }
 
+export interface ValuesAppendResponse {
+  readonly spreadsheetId: string;
+  readonly tableRange?: string;
+  readonly updates?: {
+    readonly updatedRange?: string;
+    readonly updatedRows?: number;
+    readonly updatedColumns?: number;
+    readonly updatedCells?: number;
+  };
+}
+
+export interface SheetProperties {
+  readonly sheetId: number;
+  readonly title: string;
+}
+
+export interface SpreadsheetMeta {
+  readonly spreadsheetId: string;
+  readonly sheets: readonly { readonly properties: SheetProperties }[];
+}
+
 const SHEETS_BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
 
 @Injectable({ providedIn: 'root' })
@@ -76,5 +97,33 @@ export class SheetsClient {
       },
       token,
     );
+  }
+
+  async valuesAppend(
+    spreadsheetId: string,
+    range: string,
+    values: readonly (readonly SheetCellValue[])[],
+  ): Promise<ValuesAppendResponse> {
+    const token = await this.auth.getAccessToken();
+    const url =
+      `${SHEETS_BASE}/${encodeURIComponent(spreadsheetId)}` +
+      `/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED`;
+    return googleFetch<ValuesAppendResponse>(
+      url,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ values }),
+      },
+      token,
+    );
+  }
+
+  async getSpreadsheet(spreadsheetId: string): Promise<SpreadsheetMeta> {
+    const token = await this.auth.getAccessToken();
+    const url =
+      `${SHEETS_BASE}/${encodeURIComponent(spreadsheetId)}` +
+      `?fields=spreadsheetId,sheets.properties(sheetId,title)`;
+    return googleFetch<SpreadsheetMeta>(url, { method: 'GET' }, token);
   }
 }
