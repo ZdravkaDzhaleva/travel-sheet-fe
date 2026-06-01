@@ -39,10 +39,11 @@ Install the `firebase` package and initialize the app for **Auth only**: put the
 - **Done when:** app boots with Firebase initialized; a manual Google sign-in round-trips a user object (fully exercised later in T3.1). No service-account keys or OAuth client secrets committed.
 - `firebase` installed; `environment.ts`/`environment.development.ts` with FILL_ME placeholders; `initializeApp`+`getAuth` in `app.config.ts`; 5-assertion smoke spec passes; no secrets committed.
 
-### [ ] T0.5 — Test fixtures
+### [x] T0.5 — Test fixtures
 Create `test-fixtures/` with reusable sample data mirroring the real supporting sheet: one Company, the active Vehicle (GLC), the 6 Locations, the 15 RouteLegs, a small set of Invoices/FuelEvents, and a known 2026 holiday list. Export typed factory helpers (e.g. `makeLocations()`, `makeRouteLegs()`) so Phase 2 specs share one source of truth instead of redefining fixtures.
 - **Deps:** T1.1 (types) — may be done right after T1.1 if preferred
 - **Done when:** fixtures compile and are imported by at least one passing smoke spec; values match `SupportingSpreadsheet.xlsx`.
+- `src/test-fixtures/` with 6 factory files + barrel; 29-assertion smoke spec covers all factories; 58 total tests pass.
 
 ---
 
