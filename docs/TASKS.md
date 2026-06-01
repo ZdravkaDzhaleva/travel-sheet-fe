@@ -27,10 +27,11 @@ Create the empty folder structure from ARCHITECTURE §4 (`core/{auth,config,goog
 - **Done when:** structure matches §4; `ng build` still succeeds.
 - All 13 folders created with `.gitkeep`; `ng build` passes.
 
-### [ ] T0.3 — Config files (no secrets in git)
+### [x] T0.3 — Config files (no secrets in git)
 Create `core/config/`: `workspace.config.ts` (Drive folder name, supporting-sheet ID, workbook name — placeholder values + a clear "FILL ME" comment), `supporting.map.ts` (tab names + 0-based column indexes per §6a), `workbook.template.ts` (cell coordinates + number formats + bold rules per §6), `generation.config.ts` (`BALANCE_MIN=0`, `BALANCE_MAX=8`, `MAX_STOPS_PER_DAY=3`, `MAX_KM_PER_DAY=80`), `holiday.config.ts` (Nager endpoint template, timeout ms, override tab name), `oauth.config.ts` (scopes).
 - **Deps:** T0.2
 - **Done when:** all config compiles and is imported by a trivial smoke spec; no real IDs/secrets committed (use env or placeholder).
+- 6 config files + 24-assertion smoke spec; all placeholders, no real IDs; `ng test` and `ng lint` pass.
 
 ### [ ] T0.4 — Firebase Auth SDK setup
 Install the `firebase` package and initialize the app for **Auth only**: put the Firebase web config (apiKey, authDomain, projectId, …) in `environment.ts` / `environment.prod.ts`, call `initializeApp` + `getAuth` at bootstrap. **Note:** the Firebase web config is *not* secret — it ships in the client bundle and is safe to commit (Firebase security comes from Auth rules and authorized domains). The actual secrets to keep out of git are the **Google OAuth client setup** and any **service-account keys** — never commit those. Hosting config (`firebase.json`, `.firebaserc`) is NOT created here — it belongs to deployment (T6.3).
