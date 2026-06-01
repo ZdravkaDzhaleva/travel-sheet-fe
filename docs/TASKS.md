@@ -21,10 +21,11 @@ Initialize a standalone-components Angular app (latest stable) named `travel-she
 - **Done when:** `ng serve` shows the default page; `ng test` runs (zero specs ok); `ng lint` passes.
 - Angular 21.2.6 + Vitest (built-in) + @angular-eslint/21.4.0; domain-purity no-restricted-imports rule added; brand CSS tokens in styles.scss.
 
-### [ ] T0.2 — Folder skeleton
+### [x] T0.2 — Folder skeleton
 Create the empty folder structure from ARCHITECTURE §4 (`core/{auth,config,google}`, `domain/{entities,calendar,generation,mapping}`, `infrastructure/`, `application/`, `features/{sign-in,company-info,invoices,generate}`). Add a `.gitkeep` or index barrel per folder.
 - **Deps:** T0.1
 - **Done when:** structure matches §4; `ng build` still succeeds.
+- All 13 folders created with `.gitkeep`; `ng build` passes.
 
 ### [ ] T0.3 — Config files (no secrets in git)
 Create `core/config/`: `workspace.config.ts` (Drive folder name, supporting-sheet ID, workbook name — placeholder values + a clear "FILL ME" comment), `supporting.map.ts` (tab names + 0-based column indexes per §6a), `workbook.template.ts` (cell coordinates + number formats + bold rules per §6), `generation.config.ts` (`BALANCE_MIN=0`, `BALANCE_MAX=8`, `MAX_STOPS_PER_DAY=3`, `MAX_KM_PER_DAY=80`), `holiday.config.ts` (Nager endpoint template, timeout ms, override tab name), `oauth.config.ts` (scopes).
