@@ -48,6 +48,9 @@ export const ROW_OPENING_LABEL    = 'Начално количество';
 export const ROW_CLOSING_LABEL    = 'Крайно количество';
 export const ROW_TOTAL_LABEL      = 'Общо количество';
 
+// Opening row's "km" cell (column D) holds the Cyrillic letter 'х' as a marker.
+export const ROW_OPENING_KM_MARK  = 'х';
+
 // Fuel row template — build with formatFuelRow()
 // Pattern: "Зареждане гориво - {vendor} - {liters} л * {price} лв/л = {total} лв общо"
 export const FUEL_ROW_PREFIX      = 'Зареждане гориво';
