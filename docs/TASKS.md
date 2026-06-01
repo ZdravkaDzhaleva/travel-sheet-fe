@@ -15,10 +15,11 @@ If you change a default, update both this block and `generation.config.ts`.
 
 ## Phase 0 — Scaffolding & config
 
-### [ ] T0.1 — Create the Angular project
+### [x] T0.1 — Create the Angular project
 Initialize a standalone-components Angular app (latest stable) named `travel-sheet-app`. Routing on, SCSS, strict TS.
 - **Deps:** none
 - **Done when:** `ng serve` shows the default page; `ng test` runs (zero specs ok); `ng lint` passes.
+- Angular 21.2.6 + Vitest (built-in) + @angular-eslint/21.4.0; domain-purity no-restricted-imports rule added; brand CSS tokens in styles.scss.
 
 ### [ ] T0.2 — Folder skeleton
 Create the empty folder structure from ARCHITECTURE §4 (`core/{auth,config,google}`, `domain/{entities,calendar,generation,mapping}`, `infrastructure/`, `application/`, `features/{sign-in,company-info,invoices,generate}`). Add a `.gitkeep` or index barrel per folder.
