@@ -77,10 +77,11 @@ Pure helpers: `consumed(km, avg) = round(km*avg/100, 2)`; `applyTrip(balance, km
 - **Done when:** tests match hand-computed values; a sequence (open → fuel → several trips) reproduces a known running balance.
 - `domain/generation/round2.ts` (shared rounding helper), `fuel-balance.ts` (`consumed`/`applyFuel`/`applyTrip` with `wentNegative` flag); 17 tests including a 6-step running-balance sequence; lint + 103 tests pass.
 
-### [ ] T2.4 — ZeroTripRules
+### [x] T2.4 — ZeroTripRules
 Pure predicate(s) deciding when a working day becomes a zero-trip row, per §6b (no destination needed, target already met, would overconsume, weekly minimums still satisfiable). Pure inputs only.
 - **Deps:** T2.3
 - **Done when:** tests cover each trigger condition independently.
+- `domain/generation/zero-trip-rules.ts` — four predicates (`hasNoDestination`, `targetAlreadyMet`, `wouldOverconsume`, `weeklyMinimumsStillSatisfiable`) + OR-composed `isZeroTripDay`; 20 tests, each trigger fired independently from a no-trigger baseline; 123 total pass.
 
 ### [ ] T2.5 — TripGenerator (the heart)
 Pure `generate({workingDays, fuelEvents, locations, routeLegs, vehicle, openingBalance}): GeneratedRow[]` per §6b. Distribution = "whatever burns the right amount of fuel" toward closing balance ∈ [0,8], never negative, within D1 caps. Emit opening row, fuel rows on their dates (verbatim from metadata), one trip/zero row per working day, ordered; same-day order opening→fuel→trip. On infeasibility, throw a typed `InfeasibleMonthError`.
