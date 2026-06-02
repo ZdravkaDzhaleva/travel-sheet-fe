@@ -145,10 +145,11 @@ Resolve working days for a (year, month): call HolidayProvider, then WorkingDayC
 - **Done when:** returns the correct working-day list for a sample 2026 month; warning surfaces when the override fallback is used.
 - `application/calendar.service.ts` (@Injectable, `workingDaysFor(year, month)` returns `{workingDays, source, warnings}` passing through HolidayProvider's source + warnings). 5 tests covering Jan 2026 = 21 working days, Feb 2026 = 20, override warning surfacing, source='none' with both warnings, and cross-check warning preservation. 270 total pass, lint clean.
 
-### [ ] T4.3 — InvoiceService
+### [x] T4.3 — InvoiceService
 Upload flow: file → DriveStore → get `DriveFileId` → append metadata row via SheetsStore. List/edit/delete invoice metadata.
 - **Deps:** T3.3, T3.4
 - **Done when:** an uploaded invoice appears as a Drive file + an Invoice row; list/delete reflect changes.
+- `application/invoice.service.ts` (@Injectable, signals `invoices/loading/error` + `load/upload/update/delete`). `upload` allocates `nextId = max(Id)+1`, calls DriveStore first then SheetsStore.appendInvoice (so a failed upload never leaves an orphan row). Extended SheetsStore with `updateInvoice` (locates row by Id and `valuesUpdate`s `Invoice!A{n}:K{n}`) and `deleteInvoice` (cached Invoice-tab sheetId + `deleteDimension`); added `InvoiceNotFoundError`/`InvoiceTabNotFoundError` and a shared `invoiceToRow` helper. 16 new tests (6 SheetsStore + 10 InvoiceService). 286 total pass, lint clean.
 
 ### [ ] T4.4 — GenerateMonthService
 Orchestrate §5 generate step: gather master data + working days + in-scope fuel events, **resolve the opening balance** (via `SheetsStore.readPreviousMonthClosing`; if `null`, fall back to the active `Vehicle.OpeningFuelBalance`), then TripGenerator → RowMapper → SheetsStore.writeSheet. Surface `InfeasibleMonthError` as a user-facing message.
