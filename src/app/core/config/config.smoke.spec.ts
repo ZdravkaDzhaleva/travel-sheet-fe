@@ -155,6 +155,12 @@ describe('oauth.config', () => {
     );
   });
 
+  it('includes drive.metadata.readonly scope (needed for findByName lookups)', () => {
+    expect(OAUTH_SCOPES).toContain(
+      'https://www.googleapis.com/auth/drive.metadata.readonly',
+    );
+  });
+
   it('does not request broader drive scope', () => {
     expect(OAUTH_SCOPES).not.toContain(
       'https://www.googleapis.com/auth/drive',
