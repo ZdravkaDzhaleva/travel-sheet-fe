@@ -16,6 +16,15 @@ import {
 } from './google-auth.types';
 import { buildCachedToken, isCachedTokenValid } from './token-cache';
 
+// Google access tokens default to 3600s; we cache slightly less via the
+// safety margin baked into buildCachedToken.
+const FIREBASE_OAUTH_TOKEN_LIFETIME_S = 3600;
+
+// Hard ceiling on the silent GIS request. Without this, if the browser blocks
+// the popup or the origin isn't authorized for the GIS client, the callback
+// never fires and the entire load chain stalls indefinitely.
+const GIS_TOKEN_REQUEST_TIMEOUT_MS = 30_000;
+
 declare global {
   interface Window {
     google?: GisNamespace;
@@ -37,6 +46,20 @@ export class GoogleAuth {
     const provider = new GoogleAuthProvider();
     for (const scope of OAUTH_SCOPES) provider.addScope(scope);
     const credential = await signInWithPopup(firebaseAuth, provider);
+    // Firebase's popup already prompted the user for the requested scopes and
+    // returned a usable Google OAuth access token. Cache it so the rest of the
+    // session can call Sheets/Drive directly without re-running the GIS flow
+    // (which would need its own consent for the GIS client_id and a user gesture).
+    const oauth = GoogleAuthProvider.credentialFromResult(credential);
+    if (oauth?.accessToken) {
+      this.cachedToken = buildCachedToken(
+        {
+          access_token: oauth.accessToken,
+          expires_in: FIREBASE_OAUTH_TOKEN_LIFETIME_S,
+        },
+        Date.now(),
+      );
+    }
     return credential.user;
   }
 
@@ -55,7 +78,23 @@ export class GoogleAuth {
   private requestNewToken(prompt: string): Promise<string> {
     const client = this.getTokenClient();
     return new Promise<string>((resolve, reject) => {
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        reject(
+          new GoogleAuthError(
+            `Google Identity Services did not respond within ${GIS_TOKEN_REQUEST_TIMEOUT_MS} ms — ` +
+              `verify that ${window.location.origin} is in the OAuth client's Authorized JavaScript origins ` +
+              `and that the user has granted the required scopes.`,
+          ),
+        );
+      }, GIS_TOKEN_REQUEST_TIMEOUT_MS);
+
       client.callback = resp => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
         if (resp.error) {
           reject(
             new GoogleAuthError(resp.error_description ?? resp.error),
