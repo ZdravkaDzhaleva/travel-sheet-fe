@@ -93,6 +93,21 @@ Rules:
   - Body text is white on dark, or #393939 on light — both pass AA.
 - Keep the dark base as the app shell; use light surfaces (cards/tables) for dense data like the invoice list and generation results, with #393939 text.
 
+## 8a. Responsive & mobile-friendly UI
+
+The app must be fully usable from a mobile browser (the user generates and reviews sheets on the go). Design **mobile-first**, then layer on wider-viewport refinements — not the other way round.
+
+- **Viewport:** `index.html` ships with `<meta name="viewport" content="width=device-width, initial-scale=1">`. Do not set `user-scalable=no` or `maximum-scale=1` — pinch-zoom must remain available for accessibility.
+- **Breakpoint baseline:** styles target a 360 px-wide viewport as the floor. Use `min-width` media queries to enhance at larger sizes; never write desktop-first `max-width` rules that retro-shrink on mobile. Suggested breakpoints: `--bp-sm: 480px`, `--bp-md: 768px`, `--bp-lg: 1024px` (define once as CSS custom properties, reference everywhere).
+- **Units:** font sizes and spacing use `rem`/`em` against a 16 px root, not raw `px`. Layout widths use `%`, `min()`, `max()`, `clamp()`, or `fr` units — not fixed widths. Container `max-width` is fine, fixed `width` is not.
+- **Layout primitives:** use CSS Grid / Flexbox with `flex-wrap` and `gap`; avoid floats and absolute positioning for page-level layout. No horizontal scrolling on the body — `overflow-x: hidden` is a smell that hides a real bug; fix the bug.
+- **Touch targets:** interactive elements (buttons, links, form controls, list-item actions) are at least **44×44 CSS px** with comfortable spacing. Hover-only affordances are forbidden — every action must work on a tap-only device. Provide visible `:focus-visible` states for keyboard users.
+- **Forms:** inputs use the right `inputmode`/`type` so mobile keyboards match (`type="number"` for liters/price, `inputmode="decimal"` where appropriate, `type="date"` for invoice dates). File inputs accept camera capture where it makes sense (`accept="image/*,.pdf"`). Labels are always visible — never rely on placeholders as labels.
+- **Tables (invoices, generation results):** the invoice list and any data table must degrade gracefully on narrow screens. Either: (a) stack cells into card rows under `--bp-sm`, or (b) wrap the table in an explicitly scrollable container (`overflow-x: auto`, visible scrollbar). Never leak a wide table out of the viewport unannounced.
+- **Modals / sheets:** dialogs are full-screen below `--bp-md` (top-and-bottom safe-area insets respected via `env(safe-area-inset-*)`); side drawers fall back to bottom sheets on narrow screens.
+- **Verification:** for any UI task, before marking it done you must (1) exercise it in Chrome DevTools' device toolbar at 360×640 *and* 768×1024, and (2) confirm tap targets, no horizontal scroll, and that all forms can be completed with the soft keyboard up. Note this verification in the task entry.
+- **Accessibility carry-overs from §8:** the gold-on-white contrast rule still applies — on mobile, dense lists with small gold text fail AA fast. Default to dark text on light surfaces for data.
+
 ## 9. Angular specifics
 - Standalone components, no NgModules.
 - State via signals; avoid manual `Subscription` management where a signal/`toSignal` works.
