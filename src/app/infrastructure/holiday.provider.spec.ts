@@ -8,6 +8,7 @@ import {
   crossCheck,
 } from './holiday.provider';
 import { SheetsClient } from '../core/google/sheets.client';
+import { SheetsStore } from './sheets.store';
 import { HOLIDAY_MAX_ENTRIES } from '../core/config/holiday.config';
 
 describe('isPinned', () => {
@@ -137,10 +138,19 @@ function jsonResp(
   });
 }
 
+function makeSheetsStoreStub(): SheetsStore {
+  return {
+    resolveSupportingSheetId: vi.fn(async () => 'supporting-id'),
+  } as unknown as SheetsStore;
+}
+
 function makeProvider(sheets: SheetsClient): HolidayProvider {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
-    providers: [{ provide: SheetsClient, useValue: sheets }],
+    providers: [
+      { provide: SheetsClient, useValue: sheets },
+      { provide: SheetsStore, useValue: makeSheetsStoreStub() },
+    ],
   });
   return TestBed.inject(HolidayProvider);
 }

@@ -28,7 +28,7 @@ Create the empty folder structure from ARCHITECTURE §4 (`core/{auth,config,goog
 - All 13 folders created with `.gitkeep`; `ng build` passes.
 
 ### [x] T0.3 — Config files (no secrets in git)
-Create `core/config/`: `workspace.config.ts` (Drive folder name, supporting-sheet ID, workbook name — placeholder values + a clear "FILL ME" comment), `supporting.map.ts` (tab names + 0-based column indexes per §6a), `workbook.template.ts` (cell coordinates + number formats + bold rules per §6), `generation.config.ts` (`BALANCE_MIN=0`, `BALANCE_MAX=8`, `MAX_STOPS_PER_DAY=3`, `MAX_KM_PER_DAY=80`), `holiday.config.ts` (Nager endpoint template, timeout ms, override tab name), `oauth.config.ts` (scopes).
+Create `core/config/`: `workspace.config.ts` (Drive folder name, supporting-sheet name, workbook name — placeholder values + a clear "FILL ME" comment), `supporting.map.ts` (tab names + 0-based column indexes per §6a), `workbook.template.ts` (cell coordinates + number formats + bold rules per §6), `generation.config.ts` (`BALANCE_MIN=0`, `BALANCE_MAX=8`, `MAX_STOPS_PER_DAY=3`, `MAX_KM_PER_DAY=80`), `holiday.config.ts` (Nager endpoint template, timeout ms, override tab name), `oauth.config.ts` (scopes).
 - **Deps:** T0.2
 - **Done when:** all config compiles and is imported by a trivial smoke spec; no real IDs/secrets committed (use env or placeholder).
 - 6 config files + 24-assertion smoke spec; all placeholders, no real IDs; `ng test` and `ng lint` pass.

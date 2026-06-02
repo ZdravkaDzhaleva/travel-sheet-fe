@@ -7,6 +7,17 @@ export class WorkbookNotFoundError extends Error {
   }
 }
 
+/** Thrown by SheetsStore when the configured supporting spreadsheet can't be located in Drive. */
+export class SupportingSheetNotFoundError extends Error {
+  constructor(supportingName: string, folderName: string | null) {
+    const where = folderName ? `inside folder "${folderName}"` : 'in Drive';
+    super(
+      `Supporting spreadsheet "${supportingName}" not found ${where} — create it before loading master data`,
+    );
+    this.name = 'SupportingSheetNotFoundError';
+  }
+}
+
 /** Thrown when a row from the supporting sheet can't be parsed into a typed entity. */
 export class MasterDataParseError extends Error {
   constructor(entity: string, rowIndex: number, reason: string) {

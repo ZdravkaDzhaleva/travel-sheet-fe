@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import {
   DRIVE_FOLDER_NAME,
-  SUPPORTING_SHEET_ID,
+  SUPPORTING_SHEET_NAME,
   WORKBOOK_NAME,
 } from './workspace.config';
 
@@ -36,11 +36,16 @@ import {
 import { OAUTH_SCOPES } from './oauth.config';
 
 describe('workspace.config', () => {
-  it('exports placeholder strings, not real IDs', () => {
-    // Real Google IDs are long alphanumeric strings; placeholders start with FILL_ME
-    expect(DRIVE_FOLDER_NAME).toMatch(/^FILL_ME/);
-    expect(SUPPORTING_SHEET_ID).toMatch(/^FILL_ME/);
-    expect(WORKBOOK_NAME).toMatch(/^FILL_ME/);
+  it('exports non-empty Drive folder, supporting-sheet, and workbook names', () => {
+    // All three are looked up by name inside Drive — they're not secrets
+    // (CLAUDE.md: only OAuth client secrets and service-account keys are).
+    // Per-deployment values land here directly; the smoke check is just shape.
+    expect(typeof DRIVE_FOLDER_NAME).toBe('string');
+    expect(DRIVE_FOLDER_NAME.length).toBeGreaterThan(0);
+    expect(typeof SUPPORTING_SHEET_NAME).toBe('string');
+    expect(SUPPORTING_SHEET_NAME.length).toBeGreaterThan(0);
+    expect(typeof WORKBOOK_NAME).toBe('string');
+    expect(WORKBOOK_NAME.length).toBeGreaterThan(0);
   });
 });
 

@@ -7,8 +7,8 @@ import {
   HOLIDAY_MAX_ENTRIES,
   HOLIDAY_OVERRIDE_TAB,
 } from '../core/config/holiday.config';
-import { SUPPORTING_SHEET_ID } from '../core/config/workspace.config';
 import { SheetsClient } from '../core/google/sheets.client';
+import { SheetsStore } from './sheets.store';
 
 export type HolidaySource = 'api' | 'override' | 'none';
 
@@ -21,6 +21,7 @@ export interface HolidayFetchResult {
 @Injectable({ providedIn: 'root' })
 export class HolidayProvider {
   private readonly sheets = inject(SheetsClient);
+  private readonly sheetsStore = inject(SheetsStore);
 
   async getHolidays(year: number): Promise<HolidayFetchResult> {
     const url = HOLIDAY_API_TEMPLATE.replace('{year}', String(year));
@@ -63,8 +64,9 @@ export class HolidayProvider {
   private async fallback(year: number, reason: string): Promise<HolidayFetchResult> {
     const warnings = [`Falling back to supporting-sheet override: ${reason}`];
     try {
+      const supportingId = await this.sheetsStore.resolveSupportingSheetId();
       const res = await this.sheets.valuesGet(
-        SUPPORTING_SHEET_ID,
+        supportingId,
         `${HOLIDAY_OVERRIDE_TAB}!A2:A`,
       );
       const rows = res.values ?? [];

@@ -9,7 +9,7 @@ import { DriveClient } from '../core/google/drive.client';
 import { SUPPORTING_MAP } from '../core/config/supporting.map';
 import {
   DRIVE_FOLDER_NAME,
-  SUPPORTING_SHEET_ID,
+  SUPPORTING_SHEET_NAME,
   WORKBOOK_NAME,
 } from '../core/config/workspace.config';
 import {
@@ -30,6 +30,7 @@ import {
   InvoiceNotFoundError,
   InvoiceTabNotFoundError,
   MasterDataParseError,
+  SupportingSheetNotFoundError,
   WorkbookNotFoundError,
 } from './sheets-store.errors';
 
@@ -46,7 +47,9 @@ const LOCATION_TYPES: ReadonlySet<LocationType> = new Set([
 export class SheetsStore {
   private readonly sheets = inject(SheetsClient);
   private readonly drive = inject(DriveClient);
+  private folderIdPromise: Promise<string | null> | null = null;
   private workbookIdPromise: Promise<string> | null = null;
+  private supportingSheetIdPromise: Promise<string> | null = null;
   private invoiceTabSheetIdPromise: Promise<number> | null = null;
 
   async loadCompanies(): Promise<Company[]> {
@@ -133,8 +136,9 @@ export class SheetsStore {
   }
 
   async appendInvoice(invoice: Invoice): Promise<void> {
+    const supportingId = await this.resolveSupportingSheetId();
     await this.sheets.valuesAppend(
-      SUPPORTING_SHEET_ID,
+      supportingId,
       `${SUPPORTING_MAP.invoice.tab}!A:K`,
       [invoiceToRow(invoice)],
     );
@@ -143,8 +147,9 @@ export class SheetsStore {
   /** Overwrites the existing Invoice row whose Id matches; throws if absent. */
   async updateInvoice(invoice: Invoice): Promise<void> {
     const sheetRow = await this.findInvoiceSheetRow(invoice.Id);
+    const supportingId = await this.resolveSupportingSheetId();
     await this.sheets.valuesUpdate(
-      SUPPORTING_SHEET_ID,
+      supportingId,
       `${SUPPORTING_MAP.invoice.tab}!A${sheetRow}:K${sheetRow}`,
       [invoiceToRow(invoice)],
     );
@@ -154,7 +159,8 @@ export class SheetsStore {
   async deleteInvoice(invoiceId: number): Promise<void> {
     const sheetRow = await this.findInvoiceSheetRow(invoiceId);
     const sheetId = await this.resolveInvoiceTabSheetId();
-    await this.sheets.batchUpdate(SUPPORTING_SHEET_ID, [
+    const supportingId = await this.resolveSupportingSheetId();
+    await this.sheets.batchUpdate(supportingId, [
       {
         deleteDimension: {
           range: {
@@ -223,8 +229,17 @@ export class SheetsStore {
     return null;
   }
 
+  /** Resolves the supporting spreadsheet's Drive file id by name (memoized). */
+  resolveSupportingSheetId(): Promise<string> {
+    if (!this.supportingSheetIdPromise) {
+      this.supportingSheetIdPromise = this.lookupSupportingSheetId();
+    }
+    return this.supportingSheetIdPromise;
+  }
+
   private async getValues(range: string): Promise<readonly (readonly SheetCellValue[])[]> {
-    const res = await this.sheets.valuesGet(SUPPORTING_SHEET_ID, range);
+    const id = await this.resolveSupportingSheetId();
+    const res = await this.sheets.valuesGet(id, range);
     return res.values ?? [];
   }
 
@@ -233,6 +248,15 @@ export class SheetsStore {
       this.workbookIdPromise = this.lookupWorkbookId();
     }
     return this.workbookIdPromise;
+  }
+
+  private resolveFolderId(): Promise<string | null> {
+    if (!this.folderIdPromise) {
+      this.folderIdPromise = this.drive
+        .findByName(DRIVE_FOLDER_NAME, { mimeType: MIME_FOLDER })
+        .then(folder => folder?.id ?? null);
+    }
+    return this.folderIdPromise;
   }
 
   private async findInvoiceSheetRow(invoiceId: number): Promise<number> {
@@ -250,7 +274,8 @@ export class SheetsStore {
   }
 
   private async lookupInvoiceTabSheetId(): Promise<number> {
-    const meta = await this.sheets.getSpreadsheet(SUPPORTING_SHEET_ID);
+    const supportingId = await this.resolveSupportingSheetId();
+    const meta = await this.sheets.getSpreadsheet(supportingId);
     const sheet = meta.sheets.find(
       s => s.properties.title === SUPPORTING_MAP.invoice.tab,
     );
@@ -258,18 +283,31 @@ export class SheetsStore {
     return sheet.properties.sheetId;
   }
 
-  private async lookupWorkbookId(): Promise<string> {
-    const folder = await this.drive.findByName(DRIVE_FOLDER_NAME, {
-      mimeType: MIME_FOLDER,
+  private async lookupSupportingSheetId(): Promise<string> {
+    const folderId = await this.resolveFolderId();
+    const supporting = await this.drive.findByName(SUPPORTING_SHEET_NAME, {
+      mimeType: MIME_SPREADSHEET,
+      parentId: folderId ?? undefined,
     });
+    if (!supporting) {
+      throw new SupportingSheetNotFoundError(
+        SUPPORTING_SHEET_NAME,
+        folderId !== null ? DRIVE_FOLDER_NAME : null,
+      );
+    }
+    return supporting.id;
+  }
+
+  private async lookupWorkbookId(): Promise<string> {
+    const folderId = await this.resolveFolderId();
     const workbook = await this.drive.findByName(WORKBOOK_NAME, {
       mimeType: MIME_SPREADSHEET,
-      parentId: folder?.id,
+      parentId: folderId ?? undefined,
     });
     if (!workbook) {
       throw new WorkbookNotFoundError(
         WORKBOOK_NAME,
-        folder ? DRIVE_FOLDER_NAME : null,
+        folderId !== null ? DRIVE_FOLDER_NAME : null,
       );
     }
     return workbook.id;

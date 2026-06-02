@@ -10,7 +10,7 @@
 2. **Pure domain logic.** The hard logic — Bulgarian working-day calendar, trip generation, fuel balancing — is plain TypeScript with no Angular/Google dependencies, so it is unit-testable in isolation. (PRD: NFR-8.) For the POC this is achieved by passing plain data in and out of domain functions — **not** by introducing repository interfaces.
 3. **POC simplicity (locked decisions).**
    - No `ISheetsStore` / `IDriveStore` / route-provider **interfaces**. Stores are concrete classes called directly by the application layer.
-   - **No workspace-connection step.** The Drive folder name, supporting-spreadsheet ID/name and workbook name are **hardcoded in config**. The user prepares their Drive with these exact names beforehand.
+   - **No workspace-connection step.** The Drive folder, supporting spreadsheet, and workbook are all **looked up by name** from `workspace.config.ts` (the supporting sheet and the workbook live inside the configured folder). The user prepares their Drive with these exact names beforehand.
    - **No Maps/Routes API.** Leg distances are **predefined** (looked up from the supporting spreadsheet), so there is no live distance integration.
    - **Monthly generation only.** Yearly/full-year generation is **out of POC scope** (deferred). The POC polishes a single-month generator; year generation becomes trivial to add later by looping months.
    - **Single active vehicle ⇒ no within-month split.** Exactly one vehicle has `IsActive = true`. A vehicle change is modelled by adding a new vehicle (set active) and deactivating the old one; the new vehicle applies from the next generated month onward. So each month maps to one vehicle → one sheet `м_MM` (no `_<code>` suffix needed for the POC). Mid-month split is deferred with yearly generation.
@@ -188,7 +188,7 @@ Rules:
 ## 7. Configuration (centralized, hardcoded for POC)
 
 `core/config` holds everything environment-specific so changes are one-file edits (NFR-8):
-- `workspace.config.ts` — Drive folder name, supporting-spreadsheet ID, output workbook name (**user must create these exact names in Drive**).
+- `workspace.config.ts` — Drive folder name, supporting-spreadsheet name, output workbook name (**user must create these exact names in Drive**; the supporting sheet and the workbook are resolved by name inside the folder via Drive's `files.list`).
 - `supporting.map.ts` — tab names (`Company`,`Vehicle`,`Location`,`Route`,`Invoice`) + column maps per §6a. **Verified against the real sheet.**
 - `workbook.template.ts` — the §6 cell map, number formats, bold rules (fuel rows, totals).
 - `generation.config.ts` — `BALANCE_MIN = 0`, `BALANCE_MAX = 8` (liters); per-day caps `MAX_STOPS_PER_DAY`, `MAX_KM_PER_DAY` (bounds the search and keeps routes plausible — tune to the 2025 reference, ~3 stops / ~80 km).

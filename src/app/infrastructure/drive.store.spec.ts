@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { DriveStore } from './drive.store';
 import { DriveFolderNotFoundError } from './drive-store.errors';
 import { DriveClient, type DriveFile, type DriveFileMetadata } from '../core/google/drive.client';
+import { DRIVE_FOLDER_NAME } from '../core/config/workspace.config';
 
 interface DriveStubState {
   readonly created: { metadata: DriveFileMetadata; content: Blob }[];
@@ -20,7 +21,7 @@ function makeDriveStub(opts: Partial<DriveStubState> = {}): {
     created: [],
     folder: opts.folder !== undefined
       ? opts.folder
-      : { id: 'folder-1', name: 'FILL_ME_DRIVE_FOLDER_NAME', mimeType: 'application/vnd.google-apps.folder' },
+      : { id: 'folder-1', name: DRIVE_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' },
     nextFileId: opts.nextFileId ?? 'new-file-id',
   };
   const findByNameSpy = vi.fn(async () => state.folder);

@@ -5,11 +5,17 @@ import { SheetsStore, groupByRow } from './sheets.store';
 import {
   InvoiceNotFoundError,
   InvoiceTabNotFoundError,
+  SupportingSheetNotFoundError,
   WorkbookNotFoundError,
   MasterDataParseError,
 } from './sheets-store.errors';
 import { SheetsClient } from '../core/google/sheets.client';
 import { DriveClient } from '../core/google/drive.client';
+import {
+  DRIVE_FOLDER_NAME,
+  SUPPORTING_SHEET_NAME,
+  WORKBOOK_NAME,
+} from '../core/config/workspace.config';
 import type { CellModel } from '../domain/mapping/cell-model';
 import { makeVehicle } from '../../test-fixtures/index';
 
@@ -55,18 +61,29 @@ function makeSheetsStub(state: Partial<SheetsStubState> = {}): {
   return { client, state: s };
 }
 
-function makeDriveStub(opts: { workbookId?: string; folderId?: string } = {}): DriveClient {
+function makeDriveStub(
+  opts: {
+    workbookId?: string | null;
+    folderId?: string | null;
+    supportingId?: string | null;
+  } = {},
+): DriveClient {
   return {
     findByName: vi.fn(async (name: string) => {
-      if (name === 'FILL_ME_DRIVE_FOLDER_NAME') {
-        return opts.folderId === undefined
-          ? { id: 'folder-1', name, mimeType: 'application/vnd.google-apps.folder' }
-          : null;
+      if (name === DRIVE_FOLDER_NAME) {
+        return opts.folderId === null
+          ? null
+          : { id: opts.folderId ?? 'folder-1', name, mimeType: 'application/vnd.google-apps.folder' };
       }
-      if (name === 'FILL_ME_WORKBOOK_NAME') {
-        return opts.workbookId === undefined
-          ? { id: 'wb-1', name, mimeType: 'application/vnd.google-apps.spreadsheet' }
-          : null;
+      if (name === WORKBOOK_NAME) {
+        return opts.workbookId === null
+          ? null
+          : { id: opts.workbookId ?? 'wb-1', name, mimeType: 'application/vnd.google-apps.spreadsheet' };
+      }
+      if (name === SUPPORTING_SHEET_NAME) {
+        return opts.supportingId === null
+          ? null
+          : { id: opts.supportingId ?? 'supporting-1', name, mimeType: 'application/vnd.google-apps.spreadsheet' };
       }
       return null;
     }),
@@ -326,12 +343,55 @@ describe('SheetsStore.writeSheet', () => {
   });
 
   it('throws WorkbookNotFoundError when the workbook cannot be located by name', async () => {
-    const { store } = makeStore({
-      drive: makeDriveStub({ workbookId: null as unknown as string | undefined }),
-    });
+    const { store } = makeStore({ drive: makeDriveStub({ workbookId: null }) });
     await expect(store.writeSheet(CELLS, 'м_01')).rejects.toBeInstanceOf(
       WorkbookNotFoundError,
     );
+  });
+});
+
+// ── supporting-sheet resolution ─────────────────────────────────────────────
+
+describe('SheetsStore.resolveSupportingSheetId', () => {
+  it('resolves the supporting spreadsheet id by name inside the configured folder', async () => {
+    const drive = makeDriveStub({ folderId: 'folder-X', supportingId: 'sup-X' });
+    const { store } = makeStore({ drive });
+    await expect(store.resolveSupportingSheetId()).resolves.toBe('sup-X');
+    // Drive was queried by name with the configured folder as parent and spreadsheet MIME.
+    const calls = (drive.findByName as unknown as { mock: { calls: unknown[][] } }).mock.calls;
+    const supportingCall = calls.find(c => c[0] === SUPPORTING_SHEET_NAME);
+    expect(supportingCall).toBeDefined();
+    expect(supportingCall?.[1]).toMatchObject({
+      mimeType: 'application/vnd.google-apps.spreadsheet',
+      parentId: 'folder-X',
+    });
+  });
+
+  it('memoizes resolution — repeated calls do not re-query Drive', async () => {
+    const drive = makeDriveStub();
+    const { store } = makeStore({ drive });
+    await store.resolveSupportingSheetId();
+    await store.resolveSupportingSheetId();
+    const calls = (drive.findByName as unknown as { mock: { calls: unknown[][] } }).mock.calls;
+    const supportingCalls = calls.filter(c => c[0] === SUPPORTING_SHEET_NAME);
+    expect(supportingCalls.length).toBe(1);
+  });
+
+  it('throws SupportingSheetNotFoundError when the spreadsheet cannot be located', async () => {
+    const { store } = makeStore({ drive: makeDriveStub({ supportingId: null }) });
+    await expect(store.resolveSupportingSheetId()).rejects.toBeInstanceOf(
+      SupportingSheetNotFoundError,
+    );
+  });
+
+  it('shares the folder lookup with the workbook resolver — folder is queried only once', async () => {
+    const drive = makeDriveStub();
+    const { store } = makeStore({ drive });
+    await store.resolveSupportingSheetId();
+    await store.writeSheet([{ a1: 'A1', value: 'x' }], 'м_01');
+    const calls = (drive.findByName as unknown as { mock: { calls: unknown[][] } }).mock.calls;
+    const folderCalls = calls.filter(c => c[0] === DRIVE_FOLDER_NAME);
+    expect(folderCalls.length).toBe(1);
   });
 });
 

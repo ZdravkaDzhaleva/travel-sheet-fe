@@ -1,10 +1,10 @@
 // FILL ME: set these to match your actual Google Drive setup before using the app.
-// Drive folder name, supporting-spreadsheet ID, and workbook name are hardcoded for the POC.
-// The user must create a Drive folder and files with these exact names beforehand.
-// Never commit real IDs here — supply them via environment substitution or a local override.
+// All three workspace files are looked up by name inside the configured Drive folder —
+// create the folder, the supporting spreadsheet, and the (initially empty) workbook
+// with these exact names beforehand. Names are not secrets, but they are project-specific.
 
-export const DRIVE_FOLDER_NAME = 'FILL_ME_DRIVE_FOLDER_NAME';
+export const DRIVE_FOLDER_NAME = 'Travel Sheets 2026';
 
-export const SUPPORTING_SHEET_ID = 'FILL_ME_SUPPORTING_SHEET_ID';
+export const SUPPORTING_SHEET_NAME = 'SupportingSpreadsheet';
 
-export const WORKBOOK_NAME = 'FILL_ME_WORKBOOK_NAME';
+export const WORKBOOK_NAME = 'Pytni_Lista_2026_m01-m12';
