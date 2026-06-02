@@ -14,3 +14,19 @@ export class MasterDataParseError extends Error {
     this.name = 'MasterDataParseError';
   }
 }
+
+/** Thrown when an Invoice with the given Id cannot be found in the supporting sheet. */
+export class InvoiceNotFoundError extends Error {
+  constructor(readonly invoiceId: number) {
+    super(`Invoice with Id ${invoiceId} not found in the supporting sheet`);
+    this.name = 'InvoiceNotFoundError';
+  }
+}
+
+/** Thrown when the Invoice tab cannot be found in the supporting sheet. */
+export class InvoiceTabNotFoundError extends Error {
+  constructor(tabName: string) {
+    super(`Invoice tab "${tabName}" not found in the supporting sheet`);
+    this.name = 'InvoiceTabNotFoundError';
+  }
+}

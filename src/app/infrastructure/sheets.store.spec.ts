@@ -3,6 +3,8 @@ import { TestBed } from '@angular/core/testing';
 
 import { SheetsStore, groupByRow } from './sheets.store';
 import {
+  InvoiceNotFoundError,
+  InvoiceTabNotFoundError,
   WorkbookNotFoundError,
   MasterDataParseError,
 } from './sheets-store.errors';
@@ -191,6 +193,100 @@ describe('SheetsStore.appendInvoice', () => {
     expect(state.appended[0].values[0]).toEqual([
       99, 1, 2026, 1, 'Лукойл', '2026-01-15', 40, 2.89, 115.60, 'BGN', 'drive-99',
     ]);
+  });
+});
+
+// ── updateInvoice / deleteInvoice ───────────────────────────────────────────
+
+const INVOICE_ROWS: (string | number | boolean | null)[][] = [
+  ['1', '1', '2026', '1', 'Лукойл', '2026-01-10', '40', '2.89', '115.60', 'BGN', 'drive-1'],
+  ['2', '1', '2026', '1', 'Лукойл', '2026-01-25', '45', '2.89', '130.05', 'BGN', 'drive-2'],
+];
+
+describe('SheetsStore.updateInvoice', () => {
+  it('writes the row to Invoice!A{n}:K{n} based on the position of the matching Id', async () => {
+    const { client, state } = makeSheetsStub();
+    state.values.set('Invoice!A2:K', INVOICE_ROWS);
+    const { store } = makeStore({ sheets: client, sheetsState: state });
+    await store.updateInvoice({
+      Id: 2,
+      CompanyId: 1,
+      ReportingYear: 2026,
+      VehicleId: 1,
+      FuelVendor: 'OMV',
+      InvoiceDate: new Date(2026, 0, 26),
+      QuantityLiters: 50,
+      UnitPrice: 3.0,
+      TotalAmount: 150,
+      Currency: 'BGN',
+      DriveFileId: 'drive-2',
+    });
+    expect(state.written).toHaveLength(1);
+    expect(state.written[0].range).toBe('Invoice!A3:K3');
+    expect(state.written[0].values[0]).toEqual([
+      2, 1, 2026, 1, 'OMV', '2026-01-26', 50, 3.0, 150, 'BGN', 'drive-2',
+    ]);
+  });
+
+  it('throws InvoiceNotFoundError when the Id is absent', async () => {
+    const { client, state } = makeSheetsStub();
+    state.values.set('Invoice!A2:K', INVOICE_ROWS);
+    const { store } = makeStore({ sheets: client, sheetsState: state });
+    await expect(
+      store.updateInvoice({
+        Id: 99,
+        CompanyId: 1,
+        ReportingYear: 2026,
+        VehicleId: 1,
+        FuelVendor: 'X',
+        InvoiceDate: new Date(2026, 0, 1),
+        QuantityLiters: 1,
+        UnitPrice: 1,
+        TotalAmount: 1,
+        Currency: 'BGN',
+        DriveFileId: 'd',
+      }),
+    ).rejects.toBeInstanceOf(InvoiceNotFoundError);
+  });
+});
+
+describe('SheetsStore.deleteInvoice', () => {
+  it('emits a deleteDimension request scoped to the matching row of the Invoice tab', async () => {
+    const { client, state } = makeSheetsStub({
+      meta: { sheets: [{ properties: { sheetId: 77, title: 'Invoice' } }] },
+    });
+    state.values.set('Invoice!A2:K', INVOICE_ROWS);
+    const { store } = makeStore({ sheets: client, sheetsState: state });
+    await store.deleteInvoice(1);
+    expect(state.batches).toHaveLength(1);
+    expect(state.batches[0].requests).toEqual([
+      {
+        deleteDimension: {
+          range: {
+            sheetId: 77,
+            dimension: 'ROWS',
+            startIndex: 1,
+            endIndex: 2,
+          },
+        },
+      },
+    ]);
+  });
+
+  it('throws InvoiceNotFoundError when the Id is absent', async () => {
+    const { client, state } = makeSheetsStub();
+    state.values.set('Invoice!A2:K', INVOICE_ROWS);
+    const { store } = makeStore({ sheets: client, sheetsState: state });
+    await expect(store.deleteInvoice(404)).rejects.toBeInstanceOf(InvoiceNotFoundError);
+  });
+
+  it('throws InvoiceTabNotFoundError when the Invoice tab is missing in metadata', async () => {
+    const { client, state } = makeSheetsStub({
+      meta: { sheets: [{ properties: { sheetId: 0, title: 'Sheet1' } }] },
+    });
+    state.values.set('Invoice!A2:K', INVOICE_ROWS);
+    const { store } = makeStore({ sheets: client, sheetsState: state });
+    await expect(store.deleteInvoice(1)).rejects.toBeInstanceOf(InvoiceTabNotFoundError);
   });
 });
 

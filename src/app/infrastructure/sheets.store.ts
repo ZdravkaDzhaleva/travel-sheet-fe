@@ -27,6 +27,8 @@ import type {
 } from '../domain/entities/index';
 import type { CellModel } from '../domain/mapping/cell-model';
 import {
+  InvoiceNotFoundError,
+  InvoiceTabNotFoundError,
   MasterDataParseError,
   WorkbookNotFoundError,
 } from './sheets-store.errors';
@@ -45,6 +47,7 @@ export class SheetsStore {
   private readonly sheets = inject(SheetsClient);
   private readonly drive = inject(DriveClient);
   private workbookIdPromise: Promise<string> | null = null;
+  private invoiceTabSheetIdPromise: Promise<number> | null = null;
 
   async loadCompanies(): Promise<Company[]> {
     const rows = await this.getValues(`${SUPPORTING_MAP.company.tab}!A2:E`);
@@ -130,24 +133,39 @@ export class SheetsStore {
   }
 
   async appendInvoice(invoice: Invoice): Promise<void> {
-    const row: SheetCellValue[] = [
-      invoice.Id,
-      invoice.CompanyId,
-      invoice.ReportingYear,
-      invoice.VehicleId,
-      invoice.FuelVendor,
-      isoDateOnly(invoice.InvoiceDate),
-      invoice.QuantityLiters,
-      invoice.UnitPrice,
-      invoice.TotalAmount,
-      invoice.Currency,
-      invoice.DriveFileId,
-    ];
     await this.sheets.valuesAppend(
       SUPPORTING_SHEET_ID,
       `${SUPPORTING_MAP.invoice.tab}!A:K`,
-      [row],
+      [invoiceToRow(invoice)],
     );
+  }
+
+  /** Overwrites the existing Invoice row whose Id matches; throws if absent. */
+  async updateInvoice(invoice: Invoice): Promise<void> {
+    const sheetRow = await this.findInvoiceSheetRow(invoice.Id);
+    await this.sheets.valuesUpdate(
+      SUPPORTING_SHEET_ID,
+      `${SUPPORTING_MAP.invoice.tab}!A${sheetRow}:K${sheetRow}`,
+      [invoiceToRow(invoice)],
+    );
+  }
+
+  /** Removes the Invoice row with the given Id; throws if absent. */
+  async deleteInvoice(invoiceId: number): Promise<void> {
+    const sheetRow = await this.findInvoiceSheetRow(invoiceId);
+    const sheetId = await this.resolveInvoiceTabSheetId();
+    await this.sheets.batchUpdate(SUPPORTING_SHEET_ID, [
+      {
+        deleteDimension: {
+          range: {
+            sheetId,
+            dimension: 'ROWS',
+            startIndex: sheetRow - 1, // 0-based, header occupies index 0
+            endIndex: sheetRow,
+          },
+        },
+      },
+    ]);
   }
 
   /** Adds or clears+re-adds `sheetName`, then writes `cells` into it. */
@@ -215,6 +233,29 @@ export class SheetsStore {
       this.workbookIdPromise = this.lookupWorkbookId();
     }
     return this.workbookIdPromise;
+  }
+
+  private async findInvoiceSheetRow(invoiceId: number): Promise<number> {
+    const invoices = await this.loadInvoices();
+    const idx = invoices.findIndex(inv => inv.Id === invoiceId);
+    if (idx === -1) throw new InvoiceNotFoundError(invoiceId);
+    return idx + 2; // 1-based row; header occupies row 1
+  }
+
+  private resolveInvoiceTabSheetId(): Promise<number> {
+    if (!this.invoiceTabSheetIdPromise) {
+      this.invoiceTabSheetIdPromise = this.lookupInvoiceTabSheetId();
+    }
+    return this.invoiceTabSheetIdPromise;
+  }
+
+  private async lookupInvoiceTabSheetId(): Promise<number> {
+    const meta = await this.sheets.getSpreadsheet(SUPPORTING_SHEET_ID);
+    const sheet = meta.sheets.find(
+      s => s.properties.title === SUPPORTING_MAP.invoice.tab,
+    );
+    if (!sheet) throw new InvoiceTabNotFoundError(SUPPORTING_MAP.invoice.tab);
+    return sheet.properties.sheetId;
   }
 
   private async lookupWorkbookId(): Promise<string> {
@@ -295,6 +336,22 @@ function parseDateOrFail(
     rowIndex,
     `unrecognised date "${s}" (expected YYYY-MM-DD or DD.MM.YYYY)`,
   );
+}
+
+function invoiceToRow(invoice: Invoice): SheetCellValue[] {
+  return [
+    invoice.Id,
+    invoice.CompanyId,
+    invoice.ReportingYear,
+    invoice.VehicleId,
+    invoice.FuelVendor,
+    isoDateOnly(invoice.InvoiceDate),
+    invoice.QuantityLiters,
+    invoice.UnitPrice,
+    invoice.TotalAmount,
+    invoice.Currency,
+    invoice.DriveFileId,
+  ];
 }
 
 function isoDateOnly(d: Date): string {
