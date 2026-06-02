@@ -1,0 +1,74 @@
+<main class="company-info">
+  <header class="company-info__header">
+    <a class="company-info__back" routerLink="/home">← Back</a>
+    <h1 class="company-info__title">Company info</h1>
+  </header>
+
+  @if (loading()) {
+    <p class="company-info__status" role="status">Loading…</p>
+  } @else if (error(); as err) {
+    <p class="company-info__status company-info__status--error" role="alert">
+      Could not load master data: {{ err.message }}
+    </p>
+  } @else {
+    @if (company(); as c) {
+      <section class="card" aria-labelledby="company-heading">
+        <h2 id="company-heading" class="card__heading">Company</h2>
+        <dl class="card__fields">
+          <div class="card__field">
+            <dt>Name</dt>
+            <dd>{{ c.Name }}</dd>
+          </div>
+          <div class="card__field">
+            <dt>EIK</dt>
+            <dd>{{ c.Eik }}</dd>
+          </div>
+          <div class="card__field">
+            <dt>Address</dt>
+            <dd>{{ c.Address }}</dd>
+          </div>
+          <div class="card__field">
+            <dt>Reporting year</dt>
+            <dd>{{ c.ReportingYear }}</dd>
+          </div>
+        </dl>
+      </section>
+    }
+
+    @if (vehicle(); as v) {
+      <section class="card" aria-labelledby="vehicle-heading">
+        <h2 id="vehicle-heading" class="card__heading">Active vehicle</h2>
+        <dl class="card__fields">
+          <div class="card__field">
+            <dt>Name</dt>
+            <dd>{{ v.Name }}</dd>
+          </div>
+          <div class="card__field">
+            <dt>Registration</dt>
+            <dd>{{ v.RegistrationNumber }}</dd>
+          </div>
+          <div class="card__field">
+            <dt>Fuel type</dt>
+            <dd>{{ v.FuelType }}</dd>
+          </div>
+          <div class="card__field">
+            <dt>Seats</dt>
+            <dd>{{ v.SeatCount }}</dd>
+          </div>
+          <div class="card__field">
+            <dt>Avg consumption</dt>
+            <dd>{{ v.AverageConsumptionLitersPer100Km }} L / 100 km</dd>
+          </div>
+          <div class="card__field">
+            <dt>Tank capacity</dt>
+            <dd>{{ v.TankCapacityLiters }} L</dd>
+          </div>
+          <div class="card__field">
+            <dt>Opening fuel balance</dt>
+            <dd>{{ v.OpeningFuelBalance }} L</dd>
+          </div>
+        </dl>
+      </section>
+    }
+  }
+</main>

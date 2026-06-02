@@ -1,0 +1,117 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+  background-color: var(--app-bg);
+  color: var(--app-text);
+}
+
+.company-info {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 1.25rem env(safe-area-inset-right) 2rem env(safe-area-inset-left);
+  padding-top: max(1.25rem, env(safe-area-inset-top));
+  padding-bottom: max(2rem, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.company-info__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.company-info__title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.company-info__back {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.875rem;
+  color: var(--app-text);
+  text-decoration: none;
+  border-radius: 0.5rem;
+  border: 0.0625rem solid currentColor;
+  font-weight: 500;
+}
+
+.company-info__back:focus-visible {
+  outline: 0.125rem solid var(--app-accent);
+  outline-offset: 0.125rem;
+}
+
+.company-info__status {
+  margin: 0;
+  padding: 1rem;
+  background-color: var(--app-surface);
+  color: var(--app-text-on-surface);
+  border-radius: 0.5rem;
+}
+
+.company-info__status--error {
+  background-color: rgba(192, 57, 43, 0.12);
+  color: rgb(120, 30, 30);
+}
+
+.card {
+  background-color: var(--app-surface);
+  color: var(--app-text-on-surface);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.18);
+}
+
+.card__heading {
+  margin: 0 0 0.875rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.card__fields {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.875rem 1.25rem;
+}
+
+.card__field {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.card__field dt {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: rgba(57, 57, 57, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.card__field dd {
+  margin: 0;
+  font-size: 1rem;
+  word-break: break-word;
+}
+
+@media (min-width: 480px) {
+  .card {
+    padding: 1.5rem;
+  }
+  .card__fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) {
+  .company-info {
+    padding-inline: 2rem;
+  }
+}

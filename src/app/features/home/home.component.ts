@@ -1,11 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { GoogleAuth } from '../../core/auth/google-auth';
 
 @Component({
   selector: 'app-home',
   standalone: true,
+  imports: [RouterLink],
   templateUrl: './home.component.html',
   styleUrl: './home.component.scss',
 })

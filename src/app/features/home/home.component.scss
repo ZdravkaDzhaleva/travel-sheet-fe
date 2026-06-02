@@ -40,6 +40,29 @@
   line-height: 1.4;
 }
 
+.card__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.card__link {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.875rem;
+  color: var(--app-text-on-surface);
+  text-decoration: none;
+  border: 0.0625rem solid var(--app-text-on-surface);
+  border-radius: 0.5rem;
+  font-weight: 500;
+}
+
+.card__link:focus-visible {
+  outline: 0.125rem solid var(--app-accent);
+  outline-offset: 0.125rem;
+}
+
 .card__button {
   align-self: flex-start;
   min-height: 2.75rem;

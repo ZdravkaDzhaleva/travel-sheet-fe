@@ -14,6 +14,12 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/home/home.component').then(m => m.HomeComponent),
   },
+  {
+    path: 'company-info',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/company-info/company-info.component').then(m => m.CompanyInfoComponent),
+  },
   { path: '', pathMatch: 'full', redirectTo: 'home' },
   { path: '**', redirectTo: 'home' },
 ];
