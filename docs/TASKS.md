@@ -161,10 +161,11 @@ Orchestrate §5 generate step: gather master data + working days + in-scope fuel
 
 ## Phase 5 — UI features
 
-### [ ] T5.1 — Sign-in
+### [x] T5.1 — Sign-in
 `features/sign-in`: Google sign-in button via GoogleAuth; route guard so the rest of the app requires auth.
 - **Deps:** T3.1
 - **Done when:** unauthenticated users are routed to sign-in; after sign-in they reach the app shell.
+- `features/sign-in/sign-in.component.{ts,html,scss}` (standalone, brand tokens, mobile-first per §8a — full-viewport card, ≥44 px touch targets, safe-area insets, focus-visible). `features/home/home.component.{ts,html,scss}` is the placeholder shell to be expanded in T6.1 (signs out via GoogleAuth and routes back to /sign-in). Added `core/auth/auth-state.ts` (@Injectable `AuthState.waitForFirstAuthState()` — one-shot `onAuthStateChanged` so the guard waits for Firebase session rehydrate before deciding) and `core/auth/auth.guard.ts` (functional `CanActivateFn` redirecting to `/sign-in` on no user). Routes: `/sign-in` (lazy), `/home` (lazy + `authGuard`), `''` → `/home`, `**` → `/home`. Stripped Angular scaffold placeholder from `app.html`/`app.ts`/`app.spec.ts`. 6 new tests (2 guard + 4 sign-in component covering success/error/busy/re-entrant). 299 total pass, lint clean. Mobile-viewport verification deferred to T6.1's app-shell pass.
 
 ### [ ] T5.2 — Company info (read-only)
 `features/company-info`: display Company + active Vehicle from MasterDataService. No edit controls. Escape all displayed strings (no `[innerHTML]`).
