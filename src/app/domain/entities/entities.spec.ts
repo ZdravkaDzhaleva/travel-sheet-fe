@@ -80,7 +80,7 @@ describe('T1.1 entity types', () => {
       QuantityLiters: 40,
       UnitPrice: 2.89,
       TotalAmount: 115.60,
-      Currency: 'BGN',
+      Currency: 'EUR',
       DriveFileId: 'some-drive-id',
     };
     expectTypeOf(invoice).toMatchTypeOf<Invoice>();

@@ -1,0 +1,206 @@
+<main class="invoices">
+  <header class="invoices__header">
+    <a class="invoices__back" routerLink="/home">← Back</a>
+    <h1 class="invoices__title">Invoices</h1>
+  </header>
+
+  @if (!masterReady() && masterError() === null) {
+    <p class="invoices__status" role="status">Loading workspace…</p>
+  } @else if (masterError(); as err) {
+    <p class="invoices__status invoices__status--error" role="alert">
+      Could not load master data: {{ err.message }}
+    </p>
+  } @else {
+    <section class="card" aria-labelledby="form-heading">
+      <h2 id="form-heading" class="card__heading">
+        @if (editingId() !== null) {
+          Edit invoice
+        } @else {
+          Upload invoice
+        }
+      </h2>
+
+      <form class="form" (ngSubmit)="submit()" #invoiceForm="ngForm">
+        @if (editingId() === null) {
+          <label class="form__field">
+            <span class="form__label">Invoice file</span>
+            <input
+              type="file"
+              name="file"
+              accept="image/*,application/pdf,.pdf"
+              (change)="onFileChange($event)"
+              class="form__input form__input--file"
+            />
+          </label>
+        }
+
+        <label class="form__field">
+          <span class="form__label">Fuel vendor</span>
+          <input
+            type="text"
+            name="fuelVendor"
+            [(ngModel)]="formData.fuelVendor"
+            class="form__input"
+            required
+            autocomplete="off"
+          />
+        </label>
+
+        <label class="form__field">
+          <span class="form__label">Invoice date</span>
+          <input
+            type="date"
+            name="invoiceDate"
+            [(ngModel)]="formData.invoiceDate"
+            class="form__input"
+            required
+          />
+        </label>
+
+        <label class="form__field">
+          <span class="form__label">Quantity (L)</span>
+          <input
+            type="number"
+            inputmode="decimal"
+            step="0.01"
+            min="0"
+            name="quantityLiters"
+            [(ngModel)]="formData.quantityLiters"
+            class="form__input"
+            required
+          />
+        </label>
+
+        <label class="form__field">
+          <span class="form__label">Unit price</span>
+          <input
+            type="number"
+            inputmode="decimal"
+            step="0.01"
+            min="0"
+            name="unitPrice"
+            [(ngModel)]="formData.unitPrice"
+            class="form__input"
+            required
+          />
+        </label>
+
+        <label class="form__field">
+          <span class="form__label">Total amount</span>
+          <input
+            type="number"
+            inputmode="decimal"
+            step="0.01"
+            min="0"
+            name="totalAmount"
+            [(ngModel)]="formData.totalAmount"
+            class="form__input"
+            required
+          />
+        </label>
+
+        <label class="form__field">
+          <span class="form__label">Currency</span>
+          <input
+            type="text"
+            name="currency"
+            [(ngModel)]="formData.currency"
+            class="form__input"
+            maxlength="6"
+            autocomplete="off"
+          />
+        </label>
+
+        @if (localError(); as err) {
+          <p class="form__error" role="alert">{{ err }}</p>
+        }
+        @if (serviceError(); as err) {
+          <p class="form__error" role="alert">{{ err.message }}</p>
+        }
+
+        <div class="form__actions">
+          <button
+            type="submit"
+            class="form__button form__button--primary"
+            [disabled]="serviceLoading()"
+          >
+            @if (serviceLoading()) {
+              Working…
+            } @else if (editingId() !== null) {
+              Save changes
+            } @else {
+              Upload
+            }
+          </button>
+          @if (editingId() !== null) {
+            <button
+              type="button"
+              class="form__button"
+              [disabled]="serviceLoading()"
+              (click)="cancelEdit()"
+            >
+              Cancel
+            </button>
+          }
+        </div>
+      </form>
+    </section>
+
+    <section class="card" aria-labelledby="list-heading">
+      <h2 id="list-heading" class="card__heading">
+        Invoices ({{ invoices().length }})
+      </h2>
+
+      @if (invoices().length === 0) {
+        <p class="empty">No invoices yet — upload your first one above.</p>
+      } @else {
+        <ul class="list" role="list">
+          @for (invoice of invoices(); track invoice.Id) {
+            <li class="list__item">
+              <div class="list__main">
+                <div class="list__field">
+                  <span class="list__label">Vendor</span>
+                  <span class="list__value">{{ invoice.FuelVendor }}</span>
+                </div>
+                <div class="list__field">
+                  <span class="list__label">Date</span>
+                  <span class="list__value">{{ formatDate(invoice.InvoiceDate) }}</span>
+                </div>
+                <div class="list__field">
+                  <span class="list__label">Qty (L)</span>
+                  <span class="list__value">{{ invoice.QuantityLiters }}</span>
+                </div>
+                <div class="list__field">
+                  <span class="list__label">Unit price</span>
+                  <span class="list__value">{{ invoice.UnitPrice }} {{ invoice.Currency }}</span>
+                </div>
+                <div class="list__field">
+                  <span class="list__label">Total</span>
+                  <span class="list__value">{{ invoice.TotalAmount }} {{ invoice.Currency }}</span>
+                </div>
+              </div>
+              <div class="list__actions">
+                <button
+                  type="button"
+                  class="form__button"
+                  [disabled]="serviceLoading()"
+                  (click)="startEdit(invoice)"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  class="form__button form__button--danger"
+                  [disabled]="serviceLoading()"
+                  (click)="deleteInvoice(invoice)"
+                >
+                  Delete
+                </button>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</main>

@@ -20,6 +20,12 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/company-info/company-info.component').then(m => m.CompanyInfoComponent),
   },
+  {
+    path: 'invoices',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/invoices/invoices.component').then(m => m.InvoicesComponent),
+  },
   { path: '', pathMatch: 'full', redirectTo: 'home' },
   { path: '**', redirectTo: 'home' },
 ];

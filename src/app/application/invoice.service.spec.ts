@@ -63,7 +63,7 @@ const UPLOAD_INPUT: InvoiceUploadInput = {
   quantityLiters: 30,
   unitPrice: 2.95,
   totalAmount: 88.5,
-  currency: 'BGN',
+  currency: 'EUR',
   file: new Blob(['pdf-bytes'], { type: 'application/pdf' }),
   fileName: 'invoice-3.pdf',
 };
@@ -118,7 +118,7 @@ describe('InvoiceService.upload', () => {
       QuantityLiters: 30,
       UnitPrice: 2.95,
       TotalAmount: 88.5,
-      Currency: 'BGN',
+      Currency: 'EUR',
       DriveFileId: 'drive-new',
     });
     expect(svc.invoices()).toHaveLength(3);

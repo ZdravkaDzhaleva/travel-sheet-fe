@@ -169,8 +169,8 @@ describe('SheetsStore — loaders', () => {
   it('loadInvoices parses both ISO and DD.MM.YYYY dates', async () => {
     const { client, state } = makeSheetsStub();
     state.values.set('Invoice!A2:K', [
-      ['1', '1', '2026', '1', 'Лукойл', '2026-01-10', '40', '2.89', '115.60', 'BGN', 'drive-1'],
-      ['2', '1', '2026', '1', 'Лукойл', '25.01.2026', '45', '2.89', '130.05', 'BGN', 'drive-2'],
+      ['1', '1', '2026', '1', 'Лукойл', '2026-01-10', '40', '2.89', '115.60', 'EUR', 'drive-1'],
+      ['2', '1', '2026', '1', 'Лукойл', '25.01.2026', '45', '2.89', '130.05', 'EUR', 'drive-2'],
     ]);
     const { store } = makeStore({ sheets: client, sheetsState: state });
     const out = await store.loadInvoices();
@@ -202,13 +202,13 @@ describe('SheetsStore.appendInvoice', () => {
       QuantityLiters: 40,
       UnitPrice: 2.89,
       TotalAmount: 115.60,
-      Currency: 'BGN',
+      Currency: 'EUR',
       DriveFileId: 'drive-99',
     });
     expect(state.appended).toHaveLength(1);
     expect(state.appended[0].range).toBe('Invoice!A:K');
     expect(state.appended[0].values[0]).toEqual([
-      99, 1, 2026, 1, 'Лукойл', '2026-01-15', 40, 2.89, 115.60, 'BGN', 'drive-99',
+      99, 1, 2026, 1, 'Лукойл', '2026-01-15', 40, 2.89, 115.60, 'EUR', 'drive-99',
     ]);
   });
 });
@@ -216,8 +216,8 @@ describe('SheetsStore.appendInvoice', () => {
 // ── updateInvoice / deleteInvoice ───────────────────────────────────────────
 
 const INVOICE_ROWS: (string | number | boolean | null)[][] = [
-  ['1', '1', '2026', '1', 'Лукойл', '2026-01-10', '40', '2.89', '115.60', 'BGN', 'drive-1'],
-  ['2', '1', '2026', '1', 'Лукойл', '2026-01-25', '45', '2.89', '130.05', 'BGN', 'drive-2'],
+  ['1', '1', '2026', '1', 'Лукойл', '2026-01-10', '40', '2.89', '115.60', 'EUR', 'drive-1'],
+  ['2', '1', '2026', '1', 'Лукойл', '2026-01-25', '45', '2.89', '130.05', 'EUR', 'drive-2'],
 ];
 
 describe('SheetsStore.updateInvoice', () => {
@@ -235,13 +235,13 @@ describe('SheetsStore.updateInvoice', () => {
       QuantityLiters: 50,
       UnitPrice: 3.0,
       TotalAmount: 150,
-      Currency: 'BGN',
+      Currency: 'EUR',
       DriveFileId: 'drive-2',
     });
     expect(state.written).toHaveLength(1);
     expect(state.written[0].range).toBe('Invoice!A3:K3');
     expect(state.written[0].values[0]).toEqual([
-      2, 1, 2026, 1, 'OMV', '2026-01-26', 50, 3.0, 150, 'BGN', 'drive-2',
+      2, 1, 2026, 1, 'OMV', '2026-01-26', 50, 3.0, 150, 'EUR', 'drive-2',
     ]);
   });
 
@@ -260,7 +260,7 @@ describe('SheetsStore.updateInvoice', () => {
         QuantityLiters: 1,
         UnitPrice: 1,
         TotalAmount: 1,
-        Currency: 'BGN',
+        Currency: 'EUR',
         DriveFileId: 'd',
       }),
     ).rejects.toBeInstanceOf(InvoiceNotFoundError);
