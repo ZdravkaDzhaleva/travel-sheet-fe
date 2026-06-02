@@ -1,0 +1,21 @@
+<main class="sign-in">
+  <section class="card">
+    <h1 class="card__title">Travel Sheet</h1>
+    <p class="card__intro">
+      Sign in with Google to generate your monthly travel sheet.
+    </p>
+
+    @if (error(); as message) {
+      <p class="card__error" role="alert">{{ message }}</p>
+    }
+
+    <button
+      type="button"
+      class="card__button"
+      [disabled]="busy()"
+      (click)="signIn()"
+    >
+      {{ busy() ? 'Signing in…' : 'Sign in with Google' }}
+    </button>
+  </section>
+</main>

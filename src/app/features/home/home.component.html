@@ -1,0 +1,17 @@
+<main class="home">
+  <section class="card">
+    <h1 class="card__title">Welcome</h1>
+    <p class="card__intro">
+      You are signed in. The company info, invoices, and generate views land here next.
+    </p>
+
+    <button
+      type="button"
+      class="card__button"
+      [disabled]="busy()"
+      (click)="signOut()"
+    >
+      {{ busy() ? 'Signing out…' : 'Sign out' }}
+    </button>
+  </section>
+</main>
