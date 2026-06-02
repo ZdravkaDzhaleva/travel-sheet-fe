@@ -151,10 +151,11 @@ Upload flow: file → DriveStore → get `DriveFileId` → append metadata row v
 - **Done when:** an uploaded invoice appears as a Drive file + an Invoice row; list/delete reflect changes.
 - `application/invoice.service.ts` (@Injectable, signals `invoices/loading/error` + `load/upload/update/delete`). `upload` allocates `nextId = max(Id)+1`, calls DriveStore first then SheetsStore.appendInvoice (so a failed upload never leaves an orphan row). Extended SheetsStore with `updateInvoice` (locates row by Id and `valuesUpdate`s `Invoice!A{n}:K{n}`) and `deleteInvoice` (cached Invoice-tab sheetId + `deleteDimension`); added `InvoiceNotFoundError`/`InvoiceTabNotFoundError` and a shared `invoiceToRow` helper. 16 new tests (6 SheetsStore + 10 InvoiceService). 286 total pass, lint clean.
 
-### [ ] T4.4 — GenerateMonthService
+### [x] T4.4 — GenerateMonthService
 Orchestrate §5 generate step: gather master data + working days + in-scope fuel events, **resolve the opening balance** (via `SheetsStore.readPreviousMonthClosing`; if `null`, fall back to the active `Vehicle.OpeningFuelBalance`), then TripGenerator → RowMapper → SheetsStore.writeSheet. Surface `InfeasibleMonthError` as a user-facing message.
 - **Deps:** T4.1, T4.2, T2.5, T2.6, T3.3
 - **Done when:** generating a sample month writes a correct sheet end-to-end against a test workbook; the first month of a vehicle uses `OpeningFuelBalance`, a later month carries forward the prior sheet's closing; infeasible month shows a clear error and writes nothing.
+- `application/generate-month.service.ts` (@Injectable, `generateMonth(year, month)` returns `GenerateMonthResult` with `sheetName/openingBalance/openingSource ('priorSheet'|'vehicleConfig')/closingBalance/rowCount/holidaySource/warnings`; signals `loading/error/result`). Auto-loads MasterDataService when not `ready()`; filters invoices by VehicleId + InvoiceDate year/month → FuelEvent[]; resolves opening via `readPreviousMonthClosing` (fallback to `Vehicle.OpeningFuelBalance`); pipes through `generate` → `toSheetCells` → `writeSheet`. InfeasibleMonthError propagates and prevents the writeSheet call. 7 tests covering happy path (Jan 2026 with `OpeningFuelBalance`), prior-closing carry-forward, master-data auto-load gating, warning pass-through, invoice filtering (vehicle/month/year), and the InfeasibleMonth no-write path. 293 total pass, lint clean.
 
 ---
 
