@@ -26,6 +26,12 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/invoices/invoices.component').then(m => m.InvoicesComponent),
   },
+  {
+    path: 'generate',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/generate/generate.component').then(m => m.GenerateComponent),
+  },
   { path: '', pathMatch: 'full', redirectTo: 'home' },
   { path: '**', redirectTo: 'home' },
 ];

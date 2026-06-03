@@ -142,7 +142,7 @@ function parseDateInYear(s: string, year: number): Date | null {
     date.getMonth() !== mo - 1 ||
     date.getDate() !== d
   ) {
-    return null; // overflow (e.g. Feb 30 → Mar 2)
+    return null;
   }
   return date;
 }
@@ -162,16 +162,17 @@ function expectedHolidaysFor(year: number): Date[] {
   if (year === 2026) {
     return [
       new Date(2026, 0, 1),
+      new Date(2026, 0, 2),
       new Date(2026, 2, 3),
       new Date(2026, 3, 10),
+      new Date(2026, 3, 11),
       new Date(2026, 3, 12),
       new Date(2026, 3, 13),
       new Date(2026, 4, 1),
       new Date(2026, 4, 6),
-      new Date(2026, 4, 24),
-      new Date(2026, 8, 6),
+      new Date(2026, 4, 25),
+      new Date(2026, 8, 7),
       new Date(2026, 8, 22),
-      new Date(2026, 10, 1),
       new Date(2026, 11, 24),
       new Date(2026, 11, 25),
       new Date(2026, 11, 26),

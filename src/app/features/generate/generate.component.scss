@@ -1,0 +1,227 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+  background-color: var(--app-bg);
+  color: var(--app-text);
+}
+
+.generate {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 1.25rem env(safe-area-inset-right) 2rem env(safe-area-inset-left);
+  padding-top: max(1.25rem, env(safe-area-inset-top));
+  padding-bottom: max(2rem, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.generate__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.generate__title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.generate__back {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.875rem;
+  color: var(--app-text);
+  text-decoration: none;
+  border-radius: 0.5rem;
+  border: 0.0625rem solid currentColor;
+  font-weight: 500;
+}
+
+.generate__back:focus-visible {
+  outline: 0.125rem solid var(--app-accent);
+  outline-offset: 0.125rem;
+}
+
+.card {
+  background-color: var(--app-surface);
+  color: var(--app-text-on-surface);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.card__heading {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.card__body {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.card__detail {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: rgba(57, 57, 57, 0.7);
+  word-break: break-word;
+}
+
+.card--error {
+  background-color: rgba(192, 57, 43, 0.08);
+}
+
+.card--error .card__heading {
+  color: rgb(120, 30, 30);
+}
+
+.card--success {
+  border-left: 0.25rem solid var(--app-accent);
+}
+
+.form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.875rem;
+}
+
+.form__field {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.form__label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: rgba(57, 57, 57, 0.75);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.form__input {
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  font: inherit;
+  background-color: var(--app-surface);
+  color: var(--app-text-on-surface);
+  border: 0.0625rem solid rgba(57, 57, 57, 0.25);
+  border-radius: 0.5rem;
+  width: 100%;
+}
+
+.form__input:focus-visible {
+  outline: 0.125rem solid var(--app-accent);
+  outline-offset: 0.0625rem;
+  border-color: var(--app-accent);
+}
+
+.form__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.form__button {
+  min-height: 2.75rem;
+  padding: 0 1.5rem;
+  font: inherit;
+  font-weight: 600;
+  background-color: transparent;
+  color: var(--app-text-on-surface);
+  border: 0.0625rem solid var(--app-text-on-surface);
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.form__button--primary {
+  background-color: var(--app-accent);
+  color: var(--app-accent-text);
+  border-color: var(--app-accent);
+}
+
+.form__button:focus-visible {
+  outline: 0.125rem solid var(--app-accent);
+  outline-offset: 0.125rem;
+}
+
+.form__button:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.result {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.625rem 1rem;
+}
+
+.result__field {
+  display: grid;
+  gap: 0.125rem;
+}
+
+.result__field dt {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba(57, 57, 57, 0.65);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.result__field dd {
+  margin: 0;
+  font-size: 0.9375rem;
+  word-break: break-word;
+}
+
+.warnings {
+  padding: 0.875rem 1rem;
+  background-color: rgba(244, 214, 116, 0.18);
+  border-radius: 0.5rem;
+}
+
+.warnings__heading {
+  margin: 0 0 0.375rem;
+  font-weight: 600;
+}
+
+.warnings__list {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+
+@media (min-width: 480px) {
+  .form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .form__actions {
+    grid-column: 1 / -1;
+  }
+  .result {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) {
+  .generate {
+    padding-inline: 2rem;
+  }
+  .result {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

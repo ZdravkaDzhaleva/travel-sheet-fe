@@ -1,0 +1,118 @@
+<main class="generate">
+  <header class="generate__header">
+    <a class="generate__back" routerLink="/home">← Back</a>
+    <h1 class="generate__title">Generate month</h1>
+  </header>
+
+  <section class="card" aria-labelledby="form-heading">
+    <h2 id="form-heading" class="card__heading">Pick a period</h2>
+
+    <form class="form" (ngSubmit)="generate()">
+      <label class="form__field">
+        <span class="form__label">Year</span>
+        <input
+          type="number"
+          inputmode="numeric"
+          name="year"
+          [(ngModel)]="year"
+          class="form__input"
+          min="2020"
+          max="2100"
+          required
+        />
+      </label>
+
+      <label class="form__field">
+        <span class="form__label">Month</span>
+        <select
+          name="month"
+          [(ngModel)]="month"
+          class="form__input"
+          required
+        >
+          @for (m of months; track m.value) {
+            <option [ngValue]="m.value">{{ m.label }}</option>
+          }
+        </select>
+      </label>
+
+      <div class="form__actions">
+        <button
+          type="submit"
+          class="form__button form__button--primary"
+          [disabled]="loading()"
+        >
+          {{ loading() ? 'Generating…' : 'Generate' }}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  @if (error(); as err) {
+    <section
+      class="card card--error"
+      role="alert"
+      aria-labelledby="error-heading"
+    >
+      <h2 id="error-heading" class="card__heading">
+        @if (isInfeasible(err)) {
+          Infeasible month
+        } @else {
+          Generation failed
+        }
+      </h2>
+      @if (isInfeasible(err)) {
+        <p class="card__body">
+          The fuel balance can't land in the allowed window for this month. Nothing was written.
+        </p>
+      }
+      <p class="card__detail">{{ err.message }}</p>
+    </section>
+  }
+
+  @if (result(); as r) {
+    <section class="card card--success" aria-labelledby="result-heading">
+      <h2 id="result-heading" class="card__heading">
+        Sheet written: {{ r.sheetName }}
+      </h2>
+
+      <dl class="result">
+        <div class="result__field">
+          <dt>Period</dt>
+          <dd>{{ r.month }}/{{ r.year }}</dd>
+        </div>
+        <div class="result__field">
+          <dt>Rows generated</dt>
+          <dd>{{ r.rowCount }}</dd>
+        </div>
+        <div class="result__field">
+          <dt>Opening balance</dt>
+          <dd>{{ r.openingBalance }} L</dd>
+        </div>
+        <div class="result__field">
+          <dt>Opening source</dt>
+          <dd>{{ openingSourceLabel(r.openingSource) }}</dd>
+        </div>
+        <div class="result__field">
+          <dt>Closing balance</dt>
+          <dd>{{ r.closingBalance }} L</dd>
+        </div>
+        <div class="result__field">
+          <dt>Holidays</dt>
+          <dd>{{ holidaySourceLabel(r.holidaySource) }}</dd>
+        </div>
+      </dl>
+
+      @if (r.warnings.length > 0) {
+        <div class="warnings" role="status">
+          <p class="warnings__heading">Warnings</p>
+          <ul class="warnings__list">
+            @for (w of r.warnings; track w) {
+              <li>{{ w }}</li>
+            }
+          </ul>
+        </div>
+      }
+    </section>
+  }
+</main>
