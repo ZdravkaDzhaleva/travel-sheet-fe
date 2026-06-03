@@ -28,6 +28,8 @@ import {
   HDR_ROUTE,
   LBL_APPROVED,
   LBL_DRIVER,
+  LBL_APPROVED_DEFAULT,
+  LBL_DRIVER_DEFALT,
   LBL_EIK_PREFIX,
   LBL_FUEL,
   LBL_PERIOD_PREFIX,
@@ -197,8 +199,10 @@ export function toSheetCells(
   cells.push({ a1: `E${rowNum}`, value: LBL_SIGNATURE, italic: true });
   rowNum++;
   cells.push({ a1: `A${rowNum}`, value: LBL_DRIVER });
+  cells.push({ a1: `C${rowNum}`, value: LBL_DRIVER_DEFALT });
   rowNum++;
   cells.push({ a1: `A${rowNum}`, value: LBL_APPROVED });
+  cells.push({ a1: `C${rowNum}`, value: LBL_APPROVED_DEFAULT });
 
   return applyCentering(cells, lastTableRow);
 }

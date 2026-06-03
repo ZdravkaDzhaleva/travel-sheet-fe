@@ -66,7 +66,9 @@ export const FUEL_ROW_UNIT_TOTAL  = 'лв общо';
 
 // Signature section
 export const LBL_DRIVER           = 'Водач';
+export const LBL_DRIVER_DEFALT    = 'Десислава Георгиева - управител';
 export const LBL_APPROVED         = 'Одобрил';
+export const LBL_APPROVED_DEFAULT = 'Десислава Георгиева - управител';
 export const LBL_FULL_NAME        = 'име';
 export const LBL_DATE             = 'дата';
 export const LBL_SIGNATURE        = 'подпис';
