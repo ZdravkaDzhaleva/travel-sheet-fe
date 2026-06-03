@@ -136,7 +136,8 @@ export function generate(input: GenerateInput): GeneratedRow[] {
     const desiredKm = remainingKm / remainingDays;
     const maxKmByBalance = (balance * 100) / avg;
     const maxKmToday = Math.min(MAX_KM_PER_DAY, maxKmByBalance);
-    const chosen = pickCandidate(candidates, desiredKm, maxKmToday, locations, weekArchVisits, weekConsVisits);
+    const minKmFloor = Math.max(0, minBurnKm - kmDriven) / remainingDays;
+    const chosen = pickCandidate(candidates, desiredKm, maxKmToday, locations, weekArchVisits, weekConsVisits, minKmFloor);
 
     if (chosen.stopIds.length === 0) {
       rows.push({
@@ -242,6 +243,7 @@ function pickCandidate(
   locations: readonly Location[],
   weekArchVisits: number,
   weekConsVisits: number,
+  minKmFloor: number,
 ): RouteCandidate {
   const feasible = candidates.filter(c => c.km <= maxKm + 1e-9);
 
@@ -264,7 +266,23 @@ function pickCandidate(
   const sorted = [...pool].sort(
     (a, b) => Math.abs(a.km - desiredKm) - Math.abs(b.km - desiredKm),
   );
-  const top = sorted.slice(0, ROUTE_VARIETY_TOP_N);
+
+  // Only allow a zero-trip day once the minimum-burn floor is already satisfied.
+  if (minKmFloor <= 0 && desiredKm <= Math.abs(sorted[0]!.km - desiredKm)) {
+    return ZERO_CANDIDATE;
+  }
+
+  // Budget floor: exclude routes smaller than the per-day minimum needed to
+  // guarantee closing balance ≤ BALANCE_MAX.  Fall back to full pool when
+  // balance constraints prevent any route from meeting the floor.
+  const budgetPool = pool.filter(c => c.km >= minKmFloor - 1e-9);
+  const effectivePool = budgetPool.length > 0 ? budgetPool : pool;
+  const effectiveSorted =
+    effectivePool === pool
+      ? sorted
+      : [...effectivePool].sort((a, b) => Math.abs(a.km - desiredKm) - Math.abs(b.km - desiredKm));
+
+  const top = effectiveSorted.slice(0, ROUTE_VARIETY_TOP_N);
   const weights = top.map(c => 1 / (Math.abs(c.km - desiredKm) + 1));
   const totalWeight = weights.reduce((s, w) => s + w, 0);
   let r = Math.random() * totalWeight;
