@@ -9,4 +9,5 @@ export interface CellModel {
   readonly format?: string;
   readonly bold?: boolean;
   readonly italic?: boolean;
+  readonly align?: 'center' | 'left' | 'right';
 }

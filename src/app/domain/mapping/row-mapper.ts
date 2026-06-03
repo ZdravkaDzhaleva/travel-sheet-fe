@@ -186,6 +186,7 @@ export function toSheetCells(
     value: round2(sumFueled),
     format: FMT_LITERS
   });
+  const lastTableRow = rowNum;
   rowNum++;
 
   // ── Signatures (one blank row separator) ──
@@ -198,9 +199,33 @@ export function toSheetCells(
   cells.push({ a1: `A${rowNum}`, value: LBL_DRIVER });
   rowNum++;
   cells.push({ a1: `A${rowNum}`, value: LBL_APPROVED });
-  rowNum++;
 
-  return cells;
+  return applyCentering(cells, lastTableRow);
+}
+
+const CENTERED_COLS: ReadonlySet<string> = new Set(['A', 'B', 'D', 'E', 'F', 'G', 'H']);
+
+/**
+ * Center-aligns the title cell and every cell in columns A/B/D-H of the data
+ * table (header row through totals row).  Column C (Маршрут / labels) and the
+ * signature section keep their default alignment.
+ */
+function applyCentering(cells: readonly CellModel[], lastTableRow: number): CellModel[] {
+  return cells.map(c => {
+    if (c.a1 === CELL_TITLE) return { ...c, align: 'center' };
+    const m = /^([A-H])(\d+)$/.exec(c.a1);
+    if (!m) return c;
+    const col = m[1];
+    const row = Number(m[2]);
+    if (
+      row >= ROW_COLUMN_HEADERS &&
+      row <= lastTableRow &&
+      CENTERED_COLS.has(col)
+    ) {
+      return { ...c, align: 'center' };
+    }
+    return c;
+  });
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

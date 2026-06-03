@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 
-import { SheetsStore, groupByRow } from './sheets.store';
+import { SheetsStore, groupByRow, buildTextFormatRequests } from './sheets.store';
 import {
   InvoiceNotFoundError,
   InvoiceTabNotFoundError,
@@ -470,6 +470,110 @@ describe('SheetsStore — workbook resolution caching', () => {
     await store.writeSheet([{ a1: 'A1', value: 'y' }], 'м_02');
     // 2 findByName calls per resolution (folder + workbook) — should only happen once.
     expect((drive.findByName as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(2);
+  });
+});
+
+// ── buildTextFormatRequests ─────────────────────────────────────────────────
+
+describe('buildTextFormatRequests', () => {
+  const SHEET_ID = 99;
+
+  function repeatCellOf(req: unknown): {
+    range: { sheetId: number; startRowIndex: number; endRowIndex: number;
+             startColumnIndex: number; endColumnIndex: number };
+    cell: { userEnteredFormat: Record<string, unknown> };
+    fields: string;
+  } {
+    return (req as { repeatCell: ReturnType<typeof repeatCellOf> }).repeatCell;
+  }
+
+  it('skips cells with no bold / italic / align (returns empty array)', () => {
+    const out = buildTextFormatRequests(
+      [
+        { a1: 'A1', value: 'plain' },
+        { a1: 'B2', value: 42, format: '#,##0.00' },
+      ],
+      SHEET_ID,
+    );
+    expect(out).toEqual([]);
+  });
+
+  it('emits bold-only request without horizontalAlignment field', () => {
+    const out = buildTextFormatRequests([{ a1: 'C3', value: 'x', bold: true }], SHEET_ID);
+    expect(out).toHaveLength(1);
+    const r = repeatCellOf(out[0]);
+    expect(r.range).toEqual({
+      sheetId: SHEET_ID,
+      startRowIndex: 2,
+      endRowIndex: 3,
+      startColumnIndex: 2,
+      endColumnIndex: 3,
+    });
+    expect(r.cell.userEnteredFormat).toEqual({
+      textFormat: { bold: true, italic: false },
+    });
+    expect(r.fields).toBe(
+      'userEnteredFormat.textFormat.bold,userEnteredFormat.textFormat.italic',
+    );
+  });
+
+  it('emits italic-only request (bold defaults to false)', () => {
+    const out = buildTextFormatRequests([{ a1: 'D5', value: 'x', italic: true }], SHEET_ID);
+    const r = repeatCellOf(out[0]);
+    expect(r.cell.userEnteredFormat).toEqual({
+      textFormat: { bold: false, italic: true },
+    });
+    expect(r.fields).toBe(
+      'userEnteredFormat.textFormat.bold,userEnteredFormat.textFormat.italic',
+    );
+  });
+
+  it('emits align-only request with horizontalAlignment + matching fields mask, NO textFormat', () => {
+    const out = buildTextFormatRequests([{ a1: 'A12', value: '№', align: 'center' }], SHEET_ID);
+    expect(out).toHaveLength(1);
+    const r = repeatCellOf(out[0]);
+    expect(r.cell.userEnteredFormat).toEqual({ horizontalAlignment: 'CENTER' });
+    expect(r.fields).toBe('userEnteredFormat.horizontalAlignment');
+  });
+
+  it('combines bold + align: textFormat AND horizontalAlignment, both fields in the mask', () => {
+    const out = buildTextFormatRequests(
+      [{ a1: 'H12', value: 'Наличност литри', bold: true, align: 'center' }],
+      SHEET_ID,
+    );
+    const r = repeatCellOf(out[0]);
+    expect(r.cell.userEnteredFormat).toEqual({
+      textFormat: { bold: true, italic: false },
+      horizontalAlignment: 'CENTER',
+    });
+    expect(r.fields).toBe(
+      'userEnteredFormat.textFormat.bold,userEnteredFormat.textFormat.italic,userEnteredFormat.horizontalAlignment',
+    );
+  });
+
+  it('uppercases the align value (left → LEFT, right → RIGHT)', () => {
+    const out = buildTextFormatRequests(
+      [
+        { a1: 'A1', value: 'l', align: 'left' },
+        { a1: 'B1', value: 'r', align: 'right' },
+      ],
+      SHEET_ID,
+    );
+    expect(repeatCellOf(out[0]).cell.userEnteredFormat).toEqual({ horizontalAlignment: 'LEFT' });
+    expect(repeatCellOf(out[1]).cell.userEnteredFormat).toEqual({ horizontalAlignment: 'RIGHT' });
+  });
+
+  it('emits one repeatCell request per formatted cell', () => {
+    const out = buildTextFormatRequests(
+      [
+        { a1: 'A1', value: 'a', bold: true },
+        { a1: 'B2', value: 'b', italic: true },
+        { a1: 'C3', value: 'c', align: 'center' },
+        { a1: 'D4', value: 'd' }, // not formatted — skipped
+      ],
+      SHEET_ID,
+    );
+    expect(out).toHaveLength(3);
   });
 });
 

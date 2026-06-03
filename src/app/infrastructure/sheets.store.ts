@@ -428,14 +428,33 @@ interface GroupedCells {
   readonly maxRow: number;
 }
 
-/** Builds repeatCell batchUpdate requests for cells with bold and/or italic set. */
-function buildTextFormatRequests(cells: readonly CellModel[], sheetId: number): SheetsBatchRequest[] {
+/** Builds repeatCell batchUpdate requests for cells with bold / italic / align set. */
+export function buildTextFormatRequests(cells: readonly CellModel[], sheetId: number): SheetsBatchRequest[] {
   return cells
-    .filter(c => c.bold || c.italic)
+    .filter(c => c.bold || c.italic || c.align)
     .map(c => {
       const m = /^([A-H])(\d+)$/.exec(c.a1)!;
       const col = COL_INDEX.get(m[1])!;
       const row = Number(m[2]);
+
+      const userEnteredFormat: Record<string, unknown> = {};
+      const fields: string[] = [];
+
+      if (c.bold || c.italic) {
+        userEnteredFormat['textFormat'] = {
+          bold: c.bold ?? false,
+          italic: c.italic ?? false,
+        };
+        fields.push(
+          'userEnteredFormat.textFormat.bold',
+          'userEnteredFormat.textFormat.italic',
+        );
+      }
+      if (c.align) {
+        userEnteredFormat['horizontalAlignment'] = c.align.toUpperCase();
+        fields.push('userEnteredFormat.horizontalAlignment');
+      }
+
       return {
         repeatCell: {
           range: {
@@ -445,12 +464,8 @@ function buildTextFormatRequests(cells: readonly CellModel[], sheetId: number): 
             startColumnIndex: col,
             endColumnIndex: col + 1,
           },
-          cell: {
-            userEnteredFormat: {
-              textFormat: { bold: c.bold ?? false, italic: c.italic ?? false },
-            },
-          },
-          fields: 'userEnteredFormat.textFormat.bold,userEnteredFormat.textFormat.italic',
+          cell: { userEnteredFormat },
+          fields: fields.join(','),
         },
       };
     });

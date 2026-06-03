@@ -265,3 +265,82 @@ describe('toSheetCells — number formats', () => {
     expect(byA1(cells, 'F18').format).toBe('#,##0.00'); // total consumed
   });
 });
+
+// ── Horizontal alignment ─────────────────────────────────────────────────────
+
+describe('toSheetCells — horizontal alignment', () => {
+  it('title cell A5 is center-aligned', () => {
+    expect(byA1(cells, 'A5').align).toBe('center');
+  });
+
+  it('column headers A12, B12, D12-H12 are center-aligned', () => {
+    for (const a1 of ['A12', 'B12', 'D12', 'E12', 'F12', 'G12', 'H12']) {
+      expect(byA1(cells, a1).align).toBe('center');
+    }
+  });
+
+  it('column header C12 (Маршрут) is NOT centered', () => {
+    expect(byA1(cells, 'C12').align).toBeUndefined();
+  });
+
+  it('data-row cells in centered columns are centered', () => {
+    expect(byA1(cells, 'A13').align).toBe('center'); // opening line no
+    expect(byA1(cells, 'D13').align).toBe('center'); // opening "х"
+    expect(byA1(cells, 'H13').align).toBe('center'); // opening balance
+    expect(byA1(cells, 'B14').align).toBe('center'); // fuel date
+    expect(byA1(cells, 'G14').align).toBe('center'); // fuel liters
+    expect(byA1(cells, 'H14').align).toBe('center'); // fuel balance
+    expect(byA1(cells, 'D15').align).toBe('center'); // trip km
+    expect(byA1(cells, 'E15').align).toBe('center'); // trip avg
+    expect(byA1(cells, 'F15').align).toBe('center'); // trip consumed
+  });
+
+  it('column C in data rows (route text / labels) is NOT centered', () => {
+    expect(byA1(cells, 'C13').align).toBeUndefined(); // opening label
+    expect(byA1(cells, 'C14').align).toBeUndefined(); // fuel string
+    expect(byA1(cells, 'C15').align).toBeUndefined(); // trip route
+  });
+
+  it('closing balance row: H is centered, C label is not', () => {
+    expect(byA1(cells, 'H17').align).toBe('center');
+    expect(byA1(cells, 'C17').align).toBeUndefined();
+  });
+
+  it('totals row: F and G are centered, C label is not', () => {
+    expect(byA1(cells, 'F18').align).toBe('center');
+    expect(byA1(cells, 'G18').align).toBe('center');
+    expect(byA1(cells, 'C18').align).toBeUndefined();
+  });
+
+  it('company header rows (A1-A3) are NOT centered (above the data table)', () => {
+    expect(byA1(cells, 'A1').align).toBeUndefined();
+    expect(byA1(cells, 'A2').align).toBeUndefined();
+    expect(byA1(cells, 'A3').align).toBeUndefined();
+  });
+
+  it('vehicle / seats rows (row 9-10) are NOT centered', () => {
+    expect(byA1(cells, 'A9').align).toBeUndefined();
+    expect(byA1(cells, 'E9').align).toBeUndefined();
+    expect(byA1(cells, 'A10').align).toBeUndefined();
+    expect(byA1(cells, 'E10').align).toBeUndefined();
+  });
+
+  it('signature section cells are NOT centered (below the totals row)', () => {
+    expect(byA1(cells, 'C21').align).toBeUndefined(); // "име"
+    expect(byA1(cells, 'D21').align).toBeUndefined(); // "дата"
+    expect(byA1(cells, 'E21').align).toBeUndefined(); // "подпис"
+    expect(byA1(cells, 'A22').align).toBeUndefined(); // "Водач"
+    expect(byA1(cells, 'A23').align).toBeUndefined(); // "Одобрил"
+  });
+
+  it('does not mutate other cell fields when applying centering', () => {
+    // The title cell keeps bold + value; header cells keep bold + value.
+    const title = byA1(cells, 'A5');
+    expect(title.bold).toBe(true);
+    expect(title.value).toBe('П Ъ Т Е Н   Л И С Т');
+
+    const headerA12 = byA1(cells, 'A12');
+    expect(headerA12.bold).toBe(true);
+    expect(headerA12.value).toBe('№');
+  });
+});
