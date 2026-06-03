@@ -7,7 +7,7 @@
 export const CELL_COMPANY_NAME    = 'A1';
 export const CELL_COMPANY_EIK     = 'A2';
 export const CELL_COMPANY_ADDRESS = 'A3';
-export const CELL_TITLE           = 'A5';
+export const CELL_TITLE           = 'C5';
 export const CELL_PERIOD          = 'D7';
 
 export const CELL_VEHICLE_LABEL   = 'A9';
@@ -67,6 +67,8 @@ export const FUEL_ROW_UNIT_TOTAL  = 'лв общо';
 // Signature section
 export const LBL_DRIVER           = 'Водач';
 export const LBL_APPROVED         = 'Одобрил';
+export const LBL_FULL_NAME        = 'име';
+export const LBL_DATE             = 'дата';
 export const LBL_SIGNATURE        = 'подпис';
 
 // ── Number formats (Sheets API pattern strings) ────────────────────────────────

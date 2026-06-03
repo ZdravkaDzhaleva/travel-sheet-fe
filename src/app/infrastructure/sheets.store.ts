@@ -188,11 +188,25 @@ export class SheetsStore {
       requests.push({ deleteSheet: { sheetId: existing.properties.sheetId } });
     }
     requests.push({ addSheet: { properties: { title: sheetName } } });
-    await this.sheets.batchUpdate(workbookId, requests);
+    const batchReply = await this.sheets.batchUpdate(workbookId, requests);
+
+    // The addSheet reply is last; extract the numeric sheetId for formatting.
+    const addSheetReplyIdx = existing ? 1 : 0;
+    const addSheetReply = batchReply.replies?.[addSheetReplyIdx] as
+      | { addSheet: { properties: { sheetId: number } } }
+      | undefined;
+    const newSheetId = addSheetReply?.addSheet?.properties?.sheetId;
 
     const grouped = groupByRow(cells);
     const range = `${sheetName}!A1:H${grouped.maxRow}`;
     await this.sheets.valuesUpdate(workbookId, range, grouped.matrix);
+
+    if (newSheetId != null) {
+      const boldRequests = buildTextFormatRequests(cells, newSheetId);
+      if (boldRequests.length > 0) {
+        await this.sheets.batchUpdate(workbookId, boldRequests);
+      }
+    }
   }
 
   /**
@@ -404,6 +418,34 @@ const COL_INDEX = new Map(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((c, i) =>
 interface GroupedCells {
   readonly matrix: readonly (readonly SheetCellValue[])[];
   readonly maxRow: number;
+}
+
+/** Builds repeatCell batchUpdate requests for cells with bold and/or italic set. */
+function buildTextFormatRequests(cells: readonly CellModel[], sheetId: number): SheetsBatchRequest[] {
+  return cells
+    .filter(c => c.bold || c.italic)
+    .map(c => {
+      const m = /^([A-H])(\d+)$/.exec(c.a1)!;
+      const col = COL_INDEX.get(m[1])!;
+      const row = Number(m[2]);
+      return {
+        repeatCell: {
+          range: {
+            sheetId,
+            startRowIndex: row - 1,
+            endRowIndex: row,
+            startColumnIndex: col,
+            endColumnIndex: col + 1,
+          },
+          cell: {
+            userEnteredFormat: {
+              textFormat: { bold: c.bold ?? false, italic: c.italic ?? false },
+            },
+          },
+          fields: 'userEnteredFormat.textFormat.bold,userEnteredFormat.textFormat.italic',
+        },
+      };
+    });
 }
 
 /** Builds a dense A1-rectangle from a sparse CellModel[]. */

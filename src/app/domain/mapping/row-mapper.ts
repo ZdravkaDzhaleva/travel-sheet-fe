@@ -34,6 +34,8 @@ import {
   LBL_REG_NO,
   LBL_SEATS,
   LBL_SIGNATURE,
+  LBL_FULL_NAME,
+  LBL_DATE,
   LBL_TITLE,
   LBL_VEHICLE,
   ROW_CLOSING_LABEL,
@@ -112,33 +114,31 @@ export function toSheetCells(
   let closingBalance = 0;
 
   for (const row of rows) {
-    const bold = row.kind === 'opening' || row.kind === 'fuel';
-    cells.push({ a1: `A${rowNum}`, value: lineNo, bold });
+    cells.push({ a1: `A${rowNum}`, value: lineNo });
 
     if (row.date !== null) {
-      cells.push({ a1: `B${rowNum}`, value: formatDdMmYyyy(row.date), bold });
+      cells.push({ a1: `B${rowNum}`, value: formatDdMmYyyy(row.date) });
     }
 
     if (row.route !== null) {
-      cells.push({ a1: `C${rowNum}`, value: row.route, bold });
+      cells.push({ a1: `C${rowNum}`, value: row.route, bold: row.kind === 'fuel' });
     }
 
-    if (row.kind === 'opening') {
-      cells.push({ a1: `D${rowNum}`, value: ROW_OPENING_KM_MARK, bold });
+    if (row.kind === 'opening' || row.kind === 'fuel') {
+      cells.push({ a1: `D${rowNum}`, value: ROW_OPENING_KM_MARK });
     } else if (row.kind === 'trip' && row.km !== null) {
-      cells.push({ a1: `D${rowNum}`, value: row.km, bold });
+      cells.push({ a1: `D${rowNum}`, value: row.km });
     }
 
     if (row.avgConsumption !== null) {
-      cells.push({ a1: `E${rowNum}`, value: row.avgConsumption, bold });
+      cells.push({ a1: `E${rowNum}`, value: row.avgConsumption });
     }
 
     if (row.consumed !== null) {
       cells.push({
         a1: `F${rowNum}`,
         value: row.consumed,
-        format: FMT_LITERS,
-        bold,
+        format: FMT_LITERS
       });
     }
 
@@ -146,8 +146,7 @@ export function toSheetCells(
       cells.push({
         a1: `G${rowNum}`,
         value: row.fueled,
-        format: FMT_LITERS,
-        bold,
+        format: FMT_LITERS
       });
     }
 
@@ -155,7 +154,7 @@ export function toSheetCells(
       a1: `H${rowNum}`,
       value: row.balance,
       format: FMT_LITERS,
-      bold,
+      bold: row.kind === 'fuel'
     });
 
     if (row.consumed !== null) sumConsumed += row.consumed;
@@ -167,12 +166,11 @@ export function toSheetCells(
   }
 
   // ── Closing balance row ──
-  cells.push({ a1: `C${rowNum}`, value: ROW_CLOSING_LABEL, bold: true });
+  cells.push({ a1: `C${rowNum}`, value: ROW_CLOSING_LABEL });
   cells.push({
     a1: `H${rowNum}`,
     value: closingBalance,
-    format: FMT_LITERS,
-    bold: true,
+    format: FMT_LITERS
   });
   rowNum++;
 
@@ -181,24 +179,26 @@ export function toSheetCells(
   cells.push({
     a1: `F${rowNum}`,
     value: round2(sumConsumed),
-    format: FMT_LITERS,
-    bold: true,
+    format: FMT_LITERS
   });
   cells.push({
     a1: `G${rowNum}`,
     value: round2(sumFueled),
-    format: FMT_LITERS,
-    bold: true,
+    format: FMT_LITERS
   });
   rowNum++;
 
   // ── Signatures (one blank row separator) ──
   rowNum++;
-  cells.push({ a1: `A${rowNum}`, value: LBL_DRIVER });
-  cells.push({ a1: `E${rowNum}`, value: LBL_APPROVED });
   rowNum++;
-  cells.push({ a1: `C${rowNum}`, value: LBL_SIGNATURE });
-  cells.push({ a1: `G${rowNum}`, value: LBL_SIGNATURE });
+  cells.push({ a1: `C${rowNum}`, value: LBL_FULL_NAME, italic: true });
+  cells.push({ a1: `D${rowNum}`, value: LBL_DATE, italic: true });
+  cells.push({ a1: `E${rowNum}`, value: LBL_SIGNATURE, italic: true });
+  rowNum++;
+  cells.push({ a1: `A${rowNum}`, value: LBL_DRIVER });
+  rowNum++;
+  cells.push({ a1: `A${rowNum}`, value: LBL_APPROVED });
+  rowNum++;
 
   return cells;
 }

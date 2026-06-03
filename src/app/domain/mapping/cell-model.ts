@@ -8,4 +8,5 @@ export interface CellModel {
   readonly value: string | number | null;
   readonly format?: string;
   readonly bold?: boolean;
+  readonly italic?: boolean;
 }

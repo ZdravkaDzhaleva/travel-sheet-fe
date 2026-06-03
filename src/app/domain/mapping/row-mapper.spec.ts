@@ -84,7 +84,7 @@ describe('toSheetCells — header region', () => {
   });
 
   it('A5 = title "П Ъ Т Е Н   Л И С Т" (bold)', () => {
-    const c = byA1(cells, 'A5');
+    const c = byA1(cells, 'C5');
     expect(c.value).toBe('П Ъ Т Е Н   Л И С Т');
     expect(c.bold).toBe(true);
   });
@@ -143,14 +143,13 @@ describe('toSheetCells — column headers (row 12)', () => {
 // ── Data rows (from row 13) ──────────────────────────────────────────────────
 
 describe('toSheetCells — opening data row (13)', () => {
-  it('A13 = 1, B13 absent (no date), C13 = "Начално количество", D13 = "х", H13 = 5 — all bold', () => {
+  it('A13 = 1, B13 absent (no date), C13 = "Начално количество", D13 = "х", H13 = 5', () => {
     expect(byA1(cells, 'A13').value).toBe(1);
     expect(maybeA1(cells, 'B13')).toBeUndefined();
     expect(byA1(cells, 'C13').value).toBe('Начално количество');
     expect(byA1(cells, 'D13').value).toBe('х');
     expect(byA1(cells, 'H13').value).toBe(5);
-    expect(byA1(cells, 'C13').bold).toBe(true);
-    expect(byA1(cells, 'H13').bold).toBe(true);
+    expect(byA1(cells, 'C13').bold).toBe(false);
   });
 
   it('E13/F13/G13 are absent for the opening row', () => {
@@ -161,7 +160,7 @@ describe('toSheetCells — opening data row (13)', () => {
 });
 
 describe('toSheetCells — fuel data row (14)', () => {
-  it('A14 = 2; B14 = "10.01.2026"; C14 = byte-exact fuel string; G14 = 40; H14 = 45 — all bold', () => {
+  it('A14 = 2; B14 = "10.01.2026"; C14 = byte-exact fuel string; G14 = 40; H14 = 45 - only C14 and H14 are bold', () => {
     expect(byA1(cells, 'A14').value).toBe(2);
     expect(byA1(cells, 'B14').value).toBe('10.01.2026');
     expect(byA1(cells, 'C14').value).toBe(
@@ -170,12 +169,11 @@ describe('toSheetCells — fuel data row (14)', () => {
     expect(byA1(cells, 'G14').value).toBe(40);
     expect(byA1(cells, 'H14').value).toBe(45);
     expect(byA1(cells, 'C14').bold).toBe(true);
-    expect(byA1(cells, 'G14').bold).toBe(true);
     expect(byA1(cells, 'H14').bold).toBe(true);
+    expect(byA1(cells, 'D14').value).toBe('х');
   });
 
   it('D14/E14/F14 are absent for the fuel row', () => {
-    expect(maybeA1(cells, 'D14')).toBeUndefined();
     expect(maybeA1(cells, 'E14')).toBeUndefined();
     expect(maybeA1(cells, 'F14')).toBeUndefined();
   });
@@ -207,7 +205,6 @@ describe('toSheetCells — zero-trip data row (16)', () => {
     expect(byA1(cells, 'E16').value).toBe(11.5);
     expect(byA1(cells, 'F16').value).toBe(0);
     expect(byA1(cells, 'H16').value).toBe(36.95);
-    expect(byA1(cells, 'F16').bold).toBe(false);
   });
 
   it('G16 is absent (no fuel)', () => {
@@ -219,11 +216,9 @@ describe('toSheetCells — zero-trip data row (16)', () => {
 
 describe('toSheetCells — closing and totals', () => {
   // After 4 data rows starting at 13, closing row is at 17, totals row at 18.
-  it('C17 = "Крайно количество" (bold); H17 = closing balance 36.95 (bold)', () => {
+  it('C17 = "Крайно количество"; H17 = closing balance 36.95', () => {
     expect(byA1(cells, 'C17').value).toBe('Крайно количество');
-    expect(byA1(cells, 'C17').bold).toBe(true);
     expect(byA1(cells, 'H17').value).toBe(36.95);
-    expect(byA1(cells, 'H17').bold).toBe(true);
   });
 
   it('C18 = "Общо количество" (bold); F18 = Σ consumed = 8.05; G18 = Σ fueled = 40', () => {
@@ -231,8 +226,6 @@ describe('toSheetCells — closing and totals', () => {
     expect(byA1(cells, 'C18').bold).toBe(true);
     expect(byA1(cells, 'F18').value).toBe(8.05);
     expect(byA1(cells, 'G18').value).toBe(40);
-    expect(byA1(cells, 'F18').bold).toBe(true);
-    expect(byA1(cells, 'G18').bold).toBe(true);
   });
 });
 
@@ -240,14 +233,15 @@ describe('toSheetCells — closing and totals', () => {
 
 describe('toSheetCells — signatures', () => {
   // One blank row after totals (row 19), then signature label row 20, подпис row 21.
-  it('row 20: A20 = "Водач", E20 = "Одобрил"', () => {
-    expect(byA1(cells, 'A20').value).toBe('Водач');
-    expect(byA1(cells, 'E20').value).toBe('Одобрил');
+  it('footer: A22 = "Водач", A23 = "Одобрил"', () => {
+    expect(byA1(cells, 'A22').value).toBe('Водач');
+    expect(byA1(cells, 'A23').value).toBe('Одобрил');
   });
 
-  it('row 21: C21 = "подпис", G21 = "подпис"', () => {
-    expect(byA1(cells, 'C21').value).toBe('подпис');
-    expect(byA1(cells, 'G21').value).toBe('подпис');
+  it('footer row 21: C21 = "име", D21 = "дата", E21 = "подпис"', () => {
+    expect(byA1(cells, 'C21').value).toBe('име');
+    expect(byA1(cells, 'D21').value).toBe('дата');
+    expect(byA1(cells, 'E21').value).toBe('подпис');
   });
 });
 

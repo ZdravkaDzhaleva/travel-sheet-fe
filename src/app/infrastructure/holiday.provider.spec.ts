@@ -164,16 +164,17 @@ describe('HolidayProvider.getHolidays', () => {
 
   const validBg2026 = [
     { date: '2026-01-01' },
+    { date: '2026-01-02' },
     { date: '2026-03-03' },
     { date: '2026-04-10' },
+    { date: '2026-04-11' },
     { date: '2026-04-12' },
     { date: '2026-04-13' },
     { date: '2026-05-01' },
     { date: '2026-05-06' },
-    { date: '2026-05-24' },
-    { date: '2026-09-06' },
+    { date: '2026-05-25' },
+    { date: '2026-09-07' },
     { date: '2026-09-22' },
-    { date: '2026-11-01' },
     { date: '2026-12-24' },
     { date: '2026-12-25' },
     { date: '2026-12-26' },
@@ -185,7 +186,7 @@ describe('HolidayProvider.getHolidays', () => {
     const out = await provider.getHolidays(2026);
     expect(out.source).toBe('api');
     expect(out.warnings).toEqual([]);
-    expect(out.dates).toHaveLength(14);
+    expect(out.dates).toHaveLength(15);
   });
 
   it('uses the pinned host URL', async () => {
