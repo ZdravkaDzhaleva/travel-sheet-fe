@@ -15,7 +15,9 @@ import {
 import {
   CELL_VEHICLE_PLATE,
   ROW_CLOSING_LABEL,
+  SHEET_MERGES,
   monthSheetName,
+  type MergeRegion,
 } from '../core/config/workbook.template';
 import type {
   Company,
@@ -178,6 +180,7 @@ export class SheetsStore {
   async writeSheet(
     cells: readonly CellModel[],
     sheetName: string,
+    mergeRegions: MergeRegion[] = [...SHEET_MERGES],
   ): Promise<void> {
     const workbookId = await this.resolveWorkbookId();
     const meta = await this.sheets.getSpreadsheet(workbookId);
@@ -202,9 +205,14 @@ export class SheetsStore {
     await this.sheets.valuesUpdate(workbookId, range, grouped.matrix);
 
     if (newSheetId != null) {
-      const boldRequests = buildTextFormatRequests(cells, newSheetId);
-      if (boldRequests.length > 0) {
-        await this.sheets.batchUpdate(workbookId, boldRequests);
+      const textFmtRequests = buildTextFormatRequests(cells, newSheetId);
+      if (textFmtRequests.length > 0) {
+        await this.sheets.batchUpdate(workbookId, textFmtRequests);
+      }
+      if (mergeRegions.length > 0) {
+        mergeRegions.push({ start: `A${grouped.maxRow-1}`, end: `B${grouped.maxRow-1}` }); // Diver
+        mergeRegions.push({ start: `A${grouped.maxRow}`, end: `B${grouped.maxRow}` });     // Approver
+        await this.sheets.batchUpdate(workbookId, buildMergeRequests(mergeRegions, newSheetId));
       }
     }
   }
@@ -446,6 +454,39 @@ function buildTextFormatRequests(cells: readonly CellModel[], sheetId: number): 
         },
       };
     });
+}
+
+const COL_LETTER = new Map('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((c, i) => [c, i]));
+
+function parseA1(a1: string): { col: number; row: number } {
+  const m = /^([A-Z]+)(\d+)$/.exec(a1);
+  if (!m) throw new Error(`Invalid A1 address: ${a1}`);
+  let col = 0;
+  for (const ch of m[1]) col = col * 26 + (COL_LETTER.get(ch)! + 1);
+  return { col: col - 1, row: Number(m[2]) - 1 }; // 0-based
+}
+
+/** Builds mergeCells batchUpdate requests from a list of inclusive A1-corner regions. */
+function buildMergeRequests(
+  mergeRegions: readonly MergeRegion[],
+  sheetId: number,
+): SheetsBatchRequest[] {
+  return mergeRegions.map(r => {
+    const start = parseA1(r.start);
+    const end   = parseA1(r.end);
+    return {
+      mergeCells: {
+        range: {
+          sheetId,
+          startRowIndex:    start.row,
+          endRowIndex:      end.row + 1,
+          startColumnIndex: start.col,
+          endColumnIndex:   end.col + 1,
+        },
+        mergeType: 'MERGE_ALL',
+      },
+    };
+  });
 }
 
 /** Builds a dense A1-rectangle from a sparse CellModel[]. */

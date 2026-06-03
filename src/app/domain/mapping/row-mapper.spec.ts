@@ -84,7 +84,7 @@ describe('toSheetCells — header region', () => {
   });
 
   it('A5 = title "П Ъ Т Е Н   Л И С Т" (bold)', () => {
-    const c = byA1(cells, 'C5');
+    const c = byA1(cells, 'A5');
     expect(c.value).toBe('П Ъ Т Е Н   Л И С Т');
     expect(c.bold).toBe(true);
   });

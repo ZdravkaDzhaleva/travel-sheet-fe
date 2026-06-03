@@ -7,7 +7,7 @@
 export const CELL_COMPANY_NAME    = 'A1';
 export const CELL_COMPANY_EIK     = 'A2';
 export const CELL_COMPANY_ADDRESS = 'A3';
-export const CELL_TITLE           = 'C5';
+export const CELL_TITLE           = 'A5';
 export const CELL_PERIOD          = 'D7';
 
 export const CELL_VEHICLE_LABEL   = 'A9';
@@ -82,3 +82,27 @@ export const FMT_DATE             = 'DD.MM.YYYY';
 // Rows that must be bold: the column-header row, fuel rows, totals rows.
 // The RowMapper applies bold based on row kind, not hard-coded row numbers.
 export const BOLD_ROW_KINDS = ['fuel', 'opening', 'closing', 'total'] as const;
+
+// ── Merge regions ─────────────────────────────────────────────────────────────
+
+/** Inclusive A1-corner rectangle that the Sheets API should merge into one cell. */
+export interface MergeRegion {
+  /** Top-left cell, e.g. "A1". */
+  readonly start: string;
+  /** Bottom-right cell, e.g. "H1". */
+  readonly end: string;
+}
+
+/**
+ * Static merge regions for the monthly travel-sheet layout.
+ * Adjust to match the 2025 reference workbook; addresses follow the A–H scheme above.
+ */
+export const SHEET_MERGES: readonly MergeRegion[] = [
+  { start: 'A1', end: 'H1' },   // Company name
+  { start: 'A2', end: 'H2' },   // EIK
+  { start: 'A3', end: 'H3' },   // Address
+  { start: 'A5', end: 'H5' },   // Title "П Ъ Т Е Н   Л И С Т"
+  { start: 'D7', end: 'H7' },   // Period "За период: …"
+  { start: 'A9', end: 'B9' },   // "Автомобил" label
+  { start: 'A10', end: 'B10' }, // "Брой места:" label
+];
