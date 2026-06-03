@@ -142,3 +142,8 @@ export const COLOR_LIGHT_BLUE_3: SheetColor = {
   green: 226 / 255,
   blue:  243 / 255,
 };
+
+// ── Route column layout ───────────────────────────────────────────────────────
+
+/** Fixed pixel width for the route column (C). Text wraps inside this width. */
+export const ROUTE_COLUMN_WIDTH_PX = 330;

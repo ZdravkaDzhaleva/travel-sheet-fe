@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 
-import { SheetsStore, groupByRow, buildTextFormatRequests, buildBorderRequests } from './sheets.store';
+import {
+  SheetsStore,
+  groupByRow,
+  buildTextFormatRequests,
+  buildBorderRequests,
+  buildRouteColumnLayoutRequests,
+} from './sheets.store';
+import { ROUTE_COLUMN_WIDTH_PX } from '../core/config/workbook.template';
 import {
   InvoiceNotFoundError,
   InvoiceTabNotFoundError,
@@ -691,6 +698,55 @@ describe('buildBorderRequests', () => {
     expect(updateBordersOf(out[0]).range.startRowIndex).toBe(8);
     expect(updateBordersOf(out[1]).range.startRowIndex).toBe(9);
     expect(updateBordersOf(out[2]).range.startRowIndex).toBe(11);
+  });
+});
+
+// ── buildRouteColumnLayoutRequests ──────────────────────────────────────────
+
+describe('buildRouteColumnLayoutRequests', () => {
+  const SHEET_ID = 55;
+
+  it('returns exactly two requests: one updateDimensionProperties, one repeatCell', () => {
+    const out = buildRouteColumnLayoutRequests(SHEET_ID);
+    expect(out).toHaveLength(2);
+    expect(out[0]).toHaveProperty('updateDimensionProperties');
+    expect(out[1]).toHaveProperty('repeatCell');
+  });
+
+  it('updateDimensionProperties targets column C with ROUTE_COLUMN_WIDTH_PX', () => {
+    const req = (buildRouteColumnLayoutRequests(SHEET_ID)[0] as {
+      updateDimensionProperties: {
+        range: { sheetId: number; dimension: string; startIndex: number; endIndex: number };
+        properties: { pixelSize: number };
+        fields: string;
+      };
+    }).updateDimensionProperties;
+    expect(req.range).toEqual({
+      sheetId: SHEET_ID,
+      dimension: 'COLUMNS',
+      startIndex: 2,   // column C, 0-based
+      endIndex:   3,
+    });
+    expect(req.properties.pixelSize).toBe(ROUTE_COLUMN_WIDTH_PX);
+    expect(req.properties.pixelSize).toBe(330);
+    expect(req.fields).toBe('pixelSize');
+  });
+
+  it('repeatCell targets the whole column C with wrapStrategy WRAP', () => {
+    const req = (buildRouteColumnLayoutRequests(SHEET_ID)[1] as {
+      repeatCell: {
+        range: { sheetId: number; startColumnIndex: number; endColumnIndex: number };
+        cell: { userEnteredFormat: { wrapStrategy: string } };
+        fields: string;
+      };
+    }).repeatCell;
+    expect(req.range).toEqual({
+      sheetId: SHEET_ID,
+      startColumnIndex: 2,
+      endColumnIndex:   3,
+    });
+    expect(req.cell.userEnteredFormat.wrapStrategy).toBe('WRAP');
+    expect(req.fields).toBe('userEnteredFormat.wrapStrategy');
   });
 });
 

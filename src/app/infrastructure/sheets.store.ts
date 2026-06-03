@@ -14,6 +14,7 @@ import {
 } from '../core/config/workspace.config';
 import {
   CELL_VEHICLE_PLATE,
+  ROUTE_COLUMN_WIDTH_PX,
   ROW_CLOSING_LABEL,
   SHEET_BORDERS,
   SHEET_MERGES,
@@ -230,6 +231,9 @@ export class SheetsStore {
         { start: `A${approvedRow}`, end: `E${approvedRow}` },
       ];
       await this.sheets.batchUpdate(workbookId, buildBorderRequests(borders, newSheetId));
+
+      // Route column: fixed width + word-wrap for long route / fuel strings.
+      await this.sheets.batchUpdate(workbookId, buildRouteColumnLayoutRequests(newSheetId));
     }
   }
 
@@ -551,6 +555,39 @@ export function buildBorderRequests(
       },
     };
   });
+}
+
+/**
+ * Fixes column C (the route column) to ROUTE_COLUMN_WIDTH_PX and turns on
+ * WRAP so long route / fuel strings break to the next line inside the cell.
+ */
+export function buildRouteColumnLayoutRequests(sheetId: number): SheetsBatchRequest[] {
+  const COL_C_IDX = 2; // 0-based: A=0, B=1, C=2
+  return [
+    {
+      updateDimensionProperties: {
+        range: {
+          sheetId,
+          dimension: 'COLUMNS',
+          startIndex: COL_C_IDX,
+          endIndex:   COL_C_IDX + 1,
+        },
+        properties: { pixelSize: ROUTE_COLUMN_WIDTH_PX },
+        fields: 'pixelSize',
+      },
+    },
+    {
+      repeatCell: {
+        range: {
+          sheetId,
+          startColumnIndex: COL_C_IDX,
+          endColumnIndex:   COL_C_IDX + 1,
+        },
+        cell: { userEnteredFormat: { wrapStrategy: 'WRAP' } },
+        fields: 'userEnteredFormat.wrapStrategy',
+      },
+    },
+  ];
 }
 
 /** Builds a dense A1-rectangle from a sparse CellModel[]. */
