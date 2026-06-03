@@ -6,10 +6,13 @@ import type {
   Vehicle,
 } from '../entities/index';
 import {
+  ARCH_VISITS_PER_WEEK,
   BALANCE_MAX,
   BALANCE_MIN,
+  CONS_VISITS_PER_WEEK,
   MAX_KM_PER_DAY,
   MAX_STOPS_PER_DAY,
+  ROUTE_VARIETY_TOP_N,
 } from '../../core/config/generation.config';
 import {
   FUEL_ROW_PREFIX,
@@ -95,6 +98,9 @@ export function generate(input: GenerateInput): GeneratedRow[] {
 
   let kmDriven = 0;
   let workingDaysProcessed = 0;
+  let currentWeekKey = '';
+  let weekArchVisits = 0;
+  let weekConsVisits = 0;
 
   for (const date of timeline) {
     const key = dateKey(date);
@@ -117,12 +123,20 @@ export function generate(input: GenerateInput): GeneratedRow[] {
 
     if (!workingDaySet.has(key)) continue;
 
+    // Reset weekly visit counters at the start of each ISO week.
+    const wk = isoWeekKey(date);
+    if (wk !== currentWeekKey) {
+      currentWeekKey = wk;
+      weekArchVisits = 0;
+      weekConsVisits = 0;
+    }
+
     const remainingDays = workingDays.length - workingDaysProcessed;
     const remainingKm = Math.max(0, targetTotalKm - kmDriven);
     const desiredKm = remainingKm / remainingDays;
     const maxKmByBalance = (balance * 100) / avg;
     const maxKmToday = Math.min(MAX_KM_PER_DAY, maxKmByBalance);
-    const chosen = pickCandidate(candidates, desiredKm, maxKmToday);
+    const chosen = pickCandidate(candidates, desiredKm, maxKmToday, locations, weekArchVisits, weekConsVisits);
 
     if (chosen.stopIds.length === 0) {
       rows.push({
@@ -163,6 +177,8 @@ export function generate(input: GenerateInput): GeneratedRow[] {
           fueled: null,
           balance: trip.balance,
         });
+        if (chosen.stopIds.some(id => locationTypeOf(locations, id) === 'Architect')) weekArchVisits++;
+        if (chosen.stopIds.some(id => locationTypeOf(locations, id) === 'Constructor')) weekConsVisits++;
       }
     }
     workingDaysProcessed++;
@@ -223,18 +239,40 @@ function pickCandidate(
   candidates: readonly RouteCandidate[],
   desiredKm: number,
   maxKm: number,
+  locations: readonly Location[],
+  weekArchVisits: number,
+  weekConsVisits: number,
 ): RouteCandidate {
-  let best: RouteCandidate = ZERO_CANDIDATE;
-  let bestDist = Math.abs(0 - desiredKm);
-  for (const c of candidates) {
-    if (c.km > maxKm + 1e-9) continue;
-    const d = Math.abs(c.km - desiredKm);
-    if (d < bestDist) {
-      best = c;
-      bestDist = d;
-    }
+  const feasible = candidates.filter(c => c.km <= maxKm + 1e-9);
+
+  // Prefer candidates that respect weekly Architect / Constructor quotas.
+  const preferred = feasible.filter(c => {
+    const hasArch = c.stopIds.some(id => locationTypeOf(locations, id) === 'Architect');
+    const hasCons = c.stopIds.some(id => locationTypeOf(locations, id) === 'Constructor');
+    if (hasArch && weekArchVisits >= ARCH_VISITS_PER_WEEK) return false;
+    if (hasCons && weekConsVisits >= CONS_VISITS_PER_WEEK) return false;
+    return true;
+  });
+
+  // Fall back to full feasible pool only when quotas would block everything.
+  const pool = preferred.length > 0 ? preferred : feasible;
+  if (pool.length === 0) return ZERO_CANDIDATE;
+
+  // Sort by closeness to desiredKm; weight-random among the top N so closer
+  // candidates are strongly preferred (weight = 1/(dist+1)) — this adds route
+  // variety without letting the month-end balance drift outside [0, 8].
+  const sorted = [...pool].sort(
+    (a, b) => Math.abs(a.km - desiredKm) - Math.abs(b.km - desiredKm),
+  );
+  const top = sorted.slice(0, ROUTE_VARIETY_TOP_N);
+  const weights = top.map(c => 1 / (Math.abs(c.km - desiredKm) + 1));
+  const totalWeight = weights.reduce((s, w) => s + w, 0);
+  let r = Math.random() * totalWeight;
+  for (let i = 0; i < top.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return top[i]!;
   }
-  return best;
+  return top[top.length - 1]!;
 }
 
 function findLocation(locations: readonly Location[], id: number): Location {
@@ -243,6 +281,19 @@ function findLocation(locations: readonly Location[], id: number): Location {
     throw new InfeasibleMonthError(`Location id ${id} not found`);
   }
   return loc;
+}
+
+function locationTypeOf(locations: readonly Location[], id: number): string {
+  return locations.find(l => l.Id === id)?.Type ?? '';
+}
+
+/** ISO week key "YYYY-Www" — Thursday of the week determines the year. */
+function isoWeekKey(d: Date): string {
+  const thu = new Date(d);
+  thu.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  const yearStart = new Date(thu.getFullYear(), 0, 1);
+  const week = Math.ceil(((thu.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+  return `${thu.getFullYear()}-W${String(week).padStart(2, '0')}`;
 }
 
 function groupFuelByDate(
