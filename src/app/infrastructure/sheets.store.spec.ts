@@ -575,6 +575,54 @@ describe('buildTextFormatRequests', () => {
     );
     expect(out).toHaveLength(3);
   });
+
+  it('emits bgColor-only request with backgroundColor + matching fields mask, NO textFormat', () => {
+    const out = buildTextFormatRequests(
+      [{ a1: 'A12', value: '№', bgColor: { red: 0.5, green: 0.6, blue: 0.7 } }],
+      SHEET_ID,
+    );
+    expect(out).toHaveLength(1);
+    const r = repeatCellOf(out[0]);
+    expect(r.cell.userEnteredFormat).toEqual({
+      backgroundColor: { red: 0.5, green: 0.6, blue: 0.7 },
+    });
+    expect(r.fields).toBe('userEnteredFormat.backgroundColor');
+  });
+
+  it('combines bold + bgColor: textFormat AND backgroundColor in cell + fields mask', () => {
+    const out = buildTextFormatRequests(
+      [{ a1: 'A12', value: '№', bold: true, bgColor: { red: 0.1, green: 0.2, blue: 0.3 } }],
+      SHEET_ID,
+    );
+    const r = repeatCellOf(out[0]);
+    expect(r.cell.userEnteredFormat).toEqual({
+      textFormat: { bold: true, italic: false },
+      backgroundColor: { red: 0.1, green: 0.2, blue: 0.3 },
+    });
+    expect(r.fields).toBe(
+      'userEnteredFormat.textFormat.bold,userEnteredFormat.textFormat.italic,userEnteredFormat.backgroundColor',
+    );
+  });
+
+  it('combines all four: bold + align + bgColor produces single request with all field-mask entries', () => {
+    const out = buildTextFormatRequests(
+      [{
+        a1: 'A12', value: '№',
+        bold: true, align: 'center',
+        bgColor: { red: 0.8, green: 0.9, blue: 1 },
+      }],
+      SHEET_ID,
+    );
+    const r = repeatCellOf(out[0]);
+    expect(r.cell.userEnteredFormat).toEqual({
+      textFormat: { bold: true, italic: false },
+      horizontalAlignment: 'CENTER',
+      backgroundColor: { red: 0.8, green: 0.9, blue: 1 },
+    });
+    expect(r.fields).toBe(
+      'userEnteredFormat.textFormat.bold,userEnteredFormat.textFormat.italic,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor',
+    );
+  });
 });
 
 // ── buildBorderRequests ─────────────────────────────────────────────────────

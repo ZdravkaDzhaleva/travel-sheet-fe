@@ -126,3 +126,19 @@ export const SHEET_BORDERS: readonly BorderRegion[] = [
   { start: 'A9',  end: 'E9'  }, // vehicle row
   { start: 'A10', end: 'E10' }, // seats / fuel row
 ];
+
+// ── Fill colors ───────────────────────────────────────────────────────────────
+
+/** Google Sheets RGB color (each channel 0..1, no alpha). */
+export interface SheetColor {
+  readonly red: number;
+  readonly green: number;
+  readonly blue: number;
+}
+
+/** Google Sheets default palette: "Light blue 3" = #cfe2f3. */
+export const COLOR_LIGHT_BLUE_3: SheetColor = {
+  red:   207 / 255,
+  green: 226 / 255,
+  blue:  243 / 255,
+};

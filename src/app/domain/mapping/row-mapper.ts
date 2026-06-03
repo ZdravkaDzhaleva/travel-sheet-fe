@@ -17,6 +17,7 @@ import {
   CELL_VEHICLE_MODEL,
   CELL_VEHICLE_PLATE,
   CELL_VEHICLE_REG_LBL,
+  COLOR_LIGHT_BLUE_3,
   FMT_LITERS,
   HDR_AVG_CONSUMPTION,
   HDR_BALANCE,
@@ -105,6 +106,7 @@ export function toSheetCells(
       a1: `${DATA_COLS[i]}${ROW_COLUMN_HEADERS}`,
       value: headers[i],
       bold: true,
+      bgColor: COLOR_LIGHT_BLUE_3,
     });
   }
 

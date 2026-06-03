@@ -444,10 +444,10 @@ interface GroupedCells {
   readonly maxRow: number;
 }
 
-/** Builds repeatCell batchUpdate requests for cells with bold / italic / align set. */
+/** Builds repeatCell batchUpdate requests for cells with bold / italic / align / bgColor set. */
 export function buildTextFormatRequests(cells: readonly CellModel[], sheetId: number): SheetsBatchRequest[] {
   return cells
-    .filter(c => c.bold || c.italic || c.align)
+    .filter(c => c.bold || c.italic || c.align || c.bgColor)
     .map(c => {
       const m = /^([A-H])(\d+)$/.exec(c.a1)!;
       const col = COL_INDEX.get(m[1])!;
@@ -469,6 +469,10 @@ export function buildTextFormatRequests(cells: readonly CellModel[], sheetId: nu
       if (c.align) {
         userEnteredFormat['horizontalAlignment'] = c.align.toUpperCase();
         fields.push('userEnteredFormat.horizontalAlignment');
+      }
+      if (c.bgColor) {
+        userEnteredFormat['backgroundColor'] = c.bgColor;
+        fields.push('userEnteredFormat.backgroundColor');
       }
 
       return {

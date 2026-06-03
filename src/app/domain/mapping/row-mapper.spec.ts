@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { toSheetCells, type Period } from './row-mapper';
 import type { CellModel } from './cell-model';
+import { COLOR_LIGHT_BLUE_3 } from '../../core/config/workbook.template';
 import { makeCompany, makeVehicle } from '../../../test-fixtures/index';
 import type { GeneratedRow } from '../entities/index';
 
@@ -342,5 +343,30 @@ describe('toSheetCells — horizontal alignment', () => {
     const headerA12 = byA1(cells, 'A12');
     expect(headerA12.bold).toBe(true);
     expect(headerA12.value).toBe('№');
+  });
+});
+
+// ── Header fill color ────────────────────────────────────────────────────────
+
+describe('toSheetCells — column header fill color', () => {
+  it('every column header A12-H12 carries the Light Blue 3 fill', () => {
+    for (const a1 of ['A12', 'B12', 'C12', 'D12', 'E12', 'F12', 'G12', 'H12']) {
+      expect(byA1(cells, a1).bgColor).toEqual(COLOR_LIGHT_BLUE_3);
+    }
+  });
+
+  it('header cells keep their existing bold and value', () => {
+    const c = byA1(cells, 'A12');
+    expect(c.bold).toBe(true);
+    expect(c.value).toBe('№');
+  });
+
+  it('non-header cells (title, data rows, signature) do NOT carry bgColor', () => {
+    expect(byA1(cells, 'A5').bgColor).toBeUndefined();   // title
+    expect(byA1(cells, 'A1').bgColor).toBeUndefined();   // company name
+    expect(byA1(cells, 'A13').bgColor).toBeUndefined();  // opening row line no
+    expect(byA1(cells, 'H13').bgColor).toBeUndefined();  // opening balance
+    expect(byA1(cells, 'C18').bgColor).toBeUndefined();  // totals label
+    expect(byA1(cells, 'A22').bgColor).toBeUndefined();  // "Водач"
   });
 });
