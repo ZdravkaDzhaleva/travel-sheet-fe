@@ -212,9 +212,10 @@ export function toSheetCells(
 const CENTERED_COLS: ReadonlySet<string> = new Set(['A', 'B', 'D', 'E', 'F', 'G', 'H']);
 
 /**
- * Center-aligns the title cell and every cell in columns A/B/D-H of the data
- * table (header row through totals row).  Column C (Маршрут / labels) and the
- * signature section keep their default alignment.
+ * Applies horizontal centering to the title cell and columns A/B/D-H of the
+ * data table, and middle vertical alignment to all A-H cells in the table
+ * region (header row through totals row).  Column C keeps its default
+ * horizontal alignment but is still vertically centred.
  */
 function applyCentering(cells: readonly CellModel[], lastTableRow: number): CellModel[] {
   return cells.map(c => {
@@ -223,14 +224,10 @@ function applyCentering(cells: readonly CellModel[], lastTableRow: number): Cell
     if (!m) return c;
     const col = m[1];
     const row = Number(m[2]);
-    if (
-      row >= ROW_COLUMN_HEADERS &&
-      row <= lastTableRow &&
-      CENTERED_COLS.has(col)
-    ) {
-      return { ...c, align: 'center' };
-    }
-    return c;
+    if (row < ROW_COLUMN_HEADERS || row > lastTableRow) return c;
+    return CENTERED_COLS.has(col)
+      ? { ...c, align: 'center' as const, verticalAlign: 'middle' as const }
+      : { ...c, verticalAlign: 'middle' as const };
   });
 }
 

@@ -448,10 +448,10 @@ interface GroupedCells {
   readonly maxRow: number;
 }
 
-/** Builds repeatCell batchUpdate requests for cells with bold / italic / align / bgColor set. */
+/** Builds repeatCell batchUpdate requests for cells with bold / italic / align / verticalAlign / bgColor set. */
 export function buildTextFormatRequests(cells: readonly CellModel[], sheetId: number): SheetsBatchRequest[] {
   return cells
-    .filter(c => c.bold || c.italic || c.align || c.bgColor)
+    .filter(c => c.bold || c.italic || c.align || c.verticalAlign || c.bgColor)
     .map(c => {
       const m = /^([A-H])(\d+)$/.exec(c.a1)!;
       const col = COL_INDEX.get(m[1])!;
@@ -473,6 +473,10 @@ export function buildTextFormatRequests(cells: readonly CellModel[], sheetId: nu
       if (c.align) {
         userEnteredFormat['horizontalAlignment'] = c.align.toUpperCase();
         fields.push('userEnteredFormat.horizontalAlignment');
+      }
+      if (c.verticalAlign) {
+        userEnteredFormat['verticalAlignment'] = c.verticalAlign.toUpperCase();
+        fields.push('userEnteredFormat.verticalAlignment');
       }
       if (c.bgColor) {
         userEnteredFormat['backgroundColor'] = c.bgColor;

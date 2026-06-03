@@ -346,6 +346,66 @@ describe('toSheetCells — horizontal alignment', () => {
   });
 });
 
+// ── Vertical alignment ───────────────────────────────────────────────────────
+
+describe('toSheetCells — vertical alignment', () => {
+  it('all column headers A12-H12 are middle-aligned vertically', () => {
+    for (const a1 of ['A12', 'B12', 'C12', 'D12', 'E12', 'F12', 'G12', 'H12']) {
+      expect(byA1(cells, a1).verticalAlign).toBe('middle');
+    }
+  });
+
+  it('data-row cells in all columns are middle-aligned vertically', () => {
+    expect(byA1(cells, 'A13').verticalAlign).toBe('middle'); // opening line no
+    expect(byA1(cells, 'D13').verticalAlign).toBe('middle'); // opening "х"
+    expect(byA1(cells, 'H13').verticalAlign).toBe('middle'); // opening balance
+    expect(byA1(cells, 'B14').verticalAlign).toBe('middle'); // fuel date
+    expect(byA1(cells, 'H14').verticalAlign).toBe('middle'); // fuel balance
+    expect(byA1(cells, 'D15').verticalAlign).toBe('middle'); // trip km
+    expect(byA1(cells, 'F15').verticalAlign).toBe('middle'); // trip consumed
+  });
+
+  it('column C (route / labels) is also middle-aligned vertically', () => {
+    expect(byA1(cells, 'C12').verticalAlign).toBe('middle'); // header
+    expect(byA1(cells, 'C13').verticalAlign).toBe('middle'); // opening label
+    expect(byA1(cells, 'C14').verticalAlign).toBe('middle'); // fuel string
+    expect(byA1(cells, 'C15').verticalAlign).toBe('middle'); // trip route
+  });
+
+  it('closing balance row H17 is middle-aligned vertically', () => {
+    expect(byA1(cells, 'H17').verticalAlign).toBe('middle');
+  });
+
+  it('totals row cells are middle-aligned vertically', () => {
+    expect(byA1(cells, 'F18').verticalAlign).toBe('middle');
+    expect(byA1(cells, 'G18').verticalAlign).toBe('middle');
+  });
+
+  it('cells above the table (company header, title, vehicle rows) are NOT vertically aligned', () => {
+    expect(byA1(cells, 'A1').verticalAlign).toBeUndefined();  // company name
+    expect(byA1(cells, 'A5').verticalAlign).toBeUndefined();  // title
+    expect(byA1(cells, 'A9').verticalAlign).toBeUndefined();  // vehicle label
+    expect(byA1(cells, 'A10').verticalAlign).toBeUndefined(); // seats label
+  });
+
+  it('signature section cells are NOT vertically aligned', () => {
+    expect(byA1(cells, 'C21').verticalAlign).toBeUndefined();
+    expect(byA1(cells, 'A22').verticalAlign).toBeUndefined();
+    expect(byA1(cells, 'A23').verticalAlign).toBeUndefined();
+  });
+
+  it('does not mutate other cell fields when applying vertical alignment', () => {
+    const hdr = byA1(cells, 'A12');
+    expect(hdr.bold).toBe(true);
+    expect(hdr.value).toBe('№');
+    expect(hdr.align).toBe('center');
+
+    const route = byA1(cells, 'C15');
+    expect(route.align).toBeUndefined();
+    expect(route.verticalAlign).toBe('middle');
+  });
+});
+
 // ── Header fill color ────────────────────────────────────────────────────────
 
 describe('toSheetCells — column header fill color', () => {

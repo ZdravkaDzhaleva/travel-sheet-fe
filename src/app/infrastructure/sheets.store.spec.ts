@@ -630,6 +630,65 @@ describe('buildTextFormatRequests', () => {
       'userEnteredFormat.textFormat.bold,userEnteredFormat.textFormat.italic,userEnteredFormat.horizontalAlignment,userEnteredFormat.backgroundColor',
     );
   });
+
+  it('emits verticalAlign-only request with verticalAlignment + matching fields mask, NO textFormat', () => {
+    const out = buildTextFormatRequests(
+      [{ a1: 'C13', value: 'Маршрут', verticalAlign: 'middle' }],
+      SHEET_ID,
+    );
+    expect(out).toHaveLength(1);
+    const r = repeatCellOf(out[0]);
+    expect(r.cell.userEnteredFormat).toEqual({ verticalAlignment: 'MIDDLE' });
+    expect(r.fields).toBe('userEnteredFormat.verticalAlignment');
+  });
+
+  it('uppercases verticalAlign (top → TOP, bottom → BOTTOM)', () => {
+    const out = buildTextFormatRequests(
+      [
+        { a1: 'A1', value: 't', verticalAlign: 'top' },
+        { a1: 'B1', value: 'b', verticalAlign: 'bottom' },
+      ],
+      SHEET_ID,
+    );
+    expect(repeatCellOf(out[0]).cell.userEnteredFormat).toEqual({ verticalAlignment: 'TOP' });
+    expect(repeatCellOf(out[1]).cell.userEnteredFormat).toEqual({ verticalAlignment: 'BOTTOM' });
+  });
+
+  it('combines align + verticalAlign: both alignment fields appear in cell and field mask', () => {
+    const out = buildTextFormatRequests(
+      [{ a1: 'A12', value: '№', align: 'center', verticalAlign: 'middle' }],
+      SHEET_ID,
+    );
+    const r = repeatCellOf(out[0]);
+    expect(r.cell.userEnteredFormat).toEqual({
+      horizontalAlignment: 'CENTER',
+      verticalAlignment: 'MIDDLE',
+    });
+    expect(r.fields).toBe(
+      'userEnteredFormat.horizontalAlignment,userEnteredFormat.verticalAlignment',
+    );
+  });
+
+  it('combines bold + align + verticalAlign + bgColor: all five fields in the mask', () => {
+    const out = buildTextFormatRequests(
+      [{
+        a1: 'A12', value: '№',
+        bold: true, align: 'center', verticalAlign: 'middle',
+        bgColor: { red: 0.8, green: 0.9, blue: 1 },
+      }],
+      SHEET_ID,
+    );
+    const r = repeatCellOf(out[0]);
+    expect(r.cell.userEnteredFormat).toEqual({
+      textFormat: { bold: true, italic: false },
+      horizontalAlignment: 'CENTER',
+      verticalAlignment: 'MIDDLE',
+      backgroundColor: { red: 0.8, green: 0.9, blue: 1 },
+    });
+    expect(r.fields).toBe(
+      'userEnteredFormat.textFormat.bold,userEnteredFormat.textFormat.italic,userEnteredFormat.horizontalAlignment,userEnteredFormat.verticalAlignment,userEnteredFormat.backgroundColor',
+    );
+  });
 });
 
 // ── buildBorderRequests ─────────────────────────────────────────────────────

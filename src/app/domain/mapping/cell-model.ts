@@ -10,5 +10,6 @@ export interface CellModel {
   readonly bold?: boolean;
   readonly italic?: boolean;
   readonly align?: 'center' | 'left' | 'right';
+  readonly verticalAlign?: 'top' | 'middle' | 'bottom';
   readonly bgColor?: { readonly red: number; readonly green: number; readonly blue: number };
 }
