@@ -15,8 +15,10 @@ import {
 import {
   CELL_VEHICLE_PLATE,
   ROW_CLOSING_LABEL,
+  SHEET_BORDERS,
   SHEET_MERGES,
   monthSheetName,
+  type BorderRegion,
   type MergeRegion,
 } from '../core/config/workbook.template';
 import type {
@@ -214,6 +216,20 @@ export class SheetsStore {
         mergeRegions.push({ start: `A${grouped.maxRow}`, end: `B${grouped.maxRow}` });     // Approver
         await this.sheets.batchUpdate(workbookId, buildMergeRequests(mergeRegions, newSheetId));
       }
+
+      // Borders: static rows (A9:E9, A10:E10) + dynamic table + signature rows.
+      // The signature section is always the last 5 rows (blank, blank, italic
+      // labels, driver, approved) → totalsRow = maxRow - 5.
+      const totalsRow   = grouped.maxRow - 5;
+      const driverRow   = grouped.maxRow - 1;
+      const approvedRow = grouped.maxRow;
+      const borders: BorderRegion[] = [
+        ...SHEET_BORDERS,
+        { start: 'A12',             end: `H${totalsRow}`   },
+        { start: `A${driverRow}`,   end: `E${driverRow}`   },
+        { start: `A${approvedRow}`, end: `E${approvedRow}` },
+      ];
+      await this.sheets.batchUpdate(workbookId, buildBorderRequests(borders, newSheetId));
     }
   }
 
@@ -499,6 +515,35 @@ function buildMergeRequests(
           endColumnIndex:   end.col + 1,
         },
         mergeType: 'MERGE_ALL',
+      },
+    };
+  });
+}
+
+/** Builds updateBorders batchUpdate requests that apply "all borders" to each region. */
+export function buildBorderRequests(
+  regions: readonly BorderRegion[],
+  sheetId: number,
+): SheetsBatchRequest[] {
+  const SOLID = { style: 'SOLID' };
+  return regions.map(r => {
+    const start = parseA1(r.start);
+    const end   = parseA1(r.end);
+    return {
+      updateBorders: {
+        range: {
+          sheetId,
+          startRowIndex:    start.row,
+          endRowIndex:      end.row + 1,
+          startColumnIndex: start.col,
+          endColumnIndex:   end.col + 1,
+        },
+        top:             SOLID,
+        bottom:          SOLID,
+        left:            SOLID,
+        right:           SOLID,
+        innerHorizontal: SOLID,
+        innerVertical:   SOLID,
       },
     };
   });

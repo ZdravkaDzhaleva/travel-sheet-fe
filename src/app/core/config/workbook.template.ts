@@ -108,3 +108,21 @@ export const SHEET_MERGES: readonly MergeRegion[] = [
   { start: 'A9', end: 'B9' },   // "Автомобил" label
   { start: 'A10', end: 'B10' }, // "Брой места:" label
 ];
+
+// ── Border regions ────────────────────────────────────────────────────────────
+
+/** Inclusive A1-corner rectangle for "all borders" formatting. */
+export interface BorderRegion {
+  readonly start: string;
+  readonly end: string;
+}
+
+/**
+ * Static "all borders" regions for the monthly travel-sheet layout.
+ * Dynamic ranges (data table + signature rows) are appended in writeSheet
+ * because they depend on the row count.
+ */
+export const SHEET_BORDERS: readonly BorderRegion[] = [
+  { start: 'A9',  end: 'E9'  }, // vehicle row
+  { start: 'A10', end: 'E10' }, // seats / fuel row
+];

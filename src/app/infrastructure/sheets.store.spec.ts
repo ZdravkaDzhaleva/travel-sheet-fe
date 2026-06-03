@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 
-import { SheetsStore, groupByRow, buildTextFormatRequests } from './sheets.store';
+import { SheetsStore, groupByRow, buildTextFormatRequests, buildBorderRequests } from './sheets.store';
 import {
   InvoiceNotFoundError,
   InvoiceTabNotFoundError,
@@ -574,6 +574,75 @@ describe('buildTextFormatRequests', () => {
       SHEET_ID,
     );
     expect(out).toHaveLength(3);
+  });
+});
+
+// ── buildBorderRequests ─────────────────────────────────────────────────────
+
+describe('buildBorderRequests', () => {
+  const SHEET_ID = 77;
+  const SOLID = { style: 'SOLID' };
+
+  function updateBordersOf(req: unknown): {
+    range: { sheetId: number; startRowIndex: number; endRowIndex: number;
+             startColumnIndex: number; endColumnIndex: number };
+    top: unknown; bottom: unknown; left: unknown; right: unknown;
+    innerHorizontal: unknown; innerVertical: unknown;
+  } {
+    return (req as { updateBorders: ReturnType<typeof updateBordersOf> }).updateBorders;
+  }
+
+  it('returns empty array for empty input', () => {
+    expect(buildBorderRequests([], SHEET_ID)).toEqual([]);
+  });
+
+  it('emits one updateBorders request per region with all six sides set to SOLID', () => {
+    const out = buildBorderRequests([{ start: 'A9', end: 'E9' }], SHEET_ID);
+    expect(out).toHaveLength(1);
+    const r = updateBordersOf(out[0]);
+    expect(r.top).toEqual(SOLID);
+    expect(r.bottom).toEqual(SOLID);
+    expect(r.left).toEqual(SOLID);
+    expect(r.right).toEqual(SOLID);
+    expect(r.innerHorizontal).toEqual(SOLID);
+    expect(r.innerVertical).toEqual(SOLID);
+  });
+
+  it('converts inclusive A1 corners to 0-based exclusive indices', () => {
+    const out = buildBorderRequests([{ start: 'A1', end: 'B2' }], SHEET_ID);
+    expect(updateBordersOf(out[0]).range).toEqual({
+      sheetId: SHEET_ID,
+      startRowIndex: 0,
+      endRowIndex: 2,
+      startColumnIndex: 0,
+      endColumnIndex: 2,
+    });
+  });
+
+  it('parses multi-row data-table range A12:H20 correctly', () => {
+    const out = buildBorderRequests([{ start: 'A12', end: 'H20' }], SHEET_ID);
+    expect(updateBordersOf(out[0]).range).toEqual({
+      sheetId: SHEET_ID,
+      startRowIndex: 11,
+      endRowIndex: 20,
+      startColumnIndex: 0,
+      endColumnIndex: 8,
+    });
+  });
+
+  it('emits one request per input region (order preserved)', () => {
+    const out = buildBorderRequests(
+      [
+        { start: 'A9',  end: 'E9'  },
+        { start: 'A10', end: 'E10' },
+        { start: 'A12', end: 'H18' },
+      ],
+      SHEET_ID,
+    );
+    expect(out).toHaveLength(3);
+    expect(updateBordersOf(out[0]).range.startRowIndex).toBe(8);
+    expect(updateBordersOf(out[1]).range.startRowIndex).toBe(9);
+    expect(updateBordersOf(out[2]).range.startRowIndex).toBe(11);
   });
 });
 
