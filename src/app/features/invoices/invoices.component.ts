@@ -47,6 +47,7 @@ export class InvoicesComponent implements OnInit {
   protected formData: InvoiceFormState = emptyForm();
   protected file: File | null = null;
   protected readonly editingId = signal<number | null>(null);
+  protected readonly formOpen = signal(false);
   protected readonly localError = signal<string | null>(null);
 
   ngOnInit(): void {
@@ -61,6 +62,18 @@ export class InvoicesComponent implements OnInit {
     this.file = input.files?.[0] ?? null;
   }
 
+  protected openAddForm(): void {
+    this.editingId.set(null);
+    this.formData = emptyForm();
+    this.file = null;
+    this.localError.set(null);
+    this.formOpen.set(true);
+  }
+
+  protected openEditForm(invoice: Invoice): void {
+    this.startEdit(invoice);
+  }
+
   protected startEdit(invoice: Invoice): void {
     this.editingId.set(invoice.Id);
     this.formData = {
@@ -73,6 +86,7 @@ export class InvoicesComponent implements OnInit {
     };
     this.file = null;
     this.localError.set(null);
+    this.formOpen.set(true);
   }
 
   protected cancelEdit(): void {
@@ -80,6 +94,7 @@ export class InvoicesComponent implements OnInit {
     this.formData = emptyForm();
     this.file = null;
     this.localError.set(null);
+    this.formOpen.set(false);
   }
 
   protected async submit(): Promise<void> {
@@ -126,7 +141,7 @@ export class InvoicesComponent implements OnInit {
           TotalAmount: total,
           Currency: this.formData.currency.trim(),
         });
-        this.cancelEdit();
+        this.cancelEdit(); // also closes form
       } catch {
         // Error already exposed via invoiceService.error signal; keep form open.
       }
@@ -154,6 +169,7 @@ export class InvoicesComponent implements OnInit {
       });
       this.formData = emptyForm();
       this.file = null;
+      this.formOpen.set(false);
     } catch {
       // Error surfaced via invoiceService.error; keep form filled so the user can retry.
     }

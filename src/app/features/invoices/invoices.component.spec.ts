@@ -90,7 +90,9 @@ function render(master: MasterStubs, inv: InvoiceStubs): ComponentFixture<Invoic
 
 function instance(fixture: ComponentFixture<InvoicesComponent>): {
   submit(): Promise<void>;
+  openAddForm(): void;
   startEdit(invoice: Invoice): void;
+  openEditForm(invoice: Invoice): void;
   cancelEdit(): void;
   deleteInvoice(invoice: Invoice): Promise<void>;
   formData: {
@@ -103,6 +105,7 @@ function instance(fixture: ComponentFixture<InvoicesComponent>): {
   };
   file: File | null;
   editingId: () => number | null;
+  formOpen: () => boolean;
   localError: () => string | null;
 } {
   return fixture.componentInstance as unknown as ReturnType<typeof instance>;
@@ -141,6 +144,38 @@ describe('InvoicesComponent', () => {
     expect(text).toContain('EUR');
   });
 
+  it('renders icon edit/delete buttons with aria-labels', () => {
+    const master = makeMasterStubs();
+    const inv = makeInvoiceStubs(makeInvoices());
+    const fixture = render(master, inv);
+    const el = fixture.nativeElement as HTMLElement;
+    const editBtns = el.querySelectorAll<HTMLButtonElement>('.icon-btn:not(.icon-btn--danger)');
+    const deleteBtns = el.querySelectorAll<HTMLButtonElement>('.icon-btn--danger');
+    expect(editBtns.length).toBe(makeInvoices().length);
+    expect(deleteBtns.length).toBe(makeInvoices().length);
+    expect(editBtns[0].getAttribute('aria-label')).toContain('Edit');
+    expect(deleteBtns[0].getAttribute('aria-label')).toContain('Delete');
+  });
+
+  it('shows "Add invoice" button in the page header', () => {
+    const master = makeMasterStubs();
+    const inv = makeInvoiceStubs();
+    const fixture = render(master, inv);
+    const el = fixture.nativeElement as HTMLElement;
+    const addBtn = Array.from(el.querySelectorAll('button')).find(b => b.textContent?.includes('Add invoice'));
+    expect(addBtn).toBeTruthy();
+  });
+
+  it('form is hidden by default and shown after openAddForm()', () => {
+    const master = makeMasterStubs();
+    const inv = makeInvoiceStubs();
+    const fixture = render(master, inv);
+    const cmp = instance(fixture);
+    expect(cmp.formOpen()).toBe(false);
+    cmp.openAddForm();
+    expect(cmp.formOpen()).toBe(true);
+  });
+
   it('upload submit calls InvoiceService.upload with parsed local Date and company/vehicle defaults', async () => {
     const master = makeMasterStubs();
     const inv = makeInvoiceStubs();
@@ -175,8 +210,7 @@ describe('InvoicesComponent', () => {
     expect(arg.companyId).toBe(makeCompany().Id);
     expect(arg.vehicleId).toBe(makeVehicle().Id);
     expect(arg.reportingYear).toBe(makeCompany().ReportingYear);
-    expect(arg.fuelVendor).toBe('OMV'); // trimmed
-    // Local-date check (no UTC roll-back per §4a).
+    expect(arg.fuelVendor).toBe('OMV');
     expect(arg.invoiceDate.getFullYear()).toBe(2026);
     expect(arg.invoiceDate.getMonth()).toBe(1);
     expect(arg.invoiceDate.getDate()).toBe(14);
@@ -226,7 +260,7 @@ describe('InvoicesComponent', () => {
     expect(cmp.localError()).toContain('date');
   });
 
-  it('startEdit pre-fills the form from the selected invoice and enters edit mode', () => {
+  it('startEdit pre-fills the form and opens form', () => {
     const master = makeMasterStubs();
     const inv = makeInvoiceStubs(makeInvoices());
     const fixture = render(master, inv);
@@ -234,12 +268,13 @@ describe('InvoicesComponent', () => {
     const target = makeInvoices()[0];
     cmp.startEdit(target);
     expect(cmp.editingId()).toBe(target.Id);
+    expect(cmp.formOpen()).toBe(true);
     expect(cmp.formData.fuelVendor).toBe(target.FuelVendor);
     expect(cmp.formData.invoiceDate).toBe('2026-01-10');
     expect(cmp.formData.quantityLiters).toBe(target.QuantityLiters);
   });
 
-  it('edit submit calls InvoiceService.update with the merged Invoice and exits edit mode', async () => {
+  it('edit submit calls InvoiceService.update with the merged Invoice and closes form', async () => {
     const master = makeMasterStubs();
     const inv = makeInvoiceStubs(makeInvoices());
     const fixture = render(master, inv);
@@ -255,11 +290,12 @@ describe('InvoicesComponent', () => {
     expect(arg.Id).toBe(makeInvoices()[0].Id);
     expect(arg.FuelVendor).toBe('Shell');
     expect(arg.QuantityLiters).toBe(99);
-    expect(arg.DriveFileId).toBe(makeInvoices()[0].DriveFileId); // preserved
+    expect(arg.DriveFileId).toBe(makeInvoices()[0].DriveFileId);
     expect(cmp.editingId()).toBeNull();
+    expect(cmp.formOpen()).toBe(false);
   });
 
-  it('deleteInvoice confirms before calling InvoiceService.delete, and skips when cancelled', async () => {
+  it('deleteInvoice confirms via window.confirm before calling InvoiceService.delete', async () => {
     const master = makeMasterStubs();
     const inv = makeInvoiceStubs(makeInvoices());
     const fixture = render(master, inv);
@@ -277,7 +313,7 @@ describe('InvoicesComponent', () => {
     confirmSpy.mockRestore();
   });
 
-  it('shows a master-data load error in place of the form when master data fails', () => {
+  it('shows a master-data load error and no form controls when master data fails', () => {
     const master = makeMasterStubs({ company: null, vehicle: null });
     master.error.set(new Error('master boom'));
     const inv = makeInvoiceStubs();
@@ -285,6 +321,7 @@ describe('InvoicesComponent', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Could not load master data');
     expect(text).toContain('master boom');
-    expect(text).not.toContain('Upload invoice');
+    // Neither the add button nor the list is rendered in the error state
+    expect(text).not.toContain('Add invoice');
   });
 });
