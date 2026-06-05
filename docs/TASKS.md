@@ -207,7 +207,8 @@ Run `firebase init hosting` to create `firebase.json` and `.firebaserc` (public 
 - **Done when:** `firebase deploy` publishes the app and the hosted URL runs the full sign-in → generate flow.
 - `firebase.json` (public=`dist/travel-sheet-app/browser`, SPA rewrite, cache headers) + `.firebaserc` (project `latituderealize-travel-sheet`) + `npm run deploy` script (`ng build --configuration production && firebase deploy --only hosting`); production `environment.ts` filled with real Firebase config; deployed to https://latituderealize-travel-sheet.web.app. **Manual step required:** add `latituderealize-travel-sheet.web.app` to Firebase Auth → Authorized domains and to Google Cloud Console → OAuth client → Allowed JavaScript origins.
 
-### [ ] T6.4 — README
+### [x] T6.4 — README
 Document the required Drive setup (exact folder/sheet/workbook names from `workspace.config`), env/secret setup, and how to run/test/deploy.
 - **Deps:** T6.3
 - **Done when:** a fresh reader can set up Drive and run the app from the README alone.
+- Rewrote README with Drive setup (folder/sheet/workbook names + tab schemas), Firebase/OAuth config steps, authorized-domain checklist, and all commands. Updated `npm start` to `ng serve --port 5000`.
