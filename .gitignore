@@ -50,3 +50,9 @@ Thumbs.db
 *.env.local
 service-account-key*.json
 client_secret*.json
+
+# Firebase
+.firebase/
+*-debug.log
+firebase-debug.log
+firestore-debug.log
