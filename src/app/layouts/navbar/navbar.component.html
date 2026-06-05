@@ -1,6 +1,8 @@
 <header class="nav" [class.nav--open]="menuOpen()" role="banner">
   <div class="nav__inner">
-    <a class="nav__brand" routerLink="/invoices" aria-label="Home">Пътен лист</a>
+    <a class="nav__brand" routerLink="/invoices" aria-label="Home">
+      <img src="/icons/logo-travel-sheet.png" alt="Logo" width="100" />
+    </a>
 
     <div class="nav__menu" id="main-nav">
       <nav class="nav__links" aria-label="Main navigation">
@@ -10,21 +12,21 @@
           routerLinkActive="nav__link--active"
           [routerLinkActiveOptions]="{ exact: true }"
           (click)="closeMenu()"
-        >Invoices</a>
+        >INVOICES</a>
         <a
           class="nav__link"
           routerLink="/generate"
           routerLinkActive="nav__link--active"
           [routerLinkActiveOptions]="{ exact: true }"
           (click)="closeMenu()"
-        >Generate</a>
+        >GENERATE</a>
         <a
           class="nav__link"
           routerLink="/company-info"
           routerLinkActive="nav__link--active"
           [routerLinkActiveOptions]="{ exact: true }"
           (click)="closeMenu()"
-        >Company info</a>
+        >COMPANY INFO</a>
       </nav>
 
       <button

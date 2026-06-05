@@ -29,25 +29,25 @@ describe('NavbarComponent', () => {
   it('renders a nav link to Invoices', () => {
     const { el } = render();
     const links = Array.from(el.querySelectorAll('a.nav__link'));
-    expect(links.some(a => a.textContent?.trim() === 'Invoices')).toBe(true);
+    expect(links.some(a => a.textContent?.trim() === 'INVOICES')).toBe(true);
   });
 
   it('renders a nav link to Generate', () => {
     const { el } = render();
     const links = Array.from(el.querySelectorAll('a.nav__link'));
-    expect(links.some(a => a.textContent?.trim() === 'Generate')).toBe(true);
+    expect(links.some(a => a.textContent?.trim() === 'GENERATE')).toBe(true);
   });
 
   it('renders a nav link to Company info', () => {
     const { el } = render();
     const links = Array.from(el.querySelectorAll('a.nav__link'));
-    expect(links.some(a => a.textContent?.trim() === 'Company info')).toBe(true);
+    expect(links.some(a => a.textContent?.trim() === 'COMPANY INFO')).toBe(true);
   });
 
   it('Invoices is the first nav link', () => {
     const { el } = render();
     const links = Array.from(el.querySelectorAll('a.nav__link'));
-    expect(links[0]?.textContent?.trim()).toBe('Invoices');
+    expect(links[0]?.textContent?.trim()).toBe('INVOICES');
   });
 
   it('renders a router-outlet for child content', () => {
