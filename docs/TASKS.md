@@ -201,10 +201,11 @@ Generate a full sample month against a real test workspace; eyeball the sheet ag
 - **Done when:** a generated sheet looks correct and passes all invariants manually.
 - Dry run successful with minor planned improvements - UI (error handling, create/edit invoice, invoice list), store formulas in generated sheet, etc.
 
-### [ ] T6.3 — Hosting deploy
+### [x] T6.3 — Hosting deploy
 Run `firebase init hosting` to create `firebase.json` and `.firebaserc` (public dir = the Angular build output, SPA rewrite to `index.html`). Add the production build + deploy step. Ensure the deployed domain is added to Firebase Auth **authorized domains** and to the Google OAuth client's allowed origins, or sign-in will fail in production.
 - **Deps:** T6.2
 - **Done when:** `firebase deploy` publishes the app and the hosted URL runs the full sign-in → generate flow.
+- `firebase.json` (public=`dist/travel-sheet-app/browser`, SPA rewrite, cache headers) + `.firebaserc` (project `latituderealize-travel-sheet`) + `npm run deploy` script (`ng build --configuration production && firebase deploy --only hosting`); production `environment.ts` filled with real Firebase config; deployed to https://latituderealize-travel-sheet.web.app. **Manual step required:** add `latituderealize-travel-sheet.web.app` to Firebase Auth → Authorized domains and to Google Cloud Console → OAuth client → Allowed JavaScript origins.
 
 ### [ ] T6.4 — README
 Document the required Drive setup (exact folder/sheet/workbook names from `workspace.config`), env/secret setup, and how to run/test/deploy.
