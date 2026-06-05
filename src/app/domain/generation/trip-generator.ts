@@ -12,7 +12,6 @@ import {
   CONS_VISITS_PER_WEEK,
   MAX_KM_PER_DAY,
   MAX_STOPS_PER_DAY,
-  ROUTE_VARIETY_TOP_N,
 } from '../../core/config/generation.config';
 import {
   FUEL_ROW_PREFIX,
@@ -33,6 +32,11 @@ export interface GenerateInput {
   readonly routeLegs: readonly RouteLeg[];
   readonly vehicle: Vehicle;
   readonly openingBalance: number;
+  /**
+   * Upper bound on the closing balance of the trailing segment. Computed by
+   * the application layer from month M+1's first-fuel date.
+   */
+  readonly trailingTmax?: number;
 }
 
 interface RouteCandidate {
@@ -40,7 +44,18 @@ interface RouteCandidate {
   readonly km: number;
 }
 
+interface Segment {
+  readonly workingDays: readonly Date[];
+  readonly Tmin: number;
+  readonly Tmax: number; // POSITIVE_INFINITY for the trailing segment
+  readonly nextFuel: FuelEvent | null;
+}
+
 const ZERO_CANDIDATE: RouteCandidate = { stopIds: [], km: 0 };
+
+// Wide spread keeps weights flat across the feasible range, so the picker
+// produces visibly varied km day-to-day instead of clustering on one value.
+const DIVERSITY_SPREAD_KM = 20;
 
 export function generate(input: GenerateInput): GeneratedRow[] {
   const {
@@ -50,6 +65,7 @@ export function generate(input: GenerateInput): GeneratedRow[] {
     routeLegs,
     vehicle,
     openingBalance,
+    trailingTmax,
   } = input;
   const avg = vehicle.AverageConsumptionLitersPer100Km;
 
@@ -58,29 +74,19 @@ export function generate(input: GenerateInput): GeneratedRow[] {
     throw new InfeasibleMonthError('No Office location supplied');
   }
 
-  const sumFuelLiters = fuelEvents.reduce((s, fe) => s + fe.liters, 0);
-  const totalIn = openingBalance + sumFuelLiters;
-  const capacityKm = workingDays.length * MAX_KM_PER_DAY;
-  const minBurnLiters = Math.max(0, totalIn - BALANCE_MAX);
-  const minBurnKm = (minBurnLiters * 100) / avg;
-  if (minBurnKm > capacityKm + 1e-9) {
-    throw new InfeasibleMonthError(
-      `Over-fueled month: must burn at least ${minBurnKm.toFixed(2)} km of driving, ` +
-        `but ${workingDays.length} working days × ${MAX_KM_PER_DAY} km/day = ${capacityKm} km`,
-    );
-  }
-
   const destinations = locations.filter(l => l.Type !== 'Office');
   const candidates = enumerateRoutes(office.Id, destinations, routeLegs);
 
-  // Aim closing balance at the midpoint of the allowed window.
-  const targetClosing = (BALANCE_MIN + BALANCE_MAX) / 2;
-  const idealTotalKm = Math.max(0, ((totalIn - targetClosing) * 100) / avg);
-  const targetTotalKm = Math.min(idealTotalKm, capacityKm);
+  const sortedFuels = [...fuelEvents].sort(
+    (a, b) => a.date.getTime() - b.date.getTime(),
+  );
+  const segments = buildSegments(workingDays, sortedFuels, trailingTmax);
+
+  checkFeasibility(segments, openingBalance, avg);
 
   const workingDaySet = new Set(workingDays.map(dateKey));
-  const fuelByDate = groupFuelByDate(fuelEvents);
-  const timeline = buildTimeline(workingDays, fuelEvents);
+  const fuelByDate = groupFuelByDate(sortedFuels);
+  const timeline = buildTimeline(workingDays, sortedFuels);
 
   const rows: GeneratedRow[] = [];
   let balance = round2(openingBalance);
@@ -96,8 +102,8 @@ export function generate(input: GenerateInput): GeneratedRow[] {
     balance,
   });
 
-  let kmDriven = 0;
-  let workingDaysProcessed = 0;
+  let segIdx = 0;
+  let daysRemainingInSegment = segments[segIdx]!.workingDays.length;
   let currentWeekKey = '';
   let weekArchVisits = 0;
   let weekConsVisits = 0;
@@ -106,6 +112,7 @@ export function generate(input: GenerateInput): GeneratedRow[] {
     const key = dateKey(date);
 
     // Fuel rows first (same-day order: fuel → trip).
+    // Each fuel event ends the current segment and starts the next.
     const todayFuel = fuelByDate.get(key) ?? [];
     for (const fe of todayFuel) {
       balance = applyFuel(balance, fe.liters);
@@ -119,6 +126,8 @@ export function generate(input: GenerateInput): GeneratedRow[] {
         fueled: round2(fe.liters),
         balance,
       });
+      segIdx++;
+      daysRemainingInSegment = segments[segIdx]!.workingDays.length;
     }
 
     if (!workingDaySet.has(key)) continue;
@@ -131,13 +140,35 @@ export function generate(input: GenerateInput): GeneratedRow[] {
       weekConsVisits = 0;
     }
 
-    const remainingDays = workingDays.length - workingDaysProcessed;
-    const remainingKm = Math.max(0, targetTotalKm - kmDriven);
-    const desiredKm = remainingKm / remainingDays;
-    const maxKmByBalance = (balance * 100) / avg;
-    const maxKmToday = Math.min(MAX_KM_PER_DAY, maxKmByBalance);
-    const minKmFloor = Math.max(0, minBurnKm - kmDriven) / remainingDays;
-    const chosen = pickCandidate(candidates, desiredKm, maxKmToday, locations, weekArchVisits, weekConsVisits, minKmFloor);
+    const seg = segments[segIdx]!;
+    const R = daysRemainingInSegment - 1; // working days left AFTER today
+    const { xMin, xMax } = feasibleRange(
+      balance,
+      R,
+      seg.Tmin,
+      seg.Tmax,
+      avg,
+      MAX_KM_PER_DAY,
+    );
+
+    // Soft per-day target — bias only; the picker is free within the range.
+    const softTarget = Number.isFinite(seg.Tmax)
+      ? (seg.Tmin + seg.Tmax) / 2
+      : null;
+    const desiredKm =
+      softTarget !== null
+        ? Math.max(0, ((balance - softTarget) * 100) / avg) / (R + 1)
+        : (xMin + xMax) / 2;
+
+    const chosen = pickCandidate(
+      candidates,
+      xMin,
+      xMax,
+      desiredKm,
+      locations,
+      weekArchVisits,
+      weekConsVisits,
+    );
 
     if (chosen.stopIds.length === 0) {
       rows.push({
@@ -153,7 +184,7 @@ export function generate(input: GenerateInput): GeneratedRow[] {
     } else {
       const trip = applyTrip(balance, chosen.km, avg);
       if (trip.wentNegative) {
-        // Picker already caps at balance, so this branch is a defensive net.
+        // Defensive — picker caps by balance, but tolerate float drift.
         rows.push({
           kind: 'zero',
           date,
@@ -166,7 +197,6 @@ export function generate(input: GenerateInput): GeneratedRow[] {
         });
       } else {
         balance = trip.balance;
-        kmDriven += chosen.km;
         const stopLocs = chosen.stopIds.map(id => findLocation(locations, id));
         rows.push({
           kind: 'trip',
@@ -182,16 +212,150 @@ export function generate(input: GenerateInput): GeneratedRow[] {
         if (chosen.stopIds.some(id => locationTypeOf(locations, id) === 'Constructor')) weekConsVisits++;
       }
     }
-    workingDaysProcessed++;
-  }
-
-  if (balance < BALANCE_MIN - 1e-9 || balance > BALANCE_MAX + 1e-9) {
-    throw new InfeasibleMonthError(
-      `Closing balance ${balance} not in [${BALANCE_MIN}, ${BALANCE_MAX}] after generation`,
-    );
+    daysRemainingInSegment--;
   }
 
   return rows;
+}
+
+// ── Segment construction & feasibility ──────────────────────────────────────
+
+function buildSegments(
+  workingDays: readonly Date[],
+  sortedFuels: readonly FuelEvent[],
+  trailingTmax: number | undefined,
+): Segment[] {
+  const segs: Segment[] = [];
+  const sortedDays = [...workingDays].sort(
+    (a, b) => a.getTime() - b.getTime(),
+  );
+  let cursor = 0;
+
+  for (const fe of sortedFuels) {
+    const cutoff = fe.date.getTime();
+    const segDays: Date[] = [];
+    while (cursor < sortedDays.length && sortedDays[cursor]!.getTime() < cutoff) {
+      segDays.push(sortedDays[cursor]!);
+      cursor++;
+    }
+    segs.push({
+      workingDays: segDays,
+      Tmin: BALANCE_MIN,
+      Tmax: BALANCE_MAX,
+      nextFuel: fe,
+    });
+  }
+
+  segs.push({
+    workingDays: sortedDays.slice(cursor),
+    Tmin: BALANCE_MIN,
+    Tmax: trailingTmax ?? Number.POSITIVE_INFINITY,
+    nextFuel: null,
+  });
+  return segs;
+}
+
+function checkFeasibility(
+  segments: readonly Segment[],
+  openingBalance: number,
+  avg: number,
+): void {
+  let balance = openingBalance;
+  for (const seg of segments) {
+    const N = seg.workingDays.length;
+    const burnCapacity = (N * MAX_KM_PER_DAY * avg) / 100;
+
+    if (Number.isFinite(seg.Tmax)) {
+      const endMin = Math.max(0, balance - burnCapacity);
+      if (endMin > seg.Tmax + 1e-9) {
+        if (seg.nextFuel !== null) {
+          const dateStr = isoDate(seg.nextFuel.date);
+          throw new InfeasibleMonthError(
+            `Fuel ${seg.nextFuel.liters.toFixed(2)} L on ${dateStr} arrives too soon: ` +
+              `prior segment has only ${N} working day(s) × ${MAX_KM_PER_DAY} km/day ` +
+              `(max burn ${burnCapacity.toFixed(2)} L), but the balance is ` +
+              `${balance.toFixed(2)} L and must drop to ≤ ${seg.Tmax} L before refueling.`,
+          );
+        }
+        throw new InfeasibleMonthError(
+          `Next month's first fuel cannot be absorbed: only ${N} working day(s) ` +
+            `in this month after the last refuel × ${MAX_KM_PER_DAY} km/day ` +
+            `(max burn ${burnCapacity.toFixed(2)} L), but the balance is ` +
+            `${balance.toFixed(2)} L and must drop to ≤ ${seg.Tmax.toFixed(2)} L ` +
+            `to leave room for next month's first refuel.`,
+        );
+      }
+      // Optimistic chaining — algorithm can end at endMin, leaving max room downstream.
+      balance = endMin + (seg.nextFuel?.liters ?? 0);
+    }
+    // Trailing segment with infinite Tmax: nothing to fail.
+  }
+}
+
+// ── Per-day feasible range & candidate picker ───────────────────────────────
+
+function feasibleRange(
+  balance: number,
+  R: number,
+  Tmin: number,
+  Tmax: number,
+  avg: number,
+  M: number,
+): { xMin: number; xMax: number } {
+  const xMaxBalance = (balance * 100) / avg;
+  const xMaxToHonorTmin = ((balance - Tmin) * 100) / avg;
+  const xMax = Math.max(0, Math.min(M, xMaxBalance, xMaxToHonorTmin));
+
+  let xMin = 0;
+  if (Number.isFinite(Tmax)) {
+    // Floor: even if every remaining day drives max, today must burn enough so
+    // end-of-segment balance can still come down to ≤ Tmax.
+    const remainingBurn = (R * M * avg) / 100;
+    const required = ((balance - Tmax - remainingBurn) * 100) / avg;
+    xMin = Math.max(0, required);
+  }
+  return { xMin, xMax };
+}
+
+function pickCandidate(
+  candidates: readonly RouteCandidate[],
+  xMin: number,
+  xMax: number,
+  desiredKm: number,
+  locations: readonly Location[],
+  weekArchVisits: number,
+  weekConsVisits: number,
+): RouteCandidate {
+  const inRange = candidates.filter(
+    c => c.km >= xMin - 1e-9 && c.km <= xMax + 1e-9,
+  );
+
+  const respectQuotas = inRange.filter(c => {
+    const hasArch = c.stopIds.some(id => locationTypeOf(locations, id) === 'Architect');
+    const hasCons = c.stopIds.some(id => locationTypeOf(locations, id) === 'Constructor');
+    if (hasArch && weekArchVisits >= ARCH_VISITS_PER_WEEK) return false;
+    if (hasCons && weekConsVisits >= CONS_VISITS_PER_WEEK) return false;
+    return true;
+  });
+  const pool = respectQuotas.length > 0 ? respectQuotas : inRange;
+
+  // Zero-trip is emitted only when no route fits the day's feasible km window
+  // (typically because balance is too low for even the shortest route). A
+  // short route is always preferred over a voluntary zero.
+  if (pool.length === 0) return ZERO_CANDIDATE;
+
+  // Weight candidates by closeness to desiredKm with a wide spread, so the
+  // weights stay flat across the range and the picker produces varied km.
+  const weights = pool.map(
+    c => 1 / (Math.abs(c.km - desiredKm) / DIVERSITY_SPREAD_KM + 1),
+  );
+  const totalWeight = weights.reduce((s, w) => s + w, 0);
+  let r = Math.random() * totalWeight;
+  for (let i = 0; i < pool.length; i++) {
+    r -= weights[i]!;
+    if (r <= 0) return pool[i]!;
+  }
+  return pool[pool.length - 1]!;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -234,63 +398,6 @@ function enumerateRoutes(
     }
   }
   return out;
-}
-
-function pickCandidate(
-  candidates: readonly RouteCandidate[],
-  desiredKm: number,
-  maxKm: number,
-  locations: readonly Location[],
-  weekArchVisits: number,
-  weekConsVisits: number,
-  minKmFloor: number,
-): RouteCandidate {
-  const feasible = candidates.filter(c => c.km <= maxKm + 1e-9);
-
-  // Prefer candidates that respect weekly Architect / Constructor quotas.
-  const preferred = feasible.filter(c => {
-    const hasArch = c.stopIds.some(id => locationTypeOf(locations, id) === 'Architect');
-    const hasCons = c.stopIds.some(id => locationTypeOf(locations, id) === 'Constructor');
-    if (hasArch && weekArchVisits >= ARCH_VISITS_PER_WEEK) return false;
-    if (hasCons && weekConsVisits >= CONS_VISITS_PER_WEEK) return false;
-    return true;
-  });
-
-  // Fall back to full feasible pool only when quotas would block everything.
-  const pool = preferred.length > 0 ? preferred : feasible;
-  if (pool.length === 0) return ZERO_CANDIDATE;
-
-  // Sort by closeness to desiredKm; weight-random among the top N so closer
-  // candidates are strongly preferred (weight = 1/(dist+1)) — this adds route
-  // variety without letting the month-end balance drift outside [0, 8].
-  const sorted = [...pool].sort(
-    (a, b) => Math.abs(a.km - desiredKm) - Math.abs(b.km - desiredKm),
-  );
-
-  // Only allow a zero-trip day once the minimum-burn floor is already satisfied.
-  if (minKmFloor <= 0 && desiredKm <= Math.abs(sorted[0]!.km - desiredKm)) {
-    return ZERO_CANDIDATE;
-  }
-
-  // Budget floor: exclude routes smaller than the per-day minimum needed to
-  // guarantee closing balance ≤ BALANCE_MAX.  Fall back to full pool when
-  // balance constraints prevent any route from meeting the floor.
-  const budgetPool = pool.filter(c => c.km >= minKmFloor - 1e-9);
-  const effectivePool = budgetPool.length > 0 ? budgetPool : pool;
-  const effectiveSorted =
-    effectivePool === pool
-      ? sorted
-      : [...effectivePool].sort((a, b) => Math.abs(a.km - desiredKm) - Math.abs(b.km - desiredKm));
-
-  const top = effectiveSorted.slice(0, ROUTE_VARIETY_TOP_N);
-  const weights = top.map(c => 1 / (Math.abs(c.km - desiredKm) + 1));
-  const totalWeight = weights.reduce((s, w) => s + w, 0);
-  let r = Math.random() * totalWeight;
-  for (let i = 0; i < top.length; i++) {
-    r -= weights[i];
-    if (r <= 0) return top[i]!;
-  }
-  return top[top.length - 1]!;
 }
 
 function findLocation(locations: readonly Location[], id: number): Location {
@@ -355,6 +462,13 @@ function dateKey(d: Date): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
+function isoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 /** Trip route string: "<office> - <stop1> - … - <stopN> - <office>". */
 export function formatTripRoute(
   office: Location,
@@ -376,3 +490,4 @@ export function formatFuelRow(fe: FuelEvent): string {
 }
 
 export { InfeasibleMonthError } from './infeasible-month.error';
+export { InsufficientDataError } from './insufficient-data.error';

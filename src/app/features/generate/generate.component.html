@@ -55,13 +55,19 @@
       aria-labelledby="error-heading"
     >
       <h2 id="error-heading" class="card__heading">
-        @if (isInfeasible(err)) {
+        @if (isInsufficientData(err)) {
+          Not enough data
+        } @else if (isInfeasible(err)) {
           Infeasible month
         } @else {
           Generation failed
         }
       </h2>
-      @if (isInfeasible(err)) {
+      @if (isInsufficientData(err)) {
+        <p class="card__body">
+          Upload the first invoice of the next month before generating this one.
+        </p>
+      } @else if (isInfeasible(err)) {
         <p class="card__body">
           The fuel balance can't land in the allowed window for this month. Nothing was written.
         </p>

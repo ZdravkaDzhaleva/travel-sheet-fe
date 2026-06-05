@@ -5,7 +5,10 @@ import { GenerateMonthService } from './generate-month.service';
 import { CalendarService, type WorkingDaysResult } from './calendar.service';
 import { MasterDataService } from './master-data.service';
 import { SheetsStore } from '../infrastructure/sheets.store';
-import { InfeasibleMonthError } from '../domain/generation/trip-generator';
+import {
+  InfeasibleMonthError,
+  InsufficientDataError,
+} from '../domain/generation/trip-generator';
 import {
   makeCompany,
   makeVehicle,
@@ -46,6 +49,27 @@ interface StubOpts {
   readonly calendarResult?: WorkingDaysResult;
 }
 
+// Default invoice set covers the months exercised by the spec — Jan, Feb,
+// Mar, Apr 2026 — so the next-month look-ahead check in
+// GenerateMonthService finds an invoice regardless of which month a test
+// generates. Tests that override `invoices` must include next-month entries
+// themselves or expect InsufficientDataError.
+function defaultInvoicesWithLookAhead(): Invoice[] {
+  const template = makeInvoices()[0]!;
+  const stamp = (id: number, date: Date, liters: number): Invoice => ({
+    ...template,
+    Id: id,
+    InvoiceDate: date,
+    QuantityLiters: liters,
+  });
+  return [
+    ...makeInvoices(), // Jan 10 (40 L) and Jan 25 (45 L) for vehicle 1
+    stamp(101, new Date(2026, 1, 5), 40),   // Feb 5, 2026
+    stamp(102, new Date(2026, 2, 5), 40),   // Mar 5, 2026
+    stamp(103, new Date(2026, 3, 5), 40),   // Apr 5, 2026
+  ];
+}
+
 function makeStubs(opts: StubOpts = {}): Stubs {
   const company = opts.company !== undefined ? opts.company : makeCompany();
   const vehicle = opts.vehicle !== undefined ? opts.vehicle : makeVehicle();
@@ -63,16 +87,17 @@ function makeStubs(opts: StubOpts = {}): Stubs {
     load,
   } as unknown as MasterDataService;
 
-  const calendarResult: WorkingDaysResult =
-    opts.calendarResult ?? {
-      workingDays: workingDaysInMonth(2026, 1, make2026HolidayDates()),
-      source: 'api',
-      warnings: [],
-    };
-  const workingDaysFor = vi.fn(async () => calendarResult);
+  const workingDaysFor = vi.fn(async (y: number, m: number) => {
+    if (opts.calendarResult !== undefined) return opts.calendarResult;
+    return {
+      workingDays: workingDaysInMonth(y, m, make2026HolidayDates()),
+      source: 'api' as const,
+      warnings: [] as readonly string[],
+    } satisfies WorkingDaysResult;
+  });
   const calendar = { workingDaysFor } as unknown as CalendarService;
 
-  const loadInvoices = vi.fn(async () => opts.invoices ?? makeInvoices());
+  const loadInvoices = vi.fn(async () => opts.invoices ?? defaultInvoicesWithLookAhead());
   const readPriorClosing = vi.fn(async () => opts.priorClosing ?? null);
   const writeSheet = vi.fn(async () => undefined);
   const sheets = {
@@ -117,8 +142,9 @@ describe('GenerateMonthService — happy path', () => {
     expect(result.sheetName).toBe('м_01');
     expect(result.openingBalance).toBe(5);
     expect(result.openingSource).toBe('vehicleConfig');
+    // Month-end closing is unconstrained on the upper side — it rolls forward
+    // as next month's opening. Only the pre-fuel-event balances must sit in [0, 8].
     expect(result.closingBalance).toBeGreaterThanOrEqual(0);
-    expect(result.closingBalance).toBeLessThanOrEqual(8);
     expect(result.holidaySource).toBe('api');
     expect(svc.loading()).toBe(false);
     expect(svc.error()).toBeNull();
@@ -173,18 +199,19 @@ describe('GenerateMonthService — invoice filtering', () => {
       invoices: [
         // In-scope: Jan 2026, vehicle 1
         { ...makeInvoices()[0] },
+        // Out-of-scope for current month, in-scope for look-ahead (Feb 5).
+        { ...makeInvoices()[0], Id: 11, InvoiceDate: new Date(2026, 1, 5) },
         // Out-of-scope: different vehicle
         { ...makeInvoices()[0], Id: 10, VehicleId: 999 },
-        // Out-of-scope: different month
-        { ...makeInvoices()[0], Id: 11, InvoiceDate: new Date(2026, 1, 5) },
         // Out-of-scope: different year
         { ...makeInvoices()[0], Id: 12, InvoiceDate: new Date(2025, 0, 10) },
       ],
     });
     const svc = makeService(stubs);
     const result = await svc.generateMonth(2026, 1);
-    // Exactly one fuel row of 40 L should reach the generated rows
-    // (the three out-of-scope invoices are filtered out).
+    // Exactly one fuel row of 40 L should reach the generated rows for January.
+    // The Feb invoice is excluded from the current month's fuel events but
+    // satisfies the next-month look-ahead.
     const [cells] = stubs.writeSheet.mock.calls[0] as [CellModel[], string];
     const fuelRowCells = cells.filter(
       c => c.a1.startsWith('C') && typeof c.value === 'string' && c.value.startsWith('Зареждане гориво'),
@@ -196,15 +223,27 @@ describe('GenerateMonthService — invoice filtering', () => {
 });
 
 describe('GenerateMonthService — infeasible month', () => {
-  it('surfaces InfeasibleMonthError and never writes when generation cannot land in [0,8]', async () => {
-    // Over-fuel: 500 L in a single month is impossible to burn within working-day caps.
-    const overFueled: Invoice = {
+  it('surfaces InfeasibleMonthError and never writes when a fuel event arrives too soon to drop balance to [0, 8]', async () => {
+    // Pre-fuel infeasibility: opening 50 L with a fuel event on Jan 2 (the first
+    // working day of Jan 2026 — Jan 1 is a holiday). Segment 0 has zero working
+    // days before Jan 2, so the balance cannot drop from 50 L into [0, 8] L
+    // before refueling — generation must fail rather than emit a bad sheet.
+    const tooEarly: Invoice = {
       ...makeInvoices()[0],
       Id: 999,
-      InvoiceDate: new Date(2026, 0, 5),
-      QuantityLiters: 500,
+      InvoiceDate: new Date(2026, 0, 2),
+      QuantityLiters: 40,
     };
-    const stubs = makeStubs({ invoices: [overFueled] });
+    const nextMonthAnchor: Invoice = {
+      ...makeInvoices()[0],
+      Id: 1000,
+      InvoiceDate: new Date(2026, 1, 5),
+      QuantityLiters: 40,
+    };
+    const stubs = makeStubs({
+      vehicle: makeVehicle({ OpeningFuelBalance: 50 }),
+      invoices: [tooEarly, nextMonthAnchor],
+    });
     const svc = makeService(stubs);
 
     await expect(svc.generateMonth(2026, 1)).rejects.toBeInstanceOf(InfeasibleMonthError);
@@ -212,5 +251,53 @@ describe('GenerateMonthService — infeasible month', () => {
     expect(svc.error()).toBeInstanceOf(InfeasibleMonthError);
     expect(svc.result()).toBeNull();
     expect(svc.loading()).toBe(false);
+  });
+});
+
+describe('GenerateMonthService — next-month look-ahead', () => {
+  it('throws InsufficientDataError and never writes when the next month has no invoice for the active vehicle', async () => {
+    // Only January invoices — no February → look-ahead can't anchor the
+    // trailing-segment cap.
+    const stubs = makeStubs({ invoices: makeInvoices() });
+    const svc = makeService(stubs);
+
+    await expect(svc.generateMonth(2026, 1)).rejects.toBeInstanceOf(InsufficientDataError);
+    expect(stubs.writeSheet).not.toHaveBeenCalled();
+    expect(svc.error()).toBeInstanceOf(InsufficientDataError);
+    expect(svc.error()!.message).toContain('February 2026');
+  });
+
+  it('treats next-month invoices for a DIFFERENT vehicle as missing data', async () => {
+    // Feb invoice exists but for a different vehicle — same as no Feb data.
+    const stubs = makeStubs({
+      invoices: [
+        ...makeInvoices(),
+        { ...makeInvoices()[0], Id: 200, InvoiceDate: new Date(2026, 1, 5), VehicleId: 999 },
+      ],
+    });
+    const svc = makeService(stubs);
+
+    await expect(svc.generateMonth(2026, 1)).rejects.toBeInstanceOf(InsufficientDataError);
+  });
+
+  it('caps the closing balance using the next-month first-fuel constraint (Jan 2026 + Feb 4 anchor)', async () => {
+    // Regression: opening 37.34 + Jan fuels 60.23 (Jan 8) + 60.82 (Jan 26) +
+    // next-month anchor 61.46 L on Feb 4. With 2 working days before Feb 4
+    // (Feb 2, 3) and avg 11.5 L/100 km, trailingTmax = 8 + 2×80×11.5/100 =
+    // 8 + 18.4 = 26.4. Closing must land ≤ 26.4 L for Feb to be feasible.
+    const userInvoices: Invoice[] = [
+      { ...makeInvoices()[0], Id: 301, InvoiceDate: new Date(2026, 0, 8), QuantityLiters: 60.23 },
+      { ...makeInvoices()[0], Id: 302, InvoiceDate: new Date(2026, 0, 26), QuantityLiters: 60.82 },
+      { ...makeInvoices()[0], Id: 303, InvoiceDate: new Date(2026, 1, 4),  QuantityLiters: 61.46 },
+    ];
+    const stubs = makeStubs({
+      vehicle: makeVehicle({ OpeningFuelBalance: 37.34 }),
+      invoices: userInvoices,
+    });
+    const svc = makeService(stubs);
+
+    const result = await svc.generateMonth(2026, 1);
+    expect(result.closingBalance).toBeGreaterThanOrEqual(0);
+    expect(result.closingBalance).toBeLessThanOrEqual(26.4 + 1e-6);
   });
 });

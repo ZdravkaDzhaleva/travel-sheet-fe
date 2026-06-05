@@ -4,8 +4,10 @@ import { SheetsStore } from '../infrastructure/sheets.store';
 import { CalendarService } from './calendar.service';
 import { MasterDataService } from './master-data.service';
 import { generate } from '../domain/generation/trip-generator';
+import { InsufficientDataError } from '../domain/generation/insufficient-data.error';
 import { toSheetCells } from '../domain/mapping/row-mapper';
 import { monthSheetName } from '../core/config/workbook.template';
+import { BALANCE_MAX, MAX_KM_PER_DAY } from '../core/config/generation.config';
 import type { FuelEvent, Invoice, Vehicle } from '../domain/entities/index';
 import type { HolidaySource } from '../infrastructure/holiday.provider';
 
@@ -61,6 +63,25 @@ export class GenerateMonthService {
       const openingBalance = prior ?? vehicle.OpeningFuelBalance;
       const openingSource: OpeningBalanceSource = prior === null ? 'vehicleConfig' : 'priorSheet';
 
+      // Look ahead: generating month M requires the first fuel invoice of
+      // month M+1 for the active vehicle so we can cap month M's closing at a
+      // level next month can absorb before its first refuel.
+      const { year: nextYear, month: nextMonth } = addOneMonth(year, month);
+      const nextFirstInvoice = firstInvoiceForVehicleInMonth(invoices, vehicle, nextYear, nextMonth);
+      if (nextFirstInvoice === null) {
+        throw new InsufficientDataError(
+          `Not enough data to generate the report — upload the first invoice of ` +
+            `${monthLabel(nextYear, nextMonth)} for the active vehicle first.`,
+        );
+      }
+      const nextCal = await this.calendar.workingDaysFor(nextYear, nextMonth);
+      const nextPreFuelWorkingDays = nextCal.workingDays.filter(
+        d => d.getTime() < nextFirstInvoice.InvoiceDate.getTime(),
+      ).length;
+      const trailingTmax =
+        BALANCE_MAX +
+        (nextPreFuelWorkingDays * MAX_KM_PER_DAY * vehicle.AverageConsumptionLitersPer100Km) / 100;
+
       const rows = generate({
         workingDays: cal.workingDays,
         fuelEvents,
@@ -68,6 +89,7 @@ export class GenerateMonthService {
         routeLegs,
         vehicle,
         openingBalance,
+        trailingTmax,
       });
 
       const cells = toSheetCells(rows, company, vehicle, { year, month });
@@ -118,4 +140,35 @@ function toFuelEvents(
       unitPrice: inv.UnitPrice,
       totalAmount: inv.TotalAmount,
     }));
+}
+
+function firstInvoiceForVehicleInMonth(
+  invoices: readonly Invoice[],
+  vehicle: Vehicle,
+  year: number,
+  month: number,
+): Invoice | null {
+  const matches = invoices.filter(
+    inv =>
+      inv.VehicleId === vehicle.Id &&
+      inv.InvoiceDate.getFullYear() === year &&
+      inv.InvoiceDate.getMonth() + 1 === month,
+  );
+  if (matches.length === 0) return null;
+  return matches.reduce((earliest, inv) =>
+    inv.InvoiceDate.getTime() < earliest.InvoiceDate.getTime() ? inv : earliest,
+  );
+}
+
+function addOneMonth(year: number, month: number): { year: number; month: number } {
+  return month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+}
+
+const MONTH_NAMES_EN = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+function monthLabel(year: number, month: number): string {
+  return `${MONTH_NAMES_EN[month - 1]} ${year}`;
 }

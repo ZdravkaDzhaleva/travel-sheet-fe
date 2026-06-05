@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 
 import { GenerateMonthService } from '../../application/generate-month.service';
 import { InfeasibleMonthError } from '../../domain/generation/infeasible-month.error';
+import { InsufficientDataError } from '../../domain/generation/insufficient-data.error';
 
 interface MonthOption {
   readonly value: number;
@@ -60,6 +61,10 @@ export class GenerateComponent {
 
   protected isInfeasible(err: Error): boolean {
     return err instanceof InfeasibleMonthError || err.name === 'InfeasibleMonthError';
+  }
+
+  protected isInsufficientData(err: Error): boolean {
+    return err instanceof InsufficientDataError || err.name === 'InsufficientDataError';
   }
 
   protected openingSourceLabel(source: 'priorSheet' | 'vehicleConfig'): string {

@@ -134,10 +134,23 @@ describe('generate — January 2026 invariants', () => {
     }
   });
 
-  it('closing balance lies inside [BALANCE_MIN, BALANCE_MAX]', () => {
+  it('pre-fuel balance lies inside [BALANCE_MIN, BALANCE_MAX] for every fuel event', () => {
+    // The [0, 8] window applies just BEFORE each fuel top-up (so the tank is
+    // nearly empty before refueling), not at month end. The balance on the row
+    // immediately preceding each fuel row is what must be in [0, 8].
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i].kind !== 'fuel') continue;
+      const preFuel = rows[i - 1]!.balance;
+      expect(preFuel).toBeGreaterThanOrEqual(BALANCE_MIN);
+      expect(preFuel).toBeLessThanOrEqual(BALANCE_MAX);
+    }
+  });
+
+  it('month-end closing balance is unconstrained but non-negative', () => {
+    // After the last fuel event of the month, there is no upper-bound target —
+    // whatever is left rolls forward as next month's opening balance.
     const closing = rows[rows.length - 1].balance;
     expect(closing).toBeGreaterThanOrEqual(BALANCE_MIN);
-    expect(closing).toBeLessThanOrEqual(BALANCE_MAX);
   });
 
   it('per-row math: trip consumed = round2(km × avg / 100); fuel adds liters', () => {
@@ -182,6 +195,42 @@ describe('generate — January 2026 invariants', () => {
       }
       const expectedKm = routeDistance(office.Id, stopLocs.map(l => l.Id), routeLegs);
       expect(r.km).toBe(expectedKm);
+    }
+  });
+
+  it('non-zero trip km vary across the month (picker is not stuck on one value)', () => {
+    const tripKms = rows
+      .filter(r => r.kind === 'trip')
+      .map(r => r.km!);
+    expect(tripKms.length).toBeGreaterThan(0);
+    const distinct = new Set(tripKms);
+    // In the fixture only single-stop trips fit under MAX_KM_PER_DAY (60, 70,
+    // 80 km — every two-stop trip exceeds 80 km), so 3 is the ceiling. The
+    // range-based picker should hit all three over a 21-day month; the old
+    // closest-to-desired picker would collapse to 1.
+    expect(distinct.size).toBeGreaterThanOrEqual(2);
+    // No single value should dominate: nothing > 80% of all trips.
+    const maxFrac = Math.max(
+      ...[...distinct].map(km => tripKms.filter(k => k === km).length / tripKms.length),
+    );
+    expect(maxFrac).toBeLessThan(0.8);
+  });
+
+  it('zero-trip rows are forced by balance, never emitted while any route still fits', () => {
+    // The picker prefers any feasible route over a voluntary zero. Each zero
+    // row must correspond to a day on which the balance entering it could not
+    // afford the smallest trip seen in the run.
+    const tripKms = rows
+      .filter(r => r.kind === 'trip')
+      .map(r => r.km!)
+      .sort((a, b) => a - b);
+    if (tripKms.length === 0) return; // nothing to assert about
+    const minRouteKm = tripKms[0]!;
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i].kind !== 'zero') continue;
+      const balanceBefore = rows[i - 1]!.balance;
+      const kmAffordable = (balanceBefore * 100) / vehicle.AverageConsumptionLitersPer100Km;
+      expect(kmAffordable).toBeLessThan(minRouteKm);
     }
   });
 
@@ -242,6 +291,49 @@ describe('generate — edge cases', () => {
     ).toThrowError(InfeasibleMonthError);
   });
 
+  it('respects a finite trailingTmax on the closing balance', () => {
+    // Pass a low trailingTmax and confirm the closing balance lands at or below it.
+    const rows = generate({
+      workingDays: janWorkingDays(),
+      fuelEvents,
+      locations,
+      routeLegs,
+      vehicle,
+      openingBalance: vehicle.OpeningFuelBalance,
+      trailingTmax: 10,
+    });
+    const closing = rows[rows.length - 1]!.balance;
+    expect(closing).toBeGreaterThanOrEqual(0);
+    expect(closing).toBeLessThanOrEqual(10 + 1e-6);
+  });
+
+  it('throws InfeasibleMonthError with a trailing-specific message when trailingTmax cannot be reached', () => {
+    // Trailing segment has 5 working days × 80 km × 11.5/100 = 46 L burn
+    // capacity. With opening 5 + large fuels (60 L on Jan 10 + 60 L on Jan
+    // 25) the trailing start balance is ~60 L even in the optimistic case;
+    // with trailingTmax = 0 the closing balance cannot land in [0, 0], so
+    // the pre-flight check must throw the new trailing-specific message.
+    const bigFuels = [
+      { date: new Date(2026, 0, 10), vendor: 'X', liters: 60, unitPrice: 2, totalAmount: 120 },
+      { date: new Date(2026, 0, 25), vendor: 'X', liters: 60, unitPrice: 2, totalAmount: 120 },
+    ];
+    try {
+      generate({
+        workingDays: janWorkingDays(),
+        fuelEvents: bigFuels,
+        locations,
+        routeLegs,
+        vehicle,
+        openingBalance: vehicle.OpeningFuelBalance,
+        trailingTmax: 0,
+      });
+      expect.fail('expected generate() to throw');
+    } catch (e) {
+      expect(e).toBeInstanceOf(InfeasibleMonthError);
+      expect((e as Error).message).toContain("Next month's first fuel cannot be absorbed");
+    }
+  });
+
   it('handles a fuel event on a non-working day (Saturday) by emitting a fuel row anyway', () => {
     // Jan 10 2026 is Saturday — both fixture invoices are on weekends.
     const rows = generate({
@@ -256,6 +348,53 @@ describe('generate — edge cases', () => {
       r => r.kind === 'fuel' && r.date && localDateKey(r.date) === '2026-0-10',
     );
     expect(sat).toBeDefined();
+  });
+});
+
+// ── Regression: user-reported January 2026 scenario ────────────────────────
+
+describe('generate — January 2026 with 37.34 L opening + 60.23 L + 60.82 L', () => {
+  // The original bug: this month threw `Closing balance 15.42 not in [0, 8]`
+  // because the algorithm forced month-end balance into [0, 8]. With the
+  // corrected pre-fuel-only semantics, this month is feasible — the [0, 8]
+  // window applies before each fuel event, not at month end.
+  const userFuels = [
+    {
+      date: new Date(2026, 0, 8),
+      vendor: 'Лукойл',
+      liters: 60.230,
+      unitPrice: 2.89,
+      totalAmount: 174.06,
+    },
+    {
+      date: new Date(2026, 0, 26),
+      vendor: 'Лукойл',
+      liters: 60.82,
+      unitPrice: 2.89,
+      totalAmount: 175.77,
+    },
+  ];
+
+  it('generates successfully and lands pre-fuel balance in [0, 8] for both top-ups', () => {
+    const rows = generate({
+      workingDays: janWorkingDays(),
+      fuelEvents: userFuels,
+      locations,
+      routeLegs,
+      vehicle,
+      openingBalance: 37.34,
+    });
+
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i].kind !== 'fuel') continue;
+      const preFuel = rows[i - 1]!.balance;
+      expect(preFuel).toBeGreaterThanOrEqual(BALANCE_MIN);
+      expect(preFuel).toBeLessThanOrEqual(BALANCE_MAX);
+    }
+
+    // Closing is unconstrained but must be non-negative (rolls forward as Feb opening).
+    const closing = rows[rows.length - 1]!.balance;
+    expect(closing).toBeGreaterThanOrEqual(BALANCE_MIN);
   });
 });
 
