@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Invoices — Phase 7 UI mockup</title>
+  <style>
+    :root {
+      --lr-dark: rgb(57, 57, 57);
+      --lr-on-dark: rgb(255, 255, 255);
+      --lr-gold: rgb(173, 148, 108);
+      --lr-gold-deep: rgb(155, 132, 100);
+      --lr-gold-bright: rgb(244, 214, 116);
+      --lr-on-light: rgb(57, 57, 57);
+      --lr-light: rgb(255, 255, 255);
+
+      --app-bg: var(--lr-dark);
+      --app-surface: var(--lr-light);
+      --app-text: var(--lr-on-dark);
+      --app-text-on-surface: var(--lr-on-light);
+      --app-accent: var(--lr-gold);
+      --app-accent-text: var(--lr-on-light);
+
+      --danger: rgb(150, 40, 40);
+      --danger-bg: rgba(192, 57, 43, 0.1);
+      --muted: rgba(57, 57, 57, 0.62);
+      --hairline: rgba(57, 57, 57, 0.12);
+      --radius: 0.75rem;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--app-bg);
+      color: var(--app-text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---- top nav (unchanged from app, here for context) ---- */
+    .nav {
+      display: flex; align-items: center; gap: 2rem;
+      padding: 1rem 2rem;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      position: sticky; top: 0; background: var(--app-bg); z-index: 5;
+    }
+    .nav__brand {
+      font-weight: 700; letter-spacing: 0.18em; font-size: 0.85rem;
+      background: linear-gradient(135deg, var(--lr-gold-deep), var(--lr-gold), var(--lr-gold-bright));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .nav__links { display: flex; gap: 1.75rem; margin-left: auto; align-items: center; }
+    .nav__link { color: rgba(255,255,255,0.65); text-decoration: none; font-size: 0.9rem; letter-spacing: 0.06em; }
+    .nav__link--active { color: var(--lr-gold); }
+    .nav__signout { color: rgba(255,255,255,0.85); font-size: 0.9rem; cursor: pointer; }
+
+    .page { max-width: 60rem; margin: 0 auto; padding: 2rem 1.5rem 3rem; }
+
+    /* ---- section header with primary action (recommendation #1) ---- */
+    .page__head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; margin-bottom: 1.5rem;
+    }
+    .page__title { margin: 0; font-size: 1.6rem; font-weight: 600; letter-spacing: -0.01em; }
+    .page__count { color: rgba(255,255,255,0.5); font-weight: 400; font-size: 1rem; margin-left: 0.5rem; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      min-height: 2.75rem; padding: 0 1.1rem;
+      font: inherit; font-weight: 600; font-size: 0.95rem;
+      border-radius: 0.6rem; border: 1px solid transparent; cursor: pointer;
+      transition: filter 0.15s ease, background 0.15s ease;
+    }
+    .btn--primary { background: var(--app-accent); color: var(--app-accent-text); }
+    .btn--primary:hover { filter: brightness(1.06); }
+    .btn--ghost { background: transparent; color: var(--app-text); border-color: rgba(255,255,255,0.25); }
+    .btn svg { width: 1.05rem; height: 1.05rem; }
+
+    /* ---- list ---- */
+    .card {
+      background: var(--app-surface); color: var(--app-text-on-surface);
+      border-radius: var(--radius); overflow: hidden;
+      box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.22);
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 0.8fr 1fr 1fr auto;
+      align-items: center; gap: 1rem;
+      padding: 0.9rem 1.25rem;
+      border-bottom: 1px solid var(--hairline);
+    }
+    .row:last-child { border-bottom: 0; }
+    .row--head {
+      background: rgba(57,57,57,0.03);
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--muted); font-weight: 600;
+    }
+    .row__vendor { font-weight: 600; }
+    .row__sub { color: var(--muted); font-size: 0.78rem; margin-top: 0.1rem; }
+    .row__num { font-variant-numeric: tabular-nums; }
+
+    /* ---- icon buttons (recommendation #3) ---- */
+    .iconbtns { display: flex; gap: 0.4rem; justify-self: end; }
+    .iconbtn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 2.4rem; height: 2.4rem; border-radius: 0.55rem;
+      border: 1px solid var(--hairline); background: transparent;
+      color: var(--app-text-on-surface); cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+    .iconbtn:hover { background: rgba(57,57,57,0.06); border-color: rgba(57,57,57,0.25); }
+    .iconbtn--danger:hover { background: var(--danger-bg); border-color: rgba(150,40,40,0.4); color: var(--danger); }
+    .iconbtn svg { width: 1.15rem; height: 1.15rem; }
+
+    /* ---- modal (recommendation #2) ---- */
+    .scrim {
+      position: fixed; inset: 0; z-index: 50;
+      background: rgba(20,20,20,0.55);
+      backdrop-filter: blur(4px) saturate(0.9);
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 3.5rem 1rem; overflow-y: auto;
+    }
+    .modal {
+      width: 100%; max-width: 34rem;
+      background: var(--app-surface); color: var(--app-text-on-surface);
+      border-radius: var(--radius);
+      box-shadow: 0 1.5rem 3rem rgba(0,0,0,0.45);
+      animation: pop 0.16s ease-out;
+    }
+    @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+    .modal__head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--hairline);
+    }
+    .modal__title { margin: 0; font-size: 1.15rem; font-weight: 600; }
+    .modal__close {
+      width: 2.2rem; height: 2.2rem; border-radius: 0.5rem; border: 0;
+      background: transparent; cursor: pointer; color: var(--muted); font-size: 1.3rem; line-height: 1;
+    }
+    .modal__close:hover { background: rgba(57,57,57,0.06); color: var(--app-text-on-surface); }
+    .modal__body { padding: 1.5rem; }
+
+    /* ---- form-level error summary (recommendation #4) ---- */
+    .summary {
+      display: flex; gap: 0.65rem; align-items: flex-start;
+      padding: 0.8rem 1rem; margin-bottom: 1.25rem;
+      background: var(--danger-bg); border: 1px solid rgba(150,40,40,0.25);
+      border-radius: 0.5rem; color: var(--danger); font-size: 0.88rem;
+    }
+    .summary svg { width: 1.1rem; height: 1.1rem; flex: none; margin-top: 0.05rem; }
+    .summary ul { margin: 0.25rem 0 0; padding-left: 1.1rem; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1rem; }
+    .field { display: grid; gap: 0.35rem; }
+    .field--full { grid-column: 1 / -1; }
+    .field__label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; }
+    .field__label .req { color: var(--danger); }
+    .input {
+      min-height: 2.7rem; padding: 0 0.75rem; font: inherit;
+      border: 1px solid rgba(57,57,57,0.25); border-radius: 0.5rem;
+      background: #fff; color: var(--app-text-on-surface); width: 100%;
+    }
+    .input:focus-visible { outline: 2px solid var(--app-accent); outline-offset: 1px; border-color: var(--app-accent); }
+    /* inline field error */
+    .field--invalid .input { border-color: var(--danger); }
+    .field__error { font-size: 0.78rem; color: var(--danger); }
+
+    .modal__foot {
+      display: flex; justify-content: flex-end; gap: 0.6rem;
+      padding: 1.1rem 1.5rem; border-top: 1px solid var(--hairline);
+      background: rgba(57,57,57,0.02);
+    }
+    .btn--ghost-light { background: transparent; color: var(--app-text-on-surface); border-color: rgba(57,57,57,0.3); }
+
+    .note {
+      max-width: 60rem; margin: 0 auto 1rem; padding: 0 1.5rem;
+      color: rgba(255,255,255,0.5); font-size: 0.8rem;
+    }
+    .toggle {
+      position: fixed; bottom: 1rem; right: 1rem; z-index: 60;
+      background: var(--lr-gold); color: var(--lr-on-light);
+      border: 0; border-radius: 0.6rem; padding: 0.7rem 1rem; font-weight: 600; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <span class="nav__brand">VELA LOGISTICS</span>
+    <div class="nav__links">
+      <a class="nav__link nav__link--active" href="#">Invoices</a>
+      <a class="nav__link" href="#">Generate</a>
+      <a class="nav__link" href="#">Company info</a>
+      <span class="nav__signout">Sign out</span>
+    </div>
+  </nav>
+
+  <p class="note">Phase 7 mockup — brand palette, header-level action, modal-based create/edit, icon actions, layered error handling. Click "Toggle modal" bottom-right.</p>
+
+  <main class="page">
+    <!-- Recommendation #1: action at the header level -->
+    <div class="page__head">
+      <h1 class="page__title">Invoices <span class="page__count">9</span></h1>
+      <button class="btn btn--primary" onclick="openModal('add')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Add invoice
+      </button>
+    </div>
+
+    <!-- list as a clean table; icon actions -->
+    <div class="card">
+      <div class="row row--head">
+        <span>Vendor</span><span>Date</span><span>Qty (L)</span><span>Unit price</span><span>Total</span><span></span>
+      </div>
+
+      <div class="row">
+        <div><div class="row__vendor">Orbit Fuel</div><div class="row__sub">invoice-jan.pdf</div></div>
+        <div>08.01.2026</div>
+        <div class="row__num">60.23</div>
+        <div class="row__num">1.52 EUR</div>
+        <div class="row__num">91.55 EUR</div>
+        <div class="iconbtns">
+          <button class="iconbtn" aria-label="Edit Orbit Fuel invoice" title="Edit" onclick="openModal('edit')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+          <button class="iconbtn iconbtn--danger" aria-label="Delete Orbit Fuel invoice" title="Delete">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div><div class="row__vendor">Delta Petrol</div><div class="row__sub">invoice-jan-2.pdf</div></div>
+        <div>26.01.2026</div>
+        <div class="row__num">60.82</div>
+        <div class="row__num">1.56 EUR</div>
+        <div class="row__num">94.88 EUR</div>
+        <div class="iconbtns">
+          <button class="iconbtn" aria-label="Edit Delta Petrol invoice" title="Edit" onclick="openModal('edit')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+          <button class="iconbtn iconbtn--danger" aria-label="Delete Delta Petrol invoice" title="Delete">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div><div class="row__vendor">Gama Energy</div><div class="row__sub">invoice-feb.pdf</div></div>
+        <div>03.02.2026</div>
+        <div class="row__num">58.10</div>
+        <div class="row__num">1.49 EUR</div>
+        <div class="row__num">86.57 EUR</div>
+        <div class="iconbtns">
+          <button class="iconbtn" aria-label="Edit Gama Energy invoice" title="Edit" onclick="openModal('edit')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+          <button class="iconbtn iconbtn--danger" aria-label="Delete Gama Energy invoice" title="Delete">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Recommendation #2: modal, reused for add + edit; #4: layered errors -->
+  <div class="scrim" id="scrim" style="display:none;">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal__head">
+        <h2 class="modal__title" id="modal-title">Add invoice</h2>
+        <button class="modal__close" aria-label="Close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal__body">
+        <!-- form-level summary (only shows after a failed submit) -->
+        <div class="summary" id="summary" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 17h.01"/></svg>
+          <div>
+            <strong>Please fix the following:</strong>
+            <ul><li>Invoice date is required.</li></ul>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="field field--full">
+            <label class="field__label" for="m-file">Invoice file</label>
+            <input class="input" id="m-file" type="file" />
+          </div>
+          <div class="field field--full">
+            <label class="field__label" for="m-vendor">Fuel vendor <span class="req">*</span></label>
+            <input class="input" id="m-vendor" value="Orbit Fuel" />
+          </div>
+          <!-- inline error example -->
+          <div class="field field--invalid">
+            <label class="field__label" for="m-date">Invoice date <span class="req">*</span></label>
+            <input class="input" id="m-date" type="date" />
+            <span class="field__error">Pick a valid invoice date.</span>
+          </div>
+          <div class="field">
+            <label class="field__label" for="m-qty">Quantity (L) <span class="req">*</span></label>
+            <input class="input" id="m-qty" type="number" value="60.23" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="m-price">Unit price <span class="req">*</span></label>
+            <input class="input" id="m-price" type="number" value="1.52" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="m-total">Total amount <span class="req">*</span></label>
+            <input class="input" id="m-total" type="number" value="91.55" />
+          </div>
+          <div class="field field--full">
+            <label class="field__label" for="m-cur">Currency</label>
+            <input class="input" id="m-cur" value="EUR" />
+          </div>
+        </div>
+      </div>
+      <div class="modal__foot">
+        <button class="btn btn--ghost-light" onclick="closeModal()">Cancel</button>
+        <button class="btn btn--primary" onclick="document.getElementById('summary').style.display='flex'">Save invoice</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="toggle" onclick="document.getElementById('scrim').style.display==='none' ? openModal('add') : closeModal()">Toggle modal</button>
+
+  <script>
+    function openModal(mode) {
+      document.getElementById('modal-title').textContent = mode === 'edit' ? 'Edit invoice' : 'Add invoice';
+      document.getElementById('summary').style.display = 'none';
+      document.getElementById('scrim').style.display = 'flex';
+    }
+    function closeModal() { document.getElementById('scrim').style.display = 'none'; }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+  </script>
+</body>
+</html>
