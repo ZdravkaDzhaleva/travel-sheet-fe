@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, } from '@angular/forms';
+import { KeyValuePipe } from '@angular/common';
 
 import { InvoiceService } from '../../application/invoice.service';
 import { MasterDataService } from '../../application/master-data.service';
@@ -30,7 +31,7 @@ function emptyForm(): InvoiceFormState {
 @Component({
   selector: 'app-invoices',
   standalone: true,
-  imports: [FormsModule, ModalComponent],
+  imports: [FormsModule, KeyValuePipe, ModalComponent],
   templateUrl: './invoices.component.html',
   styleUrl: './invoices.component.scss',
 })
@@ -53,6 +54,8 @@ export class InvoicesComponent implements OnInit {
   protected readonly formOpen = signal(false);
   protected readonly confirmTarget = signal<Invoice | null>(null);
   protected readonly localError = signal<string | null>(null);
+  /** Becomes true on the first submit attempt; gates inline field errors. */
+  protected readonly submitted = signal(false);
 
   ngOnInit(): void {
     if (!this.masterReady() && !this.masterData.loading() && this.masterError() === null) {
@@ -98,7 +101,21 @@ export class InvoicesComponent implements OnInit {
     this.formData = emptyForm();
     this.file = null;
     this.localError.set(null);
+    this.submitted.set(false);
     this.formOpen.set(false);
+  }
+
+  protected fieldErrors(): Record<string, string> {
+    const f = this.formData;
+    const isAdd = this.editingId() === null;
+    const errors: Record<string, string> = {};
+    if (isAdd && this.file === null) errors['file'] = 'Choose an invoice file.';
+    if (!f.fuelVendor.trim()) errors['fuelVendor'] = 'Fuel vendor is required.';
+    if (!f.invoiceDate || parseDateInput(f.invoiceDate) === null) errors['invoiceDate'] = 'Pick a valid invoice date.';
+    if (f.quantityLiters === null) errors['quantityLiters'] = 'Quantity is required.';
+    if (f.unitPrice === null) errors['unitPrice'] = 'Unit price is required.';
+    if (f.totalAmount === null) errors['totalAmount'] = 'Total amount is required.';
+    return errors;
   }
 
   protected requestDelete(invoice: Invoice): void {
@@ -123,6 +140,7 @@ export class InvoicesComponent implements OnInit {
   }
 
   protected async submit(): Promise<void> {
+    this.submitted.set(true);
     this.localError.set(null);
 
     const company = this.company();
@@ -132,22 +150,16 @@ export class InvoicesComponent implements OnInit {
       return;
     }
 
-    const date = parseDateInput(this.formData.invoiceDate);
-    if (date === null) {
-      this.localError.set('Pick a valid invoice date.');
+    const errors = this.fieldErrors();
+    if (Object.keys(errors).length > 0) {
+      // fieldErrors() drives inline messages; localError stays null so only the summary shows.
       return;
     }
-    const quantity = this.formData.quantityLiters;
-    const price = this.formData.unitPrice;
-    const total = this.formData.totalAmount;
-    if (quantity === null || price === null || total === null) {
-      this.localError.set('Quantity, unit price, and total are all required.');
-      return;
-    }
-    if (!this.formData.fuelVendor.trim()) {
-      this.localError.set('Fuel vendor is required.');
-      return;
-    }
+
+    const date = parseDateInput(this.formData.invoiceDate)!;
+    const quantity = this.formData.quantityLiters!;
+    const price = this.formData.unitPrice!;
+    const total = this.formData.totalAmount!;
 
     const editingId = this.editingId();
     if (editingId !== null) {
@@ -196,6 +208,7 @@ export class InvoicesComponent implements OnInit {
       });
       this.formData = emptyForm();
       this.file = null;
+      this.submitted.set(false);
       this.formOpen.set(false);
       this.toast.show('Invoice uploaded', 'success');
     } catch (err) {

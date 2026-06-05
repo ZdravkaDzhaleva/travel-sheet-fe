@@ -219,22 +219,22 @@ Document the required Drive setup (exact folder/sheet/workbook names from `works
 
 > Page-by-page modernization of the UI. Reference mockups live in `docs/mockups/`. Brand palette + responsive rules per `CONVENTIONS.md` §8/§8a. UI-layer components are Angular-only — no `domain/` imports.
 
-### [ ] T7.1 — Shared UI primitives: Modal + Toast
+### [x] T7.1 — Shared UI primitives: Modal + Toast
 Build reusable `shared/ui/modal` and `shared/ui/toast` primitives so later page redesigns reuse them instead of re-implementing dialog/notification behavior.
 - **Deps:** T6.1
 - **Done when:** `Modal` (standalone) renders a blurred, scroll-locked backdrop; traps focus while open; closes on Esc, backdrop click, and an explicit ✕; restores focus to the trigger on close; sets `role="dialog"`, `aria-modal`, and `aria-labelledby`; supports projected header/body/footer. `ToastService` exposes a signal-backed queue; a host outlet renders success/error toasts with auto-dismiss and an optional action slot. Both covered by Vitest. Mobile-first per §8a (≥44 px targets, safe-area insets, `:focus-visible`).
 
-### [ ] T7.2 — Invoices: header action + table list + icon actions
+### [x] T7.2 — Invoices: header action + table list + icon actions
 Restructure the invoices page around the data: primary action in the page header, scannable list, icon-based row actions. Mockup: `docs/mockups/invoices.html`.
 - **Deps:** T7.1
 - **Done when:** the page header shows `Invoices (N)` plus a gold **Add invoice** button (old top-of-page form removed from the default view); the list renders as an aligned, tabular-numeric table at ≥640 px and collapses to stacked cards below (§8a); Edit/Delete are icon buttons with `aria-label` + `title` and ≥44 px hit targets, delete carrying a danger hover state only. Existing invoices specs updated and green; lint + build clean.
 
-### [ ] T7.3 — Invoices: modal-based create/edit (reused) + confirm-delete
+### [x] T7.3 — Invoices: modal-based create/edit (reused) + confirm-delete
 Move the upload/edit form into the T7.1 `Modal`, reused for both add and edit; replace `window.confirm` with a branded confirm dialog; surface async outcomes as toasts.
 - **Deps:** T7.2
 - **Done when:** **Add invoice** and the row Edit action open the same modal (title swaps "Add invoice"/"Edit invoice"; on edit the file input is hidden and `DriveFileId` is preserved); the existing no-file / unparseable-date / missing-required-field guards still block submit; Delete opens a branded confirm dialog (`Delete <vendor> invoice?`) and only deletes on confirm; upload/edit/delete success and failure fire toasts. Specs cover modal open/close, both submit modes, DriveFileId preservation, and both confirm-delete branches. Lint + build clean.
 
-### [ ] T7.4 — Invoices: layered error handling
+### [x] T7.4 — Invoices: layered error handling
 Replace the single raw-message error box with layered, accessible error reporting.
 - **Deps:** T7.3
 - **Done when:** invalid fields show an inline message under the offending input; a form-level summary at the top of the modal lists all problems after a failed submit (`role="alert"`); `InvoiceService` async failures route to error toasts rather than a raw `err.message` dump (no such dump remains). Specs cover field-level errors, the summary, and the service-error path. Lint + build clean.
@@ -264,17 +264,17 @@ Refresh the only unauthenticated screen. Mockup: `docs/mockups/sign-in.html`. No
 - **Deps:** T6.1
 - **Done when:** the card leads with the existing `logo-travel-sheet.png` mark above the title + intro; the action is a **Google-standard light button** (white background, 1px grey border, multicolor "G" mark, dark label) replacing the gold generic button, with the existing busy state ("Signing in…") preserved; raw `err.message` is replaced by **friendly mapped messages** for the common failures (popup blocked, popup closed/cancelled, unauthorized domain, GIS timeout) with a sensible generic fallback, shown in a styled inline alert (`role="alert"`). Keep the centered-card structure and a subtle brand footer; **no** full-page gold background wash. Specs cover the rendered logo + button, the busy state, and the error-mapping branches (mapped message for a known failure + generic fallback for an unknown one). Lint + build clean.
 
-### [ ] T7.10 — Generate: readable error alert
+### [x] T7.10 — Generate: readable error alert
 Fix the unreadable error block. Today `.card--error` paints `rgba(192,57,43,0.08)` over the **dark** app background with dark-red text — dark-on-dark, effectively invisible (see `docs/mockups/generate.html`).
 - **Deps:** T6.1
 - **Done when:** generation errors render on a **light surface** (`--app-surface`) with a red left rail and readable dark-red heading + body text; the existing message branches (`Not enough data` / `Infeasible month` / `Generation failed`) are preserved, with the technical `err.message` shown as muted secondary detail rather than the primary content. Contrast passes AA. Specs assert the error renders on the light surface and the branch headings still appear. Lint + build clean.
 
-### [ ] T7.11 — Generate: success UX (toast + slim card, dev details collapsed)
+### [x] T7.11 — Generate: success UX (toast + slim card, dev details collapsed)
 Stop the "Sheet written" card persisting until refresh and stop leading with developer-oriented internals. Mockup: `docs/mockups/generate.html`.
 - **Deps:** T7.1, T7.8, T7.10
 - **Done when:** a successful generation fires an auto-dismissing success **toast** ("January 2026 generated · Open workbook") via `ToastService`; the inline result becomes a **slim success card** showing only end-user-relevant info (period, sheet name, working-day row count) plus an **Open workbook** deep link (`https://docs.google.com/spreadsheets/d/{workbookId}/edit#gid={sheetId}`, built from `resolveWorkbookId()` + the written tab's `sheetId`, new tab/`rel=noopener`); the developer fields (opening/closing balance, opening source, holiday source) move behind a collapsed **"Technical details"** `<details>` disclosure; holiday-fallback **warnings** stay visible (they are user-relevant). Specs cover the toast firing, the slim-card end-user fields, the workbook link href, the collapsed details, and warnings still rendering. Lint + build clean.
 
-### [ ] T7.12 — Generate: block regeneration of an already-generated month
+### [x] T7.12 — Generate: block regeneration of an already-generated month
 Today `SheetsStore.writeSheet` silently `deleteSheet` + `addSheet` when the month's tab exists, overwriting it with fresh (non-deterministic) trips — and because the next month's opening is read from the prior sheet's closing, overwriting a month silently staleness-invalidates later months. Make the safe path the only path: guard the UI so an already-generated month cannot be regenerated in-app. Mockup: `docs/mockups/generate.html`.
 - **Deps:** T7.10
 - **Architecture note:** detecting an existing month requires reading the workbook's tab list — a **new exception to the "workbook is write-only except prior-month closing" non-negotiable** (CLAUDE.md / ARCHITECTURE §6). Document this exception in ARCHITECTURE §6 as part of this task before implementing.

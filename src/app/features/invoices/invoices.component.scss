@@ -283,6 +283,35 @@
   border-color: var(--app-accent);
 }
 
+.form__summary {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  background: rgba(192, 57, 43, 0.07);
+  border: 0.0625rem solid rgba(150, 40, 40, 0.22);
+  border-radius: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  color: rgb(120, 30, 30);
+  font-size: 0.88rem;
+  line-height: 1.4;
+  grid-column: 1 / -1;
+}
+
+.form__summary-list {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.form__field--invalid .form__input {
+  border-color: rgb(150, 40, 40);
+}
+
+.form__field-error {
+  font-size: 0.78rem;
+  color: rgb(120, 30, 30);
+  margin-top: 0.1rem;
+}
+
 .form__error {
   margin: 0;
   padding: 0.75rem 1rem;
@@ -292,6 +321,7 @@
   font-size: 0.9375rem;
   line-height: 1.4;
   word-break: break-word;
+  grid-column: 1 / -1;
 }
 
 .form__actions {

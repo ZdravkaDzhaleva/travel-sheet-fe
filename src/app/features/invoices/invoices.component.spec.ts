@@ -91,6 +91,7 @@ function render(master: MasterStubs, inv: InvoiceStubs): ComponentFixture<Invoic
 
 function instance(fixture: ComponentFixture<InvoicesComponent>): {
   submit(): Promise<void>;
+  fieldErrors(): Record<string, string>;
   openAddForm(): void;
   startEdit(invoice: Invoice): void;
   openEditForm(invoice: Invoice): void;
@@ -110,6 +111,7 @@ function instance(fixture: ComponentFixture<InvoicesComponent>): {
   file: File | null;
   editingId: () => number | null;
   formOpen: WritableSignal<boolean>;
+  submitted: WritableSignal<boolean>;
   confirmTarget: () => Invoice | null;
   localError: () => string | null;
 } {
@@ -242,7 +244,7 @@ describe('InvoicesComponent', () => {
     cmp.file = null;
     await cmp.submit();
     expect(inv.upload).not.toHaveBeenCalled();
-    expect(cmp.localError()).toContain('file');
+    expect(cmp.fieldErrors()['file']).toBeTruthy();
   });
 
   it('blocks submit when invoice date is missing or malformed', async () => {
@@ -262,7 +264,7 @@ describe('InvoicesComponent', () => {
     };
     await cmp.submit();
     expect(inv.upload).not.toHaveBeenCalled();
-    expect(cmp.localError()).toContain('date');
+    expect(cmp.fieldErrors()['invoiceDate']).toBeTruthy();
   });
 
   it('startEdit pre-fills the form and opens form', () => {
@@ -366,6 +368,77 @@ describe('InvoicesComponent', () => {
 
     expect(cmp.formOpen()).toBe(false);
     expect(toast.toasts()[0].type).toBe('success');
+  });
+
+  // ── T7.4: layered error handling ─────────────────────────────────────────
+
+  it('fieldErrors() reports missing file, date, and numeric fields on an empty add form', () => {
+    const master = makeMasterStubs();
+    const inv = makeInvoiceStubs();
+    const fixture = render(master, inv);
+    const cmp = instance(fixture);
+    cmp.formOpen.set(true);
+    // editingId is null → add mode, file is null
+    const errors = cmp.fieldErrors();
+    expect(errors['file']).toBeTruthy();
+    expect(errors['fuelVendor']).toBeTruthy();
+    expect(errors['invoiceDate']).toBeTruthy();
+    expect(errors['quantityLiters']).toBeTruthy();
+    expect(errors['unitPrice']).toBeTruthy();
+    expect(errors['totalAmount']).toBeTruthy();
+  });
+
+  it('fieldErrors() clears when all required fields are filled', () => {
+    const master = makeMasterStubs();
+    const inv = makeInvoiceStubs();
+    const fixture = render(master, inv);
+    const cmp = instance(fixture);
+    cmp.file = new File(['x'], 'i.pdf');
+    cmp.formData = {
+      fuelVendor: 'OMV',
+      invoiceDate: '2026-01-10',
+      quantityLiters: 40,
+      unitPrice: 1.5,
+      totalAmount: 60,
+      currency: 'EUR',
+    };
+    expect(Object.keys(cmp.fieldErrors())).toHaveLength(0);
+  });
+
+  it('submit() with validation errors sets submitted=true and does not call upload', async () => {
+    const master = makeMasterStubs();
+    const inv = makeInvoiceStubs();
+    const fixture = render(master, inv);
+    const cmp = instance(fixture);
+    // leave form empty (file=null, no date, etc.)
+    await cmp.submit();
+    expect(cmp.submitted()).toBe(true);
+    expect(inv.upload).not.toHaveBeenCalled();
+  });
+
+  it('upload service error fires an error toast (no raw dump in the form)', async () => {
+    const master = makeMasterStubs();
+    const inv = makeInvoiceStubs();
+    inv.upload.mockRejectedValueOnce(new Error('Drive quota exceeded'));
+    const fixture = render(master, inv);
+    const cmp = instance(fixture);
+    const toast = TestBed.inject(ToastService);
+
+    cmp.file = new File(['x'], 'i.pdf');
+    cmp.formData = {
+      fuelVendor: 'OMV',
+      invoiceDate: '2026-01-10',
+      quantityLiters: 40,
+      unitPrice: 1.5,
+      totalAmount: 60,
+      currency: 'EUR',
+    };
+    await cmp.submit();
+
+    expect(toast.toasts()[0].type).toBe('error');
+    expect(toast.toasts()[0].message).toContain('Drive quota exceeded');
+    // localError stays null — no raw dump in the form
+    expect(cmp.localError()).toBeNull();
   });
 
   it('shows a master-data load error and no form controls when master data fails', () => {

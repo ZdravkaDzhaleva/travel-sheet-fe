@@ -102,8 +102,27 @@
   (closed)="cancelEdit()"
 >
   <form modal-body class="form" (ngSubmit)="submit()" #invoiceForm="ngForm">
+    @if (submitted() && (fieldErrors() | keyvalue).length > 0) {
+      <div class="form__summary" role="alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" aria-hidden="true" width="16" height="16">
+          <circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 17h.01"/>
+        </svg>
+        <ul class="form__summary-list">
+          @for (e of fieldErrors() | keyvalue; track e.key) {
+            <li>{{ e.value }}</li>
+          }
+        </ul>
+      </div>
+    }
+
+    @if (localError(); as err) {
+      <p class="form__error form__field--full" role="alert">{{ err }}</p>
+    }
+
     @if (editingId() === null) {
-      <label class="form__field form__field--full">
+      <label class="form__field form__field--full"
+             [class.form__field--invalid]="submitted() && fieldErrors()['file']">
         <span class="form__label">Invoice file</span>
         <input
           type="file"
@@ -112,10 +131,14 @@
           (change)="onFileChange($event)"
           class="form__input form__input--file"
         />
+        @if (submitted() && fieldErrors()['file']) {
+          <span class="form__field-error">{{ fieldErrors()['file'] }}</span>
+        }
       </label>
     }
 
-    <label class="form__field">
+    <label class="form__field form__field--full"
+           [class.form__field--invalid]="submitted() && fieldErrors()['fuelVendor']">
       <span class="form__label">Fuel vendor</span>
       <input
         type="text"
@@ -125,9 +148,13 @@
         required
         autocomplete="off"
       />
+      @if (submitted() && fieldErrors()['fuelVendor']) {
+        <span class="form__field-error">{{ fieldErrors()['fuelVendor'] }}</span>
+      }
     </label>
 
-    <label class="form__field">
+    <label class="form__field"
+           [class.form__field--invalid]="submitted() && fieldErrors()['invoiceDate']">
       <span class="form__label">Invoice date</span>
       <input
         type="date"
@@ -136,9 +163,13 @@
         class="form__input"
         required
       />
+      @if (submitted() && fieldErrors()['invoiceDate']) {
+        <span class="form__field-error">{{ fieldErrors()['invoiceDate'] }}</span>
+      }
     </label>
 
-    <label class="form__field">
+    <label class="form__field"
+           [class.form__field--invalid]="submitted() && fieldErrors()['quantityLiters']">
       <span class="form__label">Quantity (L)</span>
       <input
         type="number"
@@ -150,9 +181,13 @@
         class="form__input"
         required
       />
+      @if (submitted() && fieldErrors()['quantityLiters']) {
+        <span class="form__field-error">{{ fieldErrors()['quantityLiters'] }}</span>
+      }
     </label>
 
-    <label class="form__field">
+    <label class="form__field"
+           [class.form__field--invalid]="submitted() && fieldErrors()['unitPrice']">
       <span class="form__label">Unit price</span>
       <input
         type="number"
@@ -164,9 +199,13 @@
         class="form__input"
         required
       />
+      @if (submitted() && fieldErrors()['unitPrice']) {
+        <span class="form__field-error">{{ fieldErrors()['unitPrice'] }}</span>
+      }
     </label>
 
-    <label class="form__field">
+    <label class="form__field"
+           [class.form__field--invalid]="submitted() && fieldErrors()['totalAmount']">
       <span class="form__label">Total amount</span>
       <input
         type="number"
@@ -178,6 +217,9 @@
         class="form__input"
         required
       />
+      @if (submitted() && fieldErrors()['totalAmount']) {
+        <span class="form__field-error">{{ fieldErrors()['totalAmount'] }}</span>
+      }
     </label>
 
     <label class="form__field">
@@ -191,10 +233,6 @@
         autocomplete="off"
       />
     </label>
-
-    @if (localError(); as err) {
-      <p class="form__error form__field--full" role="alert">{{ err }}</p>
-    }
   </form>
 
   <div modal-footer>
