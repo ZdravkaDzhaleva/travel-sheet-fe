@@ -1,0 +1,102 @@
+.modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(20, 20, 20, 0.55);
+  backdrop-filter: blur(4px) saturate(0.9);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: max(3.5rem, env(safe-area-inset-top)) 1rem
+    max(1rem, env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+
+.modal-dialog {
+  width: 100%;
+  max-width: 34rem;
+  background: var(--app-surface);
+  color: var(--app-text-on-surface);
+  border-radius: 0.75rem;
+  box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.45);
+  outline: none;
+  animation: modal-pop 0.16s ease-out;
+}
+
+@keyframes modal-pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 0.0625rem solid rgba(57, 57, 57, 0.12);
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.modal-close {
+  flex-shrink: 0;
+  width: 2.2rem;
+  height: 2.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: rgba(57, 57, 57, 0.65);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.modal-close:hover {
+  background: rgba(57, 57, 57, 0.06);
+  color: var(--app-text-on-surface);
+}
+
+.modal-close:focus-visible {
+  outline: 0.125rem solid var(--app-accent);
+  outline-offset: 0.125rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 1.1rem 1.5rem;
+  border-top: 0.0625rem solid rgba(57, 57, 57, 0.12);
+  background: rgba(57, 57, 57, 0.02);
+  border-radius: 0 0 0.75rem 0.75rem;
+}
+
+@media (max-width: 480px) {
+  .modal-scrim {
+    align-items: flex-end;
+    padding: 1rem 0 0;
+  }
+
+  .modal-dialog {
+    max-width: 100%;
+    border-radius: 0.75rem 0.75rem 0 0;
+  }
+
+  .modal-foot {
+    border-radius: 0;
+  }
+}
