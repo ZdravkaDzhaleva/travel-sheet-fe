@@ -4,13 +4,13 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { GoogleAuth } from '../../core/auth/google-auth';
 
 @Component({
-  selector: 'app-shell',
+  selector: 'app-navbar',
   standalone: true,
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
-  templateUrl: './shell.component.html',
-  styleUrl: './shell.component.scss',
+  templateUrl: './navbar.component.html',
+  styleUrl: './navbar.component.scss',
 })
-export class ShellComponent {
+export class NavbarComponent {
   private readonly auth = inject(GoogleAuth);
   private readonly router = inject(Router);
 

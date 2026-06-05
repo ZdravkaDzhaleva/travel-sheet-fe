@@ -12,7 +12,7 @@ export const routes: Routes = [
     path: '',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./features/shell/shell.component').then(m => m.ShellComponent),
+      import('./layouts/navbar/navbar.component').then(m => m.NavbarComponent),
     children: [
       {
         path: 'invoices',

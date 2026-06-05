@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { GoogleAuth } from '../../core/auth/google-auth';
-import { ShellComponent } from './shell.component';
+import { NavbarComponent } from './navbar.component';
 
 function makeAuthStub(signOutImpl: () => Promise<void> = () => Promise.resolve()) {
   return { signOut: signOutImpl } as unknown as GoogleAuth;
@@ -10,22 +10,22 @@ function makeAuthStub(signOutImpl: () => Promise<void> = () => Promise.resolve()
 
 function render(authStub = makeAuthStub()) {
   TestBed.configureTestingModule({
-    imports: [ShellComponent],
+    imports: [NavbarComponent],
     providers: [
       provideRouter([
-        { path: 'sign-in', component: ShellComponent },
-        { path: 'invoices', component: ShellComponent },
+        { path: 'sign-in', component: NavbarComponent },
+        { path: 'invoices', component: NavbarComponent },
       ]),
       { provide: GoogleAuth, useValue: authStub },
     ],
   });
-  const fixture = TestBed.createComponent(ShellComponent);
+  const fixture = TestBed.createComponent(NavbarComponent);
   fixture.detectChanges();
   const el = fixture.nativeElement as HTMLElement;
   return { fixture, el };
 }
 
-describe('ShellComponent', () => {
+describe('NavbarComponent', () => {
   it('renders a nav link to Invoices', () => {
     const { el } = render();
     const links = Array.from(el.querySelectorAll('a.nav__link'));
