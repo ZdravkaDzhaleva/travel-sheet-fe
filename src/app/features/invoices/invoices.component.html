@@ -47,13 +47,18 @@
               <span class="table__cell table__cell--vendor" role="cell">
                 <strong>{{ invoice.FuelVendor }}</strong>
               </span>
-              <span class="table__cell" role="cell">{{ formatDate(invoice.InvoiceDate) }}</span>
-              <span class="table__cell table__cell--num" role="cell">{{ invoice.QuantityLiters }}</span>
-              <span class="table__cell table__cell--num" role="cell">
-                {{ invoice.UnitPrice }} {{ invoice.Currency }}
+              <span class="table__cell table__cell--date" role="cell">{{ formatDate(invoice.InvoiceDate) }}</span>
+              <span class="table__cell table__cell--num table__cell--qty" role="cell">
+                <span class="table__card-label">Quantity</span>
+                <span class="table__value">{{ invoice.QuantityLiters }}<span class="table__unit"> L</span></span>
               </span>
-              <span class="table__cell table__cell--num" role="cell">
-                {{ invoice.TotalAmount }} {{ invoice.Currency }}
+              <span class="table__cell table__cell--num table__cell--unit" role="cell">
+                <span class="table__card-label">Unit price</span>
+                <span class="table__value">{{ invoice.UnitPrice }} {{ invoice.Currency }}</span>
+              </span>
+              <span class="table__cell table__cell--num table__cell--total" role="cell">
+                <span class="table__card-label">Total</span>
+                <span class="table__value">{{ invoice.TotalAmount }} {{ invoice.Currency }}</span>
               </span>
               <span class="table__cell table__cell--actions" role="cell">
                 <button

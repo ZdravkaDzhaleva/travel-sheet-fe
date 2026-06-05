@@ -151,6 +151,20 @@ describe('InvoicesComponent', () => {
     expect(text).toContain('EUR');
   });
 
+  it('renders mobile card labels (Quantity/Unit price/Total) once per invoice', () => {
+    const master = makeMasterStubs();
+    const rows = makeInvoices();
+    const inv = makeInvoiceStubs(rows);
+    const fixture = render(master, inv);
+    const el = fixture.nativeElement as HTMLElement;
+    const labels = Array.from(
+      el.querySelectorAll<HTMLElement>('.table__card-label'),
+    ).map(n => n.textContent?.trim());
+    expect(labels.filter(l => l === 'Quantity').length).toBe(rows.length);
+    expect(labels.filter(l => l === 'Unit price').length).toBe(rows.length);
+    expect(labels.filter(l => l === 'Total').length).toBe(rows.length);
+  });
+
   it('renders icon edit/delete buttons with aria-labels', () => {
     const master = makeMasterStubs();
     const inv = makeInvoiceStubs(makeInvoices());

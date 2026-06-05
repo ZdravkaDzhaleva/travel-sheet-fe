@@ -65,7 +65,7 @@
   font: inherit;
   font-weight: 600;
   font-size: 0.9375rem;
-  border-radius: 0.6rem;
+  border-radius: 0.8rem;
   border: 0.0625rem solid transparent;
   cursor: pointer;
   transition: filter 0.15s ease;
@@ -109,7 +109,7 @@
 .card {
   background-color: var(--app-surface);
   color: var(--app-text-on-surface);
-  border-radius: 0.75rem;
+  border-radius: 1rem;
   overflow: hidden;
   box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
 }
@@ -145,16 +145,24 @@
 .table {
   display: flex;
   flex-direction: column;
+  margin: 0.7rem;
 }
 
 .table__head {
   display: none; // Hidden on mobile; shown on desktop
 }
 
+// Mobile-first: each row is a card with a title line, labeled value rows, and
+// a divided-off action bar. The ≥640 px block below flattens it to a table row.
 .table__row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.625rem 1rem;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'vendor  date'
+    'qty     qty'
+    'unit    unit'
+    'total   total'
+    'actions actions';
   padding: 1rem 1.25rem;
   border-bottom: 0.0625rem solid rgba(57, 57, 57, 0.1);
 }
@@ -164,13 +172,11 @@
 }
 
 .table__card-label {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: rgba(57, 57, 57, 0.55);
-  grid-column: unset;
-  align-self: end;
 }
 
 .table__cell {
@@ -182,12 +188,61 @@
   font-variant-numeric: tabular-nums;
 }
 
-.table__cell--actions {
+// Muted unit suffix on the quantity value (mobile only; the desktop header
+// already reads "Qty (L)"). Hidden in the ≥640 px block.
+.table__unit {
+  color: rgba(57, 57, 57, 0.5);
+}
+
+// ── Mobile card cells ──
+.table__cell--vendor {
+  grid-area: vendor;
+  font-size: 1.05rem;
+}
+
+.table__cell--date {
+  grid-area: date;
+  align-self: center;
+  text-align: right;
+  color: rgba(57, 57, 57, 0.55);
+}
+
+.table__cell--qty {
+  grid-area: qty;
+}
+
+.table__cell--unit {
+  grid-area: unit;
+}
+
+.table__cell--total {
+  grid-area: total;
+}
+
+// Labeled value rows: label left, value right. Only the card outline (the row's
+// bottom border) divides invoices — value rows are separated by spacing alone.
+.table__cell--qty,
+.table__cell--unit,
+.table__cell--total {
   display: flex;
-  gap: 0.4rem;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.4rem;
+}
+
+.table__cell--total .table__value {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.table__cell--actions {
+  grid-area: actions;
+  display: flex;
+  gap: 0.5rem;
   align-items: center;
   justify-content: flex-end;
-  grid-column: 1 / -1;
+  margin-top: 0.75rem;
 }
 
 // ── Icon buttons ──────────────────────────────────────────────────────────────
@@ -196,10 +251,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.4rem;
-  height: 2.4rem;
+  width: 2.75rem; // ≥44 px touch target on mobile; tightened on desktop below
+  height: 2.75rem;
   border: 0.0625rem solid rgba(57, 57, 57, 0.15);
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   background: transparent;
   color: var(--app-text-on-surface);
   cursor: pointer;
@@ -333,6 +388,9 @@
 // ── Desktop table layout (≥ 640 px) ──────────────────────────────────────────
 
 @media (min-width: 640px) {
+  .table {
+    margin: 0;
+  }
   .table__head {
     display: grid;
     grid-template-columns: 1.4fr 1fr 0.8fr 1fr 1fr 5.5rem;
@@ -349,18 +407,56 @@
 
   .table__row {
     grid-template-columns: 1.4fr 1fr 0.8fr 1fr 1fr 5.5rem;
+    grid-template-areas: none;
     gap: 0 1rem;
     align-items: center;
     padding: 0.875rem 1.5rem;
   }
 
-  .table__card-label {
+  // Flatten the mobile card back into a single tabular row.
+  .table__card-label,
+  .table__unit {
     display: none;
   }
 
+  .table__cell--vendor,
+  .table__cell--date,
+  .table__cell--qty,
+  .table__cell--unit,
+  .table__cell--total,
   .table__cell--actions {
-    grid-column: unset;
+    grid-area: auto;
+  }
+
+  .table__cell--date {
+    text-align: left;
+    color: inherit;
+  }
+
+  .table__cell--vendor {
+    font-size: 0.9375rem;
+  }
+
+  .table__cell--qty,
+  .table__cell--unit,
+  .table__cell--total {
+    display: block;
+    margin-top: 0;
+  }
+
+  .table__cell--total .table__value {
+    font-weight: inherit;
+    font-size: inherit;
+  }
+
+  .table__cell--actions {
+    margin-top: 0;
     justify-content: flex-end;
+  }
+
+  .icon-btn {
+    width: 2.4rem;
+    height: 2.4rem;
   }
 
   .form {

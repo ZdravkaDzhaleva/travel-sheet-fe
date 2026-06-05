@@ -239,6 +239,12 @@ Replace the single raw-message error box with layered, accessible error reportin
 - **Deps:** T7.3
 - **Done when:** invalid fields show an inline message under the offending input; a form-level summary at the top of the modal lists all problems after a failed submit (`role="alert"`); `InvoiceService` async failures route to error toasts rather than a raw `err.message` dump (no such dump remains). Specs cover field-level errors, the summary, and the service-error path. Lint + build clean.
 
+### [x] T7.4a — Invoices: clear mobile card layout
+Finish the half-built mobile card layout from T7.2: the stacked cards render unlabeled, side-by-side values (`60.23` / `1.52 EUR` / `91.55 EUR`) that can't be told apart, and the row actions float in dead space. Desktop table stays untouched.
+- **Deps:** T7.2
+- **Done when:** below 640 px each invoice renders as a card with (a) a title row — vendor bold + date muted/right-aligned, (b) hairline-divided labeled rows for Quantity / Unit price / Total using the existing `.table__card-label` slot (labels stay `display:none` on desktop), (c) the Total visually emphasized, (d) a unit suffix on the numbers (`60.23 L`, currency on price/total), and (e) the Edit/Delete actions divided off by a top border with ≥44 px hit targets. Desktop (≥640 px) table layout is unchanged. Specs assert the per-row labels render. Lint + build clean.
+  - _Done: mobile row is now a named-areas grid (vendor/date title row, labeled qty/unit/total rows, divided action bar); icon buttons 44 px on mobile / 2.4 rem on desktop; `.table__unit` suffix mobile-only; new spec checks 3 labels × N rows. 422 tests green._
+
 ### [ ] T7.5 — Company info: header pattern + read-only link + polished cards
 Bring the read-only company/vehicle screen in line with the refreshed Invoices header and card styling. Editing stays forbidden (T5.2) — the only header action is an outward link to the source spreadsheet. Mockup: `docs/mockups/company-info.html`.
 - **Deps:** T7.2
