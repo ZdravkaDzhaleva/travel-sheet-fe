@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { signal, type Signal } from '@angular/core';
+import { signal, type Signal, type WritableSignal } from '@angular/core';
 
 import { InvoicesComponent } from './invoices.component';
 import { InvoiceService } from '../../application/invoice.service';
 import { MasterDataService } from '../../application/master-data.service';
+import { ToastService } from '../../shared/ui/toast/toast.service';
 import {
   makeCompany,
   makeVehicle,
@@ -94,6 +95,9 @@ function instance(fixture: ComponentFixture<InvoicesComponent>): {
   startEdit(invoice: Invoice): void;
   openEditForm(invoice: Invoice): void;
   cancelEdit(): void;
+  requestDelete(invoice: Invoice): void;
+  cancelDelete(): void;
+  confirmDelete(): Promise<void>;
   deleteInvoice(invoice: Invoice): Promise<void>;
   formData: {
     fuelVendor: string;
@@ -105,7 +109,8 @@ function instance(fixture: ComponentFixture<InvoicesComponent>): {
   };
   file: File | null;
   editingId: () => number | null;
-  formOpen: () => boolean;
+  formOpen: WritableSignal<boolean>;
+  confirmTarget: () => Invoice | null;
   localError: () => string | null;
 } {
   return fixture.componentInstance as unknown as ReturnType<typeof instance>;
@@ -295,22 +300,72 @@ describe('InvoicesComponent', () => {
     expect(cmp.formOpen()).toBe(false);
   });
 
-  it('deleteInvoice confirms via window.confirm before calling InvoiceService.delete', async () => {
+  it('requestDelete sets confirmTarget; cancelDelete clears it without deleting', async () => {
     const master = makeMasterStubs();
     const inv = makeInvoiceStubs(makeInvoices());
     const fixture = render(master, inv);
     const cmp = instance(fixture);
-    const confirmSpy = vi.spyOn(window, 'confirm');
+    const target = makeInvoices()[0];
 
-    confirmSpy.mockReturnValueOnce(false);
-    await cmp.deleteInvoice(makeInvoices()[0]);
+    cmp.requestDelete(target);
+    expect(cmp.confirmTarget()).toEqual(target);
+
+    cmp.cancelDelete();
+    expect(cmp.confirmTarget()).toBeNull();
     expect(inv.delete).not.toHaveBeenCalled();
+  });
 
-    confirmSpy.mockReturnValueOnce(true);
-    await cmp.deleteInvoice(makeInvoices()[0]);
-    expect(inv.delete).toHaveBeenCalledWith(makeInvoices()[0].Id);
+  it('confirmDelete calls InvoiceService.delete and fires a success toast', async () => {
+    const master = makeMasterStubs();
+    const inv = makeInvoiceStubs(makeInvoices());
+    const fixture = render(master, inv);
+    const cmp = instance(fixture);
+    const toast = TestBed.inject(ToastService);
+    const target = makeInvoices()[0];
 
-    confirmSpy.mockRestore();
+    cmp.requestDelete(target);
+    await cmp.confirmDelete();
+
+    expect(inv.delete).toHaveBeenCalledWith(target.Id);
+    expect(cmp.confirmTarget()).toBeNull();
+    expect(toast.toasts()[0].type).toBe('success');
+  });
+
+  it('upload success fires a success toast and closes the form', async () => {
+    const master = makeMasterStubs();
+    const inv = makeInvoiceStubs();
+    const fixture = render(master, inv);
+    const cmp = instance(fixture);
+    const toast = TestBed.inject(ToastService);
+
+    cmp.formOpen.set(true);
+    cmp.file = new File(['x'], 'invoice.pdf', { type: 'application/pdf' });
+    cmp.formData = {
+      fuelVendor: 'OMV',
+      invoiceDate: '2026-02-14',
+      quantityLiters: 30,
+      unitPrice: 2.95,
+      totalAmount: 88.5,
+      currency: 'EUR',
+    };
+    await cmp.submit();
+
+    expect(cmp.formOpen()).toBe(false);
+    expect(toast.toasts()[0].type).toBe('success');
+  });
+
+  it('edit success fires a success toast and closes the form', async () => {
+    const master = makeMasterStubs();
+    const inv = makeInvoiceStubs(makeInvoices());
+    const fixture = render(master, inv);
+    const cmp = instance(fixture);
+    const toast = TestBed.inject(ToastService);
+
+    cmp.startEdit(makeInvoices()[0]);
+    await cmp.submit();
+
+    expect(cmp.formOpen()).toBe(false);
+    expect(toast.toasts()[0].type).toBe('success');
   });
 
   it('shows a master-data load error and no form controls when master data fails', () => {

@@ -3,6 +3,8 @@ import { FormsModule } from '@angular/forms';
 
 import { InvoiceService } from '../../application/invoice.service';
 import { MasterDataService } from '../../application/master-data.service';
+import { ModalComponent } from '../../shared/ui/modal/modal.component';
+import { ToastService } from '../../shared/ui/toast/toast.service';
 import type { Invoice } from '../../domain/entities/index';
 
 interface InvoiceFormState {
@@ -28,13 +30,14 @@ function emptyForm(): InvoiceFormState {
 @Component({
   selector: 'app-invoices',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, ModalComponent],
   templateUrl: './invoices.component.html',
   styleUrl: './invoices.component.scss',
 })
 export class InvoicesComponent implements OnInit {
   private readonly invoiceService = inject(InvoiceService);
   private readonly masterData = inject(MasterDataService);
+  private readonly toast = inject(ToastService);
 
   protected readonly invoices = this.invoiceService.invoices;
   protected readonly serviceLoading = this.invoiceService.loading;
@@ -48,6 +51,7 @@ export class InvoicesComponent implements OnInit {
   protected file: File | null = null;
   protected readonly editingId = signal<number | null>(null);
   protected readonly formOpen = signal(false);
+  protected readonly confirmTarget = signal<Invoice | null>(null);
   protected readonly localError = signal<string | null>(null);
 
   ngOnInit(): void {
@@ -97,6 +101,27 @@ export class InvoicesComponent implements OnInit {
     this.formOpen.set(false);
   }
 
+  protected requestDelete(invoice: Invoice): void {
+    this.confirmTarget.set(invoice);
+  }
+
+  protected cancelDelete(): void {
+    this.confirmTarget.set(null);
+  }
+
+  protected async confirmDelete(): Promise<void> {
+    const target = this.confirmTarget();
+    if (!target) return;
+    try {
+      await this.invoiceService.delete(target.Id);
+      this.confirmTarget.set(null);
+      this.toast.show(`${target.FuelVendor} invoice deleted`, 'success');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.toast.show(`Delete failed: ${msg}`, 'error');
+    }
+  }
+
   protected async submit(): Promise<void> {
     this.localError.set(null);
 
@@ -141,9 +166,11 @@ export class InvoicesComponent implements OnInit {
           TotalAmount: total,
           Currency: this.formData.currency.trim(),
         });
-        this.cancelEdit(); // also closes form
-      } catch {
-        // Error already exposed via invoiceService.error signal; keep form open.
+        this.cancelEdit();
+        this.toast.show('Invoice updated', 'success');
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        this.toast.show(`Update failed: ${msg}`, 'error');
       }
       return;
     }
@@ -170,21 +197,16 @@ export class InvoicesComponent implements OnInit {
       this.formData = emptyForm();
       this.file = null;
       this.formOpen.set(false);
-    } catch {
-      // Error surfaced via invoiceService.error; keep form filled so the user can retry.
+      this.toast.show('Invoice uploaded', 'success');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.toast.show(`Upload failed: ${msg}`, 'error');
     }
   }
 
+  // Keep for legacy spec compatibility — used in existing tests via instance()
   protected async deleteInvoice(invoice: Invoice): Promise<void> {
-    const ok = window.confirm(
-      `Delete invoice ${invoice.FuelVendor} ${formatDateDisplay(invoice.InvoiceDate)}?`,
-    );
-    if (!ok) return;
-    try {
-      await this.invoiceService.delete(invoice.Id);
-    } catch {
-      // Service exposes error via signal.
-    }
+    this.requestDelete(invoice);
   }
 
   protected formatDate(d: Date): string {

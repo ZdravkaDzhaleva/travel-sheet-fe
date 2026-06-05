@@ -76,7 +76,7 @@
                   [attr.aria-label]="'Delete ' + invoice.FuelVendor + ' invoice'"
                   title="Delete"
                   [disabled]="serviceLoading()"
-                  (click)="deleteInvoice(invoice)"
+                  (click)="requestDelete(invoice)"
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="17" height="17">
@@ -87,143 +87,159 @@
                   </svg>
                 </button>
               </span>
-
-              <!-- Mobile card label row (hidden on desktop) -->
-              <span class="table__card-label" aria-hidden="true">VENDOR</span>
-              <span class="table__card-label" aria-hidden="true">DATE</span>
-              <span class="table__card-label" aria-hidden="true">QTY (L)</span>
-              <span class="table__card-label" aria-hidden="true">UNIT PRICE</span>
-              <span class="table__card-label" aria-hidden="true">TOTAL</span>
             </div>
           }
         </div>
       }
     </section>
-
-    <!-- Inline form — shown when formOpen(); replaced by Modal in T7.3 -->
-    @if (formOpen()) {
-      <section class="card" aria-labelledby="form-heading">
-        <h2 id="form-heading" class="card__heading">
-          {{ editingId() !== null ? 'Edit invoice' : 'Add invoice' }}
-        </h2>
-
-        <form class="form" (ngSubmit)="submit()" #invoiceForm="ngForm">
-          @if (editingId() === null) {
-            <label class="form__field">
-              <span class="form__label">Invoice file</span>
-              <input
-                type="file"
-                name="file"
-                accept="image/*,application/pdf,.pdf"
-                (change)="onFileChange($event)"
-                class="form__input form__input--file"
-              />
-            </label>
-          }
-
-          <label class="form__field">
-            <span class="form__label">Fuel vendor</span>
-            <input
-              type="text"
-              name="fuelVendor"
-              [(ngModel)]="formData.fuelVendor"
-              class="form__input"
-              required
-              autocomplete="off"
-            />
-          </label>
-
-          <label class="form__field">
-            <span class="form__label">Invoice date</span>
-            <input
-              type="date"
-              name="invoiceDate"
-              [(ngModel)]="formData.invoiceDate"
-              class="form__input"
-              required
-            />
-          </label>
-
-          <label class="form__field">
-            <span class="form__label">Quantity (L)</span>
-            <input
-              type="number"
-              inputmode="decimal"
-              step="0.01"
-              min="0"
-              name="quantityLiters"
-              [(ngModel)]="formData.quantityLiters"
-              class="form__input"
-              required
-            />
-          </label>
-
-          <label class="form__field">
-            <span class="form__label">Unit price</span>
-            <input
-              type="number"
-              inputmode="decimal"
-              step="0.01"
-              min="0"
-              name="unitPrice"
-              [(ngModel)]="formData.unitPrice"
-              class="form__input"
-              required
-            />
-          </label>
-
-          <label class="form__field">
-            <span class="form__label">Total amount</span>
-            <input
-              type="number"
-              inputmode="decimal"
-              step="0.01"
-              min="0"
-              name="totalAmount"
-              [(ngModel)]="formData.totalAmount"
-              class="form__input"
-              required
-            />
-          </label>
-
-          <label class="form__field">
-            <span class="form__label">Currency</span>
-            <input
-              type="text"
-              name="currency"
-              [(ngModel)]="formData.currency"
-              class="form__input"
-              maxlength="6"
-              autocomplete="off"
-            />
-          </label>
-
-          @if (localError(); as err) {
-            <p class="form__error" role="alert">{{ err }}</p>
-          }
-          @if (serviceError(); as err) {
-            <p class="form__error" role="alert">{{ err.message }}</p>
-          }
-
-          <div class="form__actions">
-            <button
-              type="submit"
-              class="btn btn--primary"
-              [disabled]="serviceLoading()"
-            >
-              {{ serviceLoading() ? 'Working…' : (editingId() !== null ? 'Save changes' : 'Upload') }}
-            </button>
-            <button
-              type="button"
-              class="btn"
-              [disabled]="serviceLoading()"
-              (click)="cancelEdit()"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </section>
-    }
   }
 </main>
+
+<!-- ── Add / Edit invoice modal ──────────────────────────────────────────── -->
+<app-modal
+  [open]="formOpen()"
+  [title]="editingId() !== null ? 'Edit invoice' : 'Add invoice'"
+  (closed)="cancelEdit()"
+>
+  <form modal-body class="form" (ngSubmit)="submit()" #invoiceForm="ngForm">
+    @if (editingId() === null) {
+      <label class="form__field form__field--full">
+        <span class="form__label">Invoice file</span>
+        <input
+          type="file"
+          name="file"
+          accept="image/*,application/pdf,.pdf"
+          (change)="onFileChange($event)"
+          class="form__input form__input--file"
+        />
+      </label>
+    }
+
+    <label class="form__field">
+      <span class="form__label">Fuel vendor</span>
+      <input
+        type="text"
+        name="fuelVendor"
+        [(ngModel)]="formData.fuelVendor"
+        class="form__input"
+        required
+        autocomplete="off"
+      />
+    </label>
+
+    <label class="form__field">
+      <span class="form__label">Invoice date</span>
+      <input
+        type="date"
+        name="invoiceDate"
+        [(ngModel)]="formData.invoiceDate"
+        class="form__input"
+        required
+      />
+    </label>
+
+    <label class="form__field">
+      <span class="form__label">Quantity (L)</span>
+      <input
+        type="number"
+        inputmode="decimal"
+        step="0.01"
+        min="0"
+        name="quantityLiters"
+        [(ngModel)]="formData.quantityLiters"
+        class="form__input"
+        required
+      />
+    </label>
+
+    <label class="form__field">
+      <span class="form__label">Unit price</span>
+      <input
+        type="number"
+        inputmode="decimal"
+        step="0.01"
+        min="0"
+        name="unitPrice"
+        [(ngModel)]="formData.unitPrice"
+        class="form__input"
+        required
+      />
+    </label>
+
+    <label class="form__field">
+      <span class="form__label">Total amount</span>
+      <input
+        type="number"
+        inputmode="decimal"
+        step="0.01"
+        min="0"
+        name="totalAmount"
+        [(ngModel)]="formData.totalAmount"
+        class="form__input"
+        required
+      />
+    </label>
+
+    <label class="form__field">
+      <span class="form__label">Currency</span>
+      <input
+        type="text"
+        name="currency"
+        [(ngModel)]="formData.currency"
+        class="form__input"
+        maxlength="6"
+        autocomplete="off"
+      />
+    </label>
+
+    @if (localError(); as err) {
+      <p class="form__error form__field--full" role="alert">{{ err }}</p>
+    }
+  </form>
+
+  <div modal-footer>
+    <button
+      type="button"
+      class="btn"
+      [disabled]="serviceLoading()"
+      (click)="cancelEdit()"
+    >
+      Cancel
+    </button>
+    <button
+      type="submit"
+      form="invoiceForm"
+      class="btn btn--primary"
+      [disabled]="serviceLoading()"
+      (click)="submit()"
+    >
+      {{ serviceLoading() ? 'Working…' : (editingId() !== null ? 'Save changes' : 'Upload') }}
+    </button>
+  </div>
+</app-modal>
+
+<!-- ── Delete confirm modal ───────────────────────────────────────────────── -->
+<app-modal
+  [open]="confirmTarget() !== null"
+  [title]="'Delete invoice'"
+  (closed)="cancelDelete()"
+>
+  <div modal-body class="confirm-body">
+    <p class="confirm-body__text">
+      Delete the <strong>{{ confirmTarget()?.FuelVendor }}</strong>
+      invoice from <strong>{{ confirmTarget() ? formatDate(confirmTarget()!.InvoiceDate) : '' }}</strong>?
+      This cannot be undone.
+    </p>
+  </div>
+  <div modal-footer>
+    <button type="button" class="btn" (click)="cancelDelete()">Cancel</button>
+    <button
+      type="button"
+      class="btn btn--danger"
+      [disabled]="serviceLoading()"
+      (click)="confirmDelete()"
+    >
+      {{ serviceLoading() ? 'Deleting…' : 'Delete' }}
+    </button>
+  </div>
+</app-modal>

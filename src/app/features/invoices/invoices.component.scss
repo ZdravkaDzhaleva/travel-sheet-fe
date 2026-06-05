@@ -94,6 +94,16 @@
   filter: brightness(1.06);
 }
 
+.btn--danger {
+  background-color: rgb(150, 40, 40);
+  color: #fff;
+  border-color: rgb(150, 40, 40);
+}
+
+.btn--danger:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
 // ── Card ──────────────────────────────────────────────────────────────────────
 
 .card {
@@ -217,10 +227,23 @@
   color: rgb(150, 40, 40);
 }
 
-// ── Inline form ───────────────────────────────────────────────────────────────
+// ── Confirm-delete body ───────────────────────────────────────────────────────
+
+.confirm-body {
+  padding: 0;
+}
+
+.confirm-body__text {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--app-text-on-surface);
+}
+
+// ── Form (used inside modal) ──────────────────────────────────────────────────
 
 .form {
-  padding: 0 1.25rem 1.25rem;
+  padding: 0;
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.875rem;
