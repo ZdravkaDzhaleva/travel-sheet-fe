@@ -195,10 +195,11 @@ Wire routes (sign-in → company-info / invoices / generate), nav, loading/error
 - **Done when:** navigation works; guards enforced.
 - `layouts/navbar/navbar.component.{ts,html,scss,spec}` — sticky top nav bar (brand link, Company info / Invoices / Generate links with `routerLinkActive`, Sign out button) wrapping `<router-outlet>`. Routes restructured: shell at `''` path with `authGuard` wrapping all authenticated child routes (company-info, invoices, generate). `app.ts`/`app.html` adds auth-loading overlay (spinner covering router-outlet while Firebase session rehydrates). Home component has been removed.Upon successful login user lands on invoices page. Feature component per-page back buttons + page-level headers removed (navbar takes over). 7 new tests (3 nav-links, router-outlet, sign-out call, busy state + 2 app-loading tests). 394 total pass, lint + build clean. Mobile-viewport verification (360×640 and 768×1024): not possible in this environment — deferred to T6.2 manual dry-run.
 
-### [ ] T6.2 — End-to-end dry run
+### [x] T6.2 — End-to-end dry run
 Generate a full sample month against a real test workspace; eyeball the sheet against the 2025 reference for plausibility; confirm balance ∈ [0,8] and totals reconcile.
 - **Deps:** T6.1
 - **Done when:** a generated sheet looks correct and passes all invariants manually.
+- Dry run successful with minor planned improvements - UI (error handling, create/edit invoice, invoice list), store formulas in generated sheet, etc.
 
 ### [ ] T6.3 — Hosting deploy
 Run `firebase init hosting` to create `firebase.json` and `.firebaserc` (public dir = the Angular build output, SPA rewrite to `index.html`). Add the production build + deploy step. Ensure the deployed domain is added to Firebase Auth **authorized domains** and to the Google OAuth client's allowed origins, or sign-in will fail in production.
