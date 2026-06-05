@@ -11,7 +11,7 @@
       <h1 class="invoices__title">
         Invoices
         @if (invoices().length > 0) {
-          <span class="invoices__count">{{ invoices().length }}</span>
+          <span class="invoices__count">{{ '('+invoices().length+')' }}</span>
         }
       </h1>
       <button
