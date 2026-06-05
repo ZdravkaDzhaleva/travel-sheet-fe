@@ -5,9 +5,12 @@ import { signal, type Signal } from '@angular/core';
 
 import { CompanyInfoComponent } from './company-info.component';
 import { MasterDataService } from '../../application/master-data.service';
+import { SheetsStore } from '../../infrastructure/sheets.store';
 import { NoActiveVehicleError } from '../../application/master-data.errors';
 import { makeCompany, makeVehicle } from '../../../test-fixtures/index';
 import type { Company, Vehicle } from '../../domain/entities/index';
+
+const SHEET_ID = 'supporting-sheet-id-123';
 
 interface Stubs {
   readonly company: ReturnType<typeof signal<Company | null>>;
@@ -16,6 +19,8 @@ interface Stubs {
   readonly error: ReturnType<typeof signal<Error | null>>;
   readonly load: ReturnType<typeof vi.fn>;
   readonly service: MasterDataService;
+  readonly resolveSupportingSheetId: ReturnType<typeof vi.fn>;
+  readonly sheets: SheetsStore;
 }
 
 function makeStubs(initial: {
@@ -23,6 +28,7 @@ function makeStubs(initial: {
   vehicle?: Vehicle | null;
   loading?: boolean;
   error?: Error | null;
+  sheetId?: string;
 } = {}): Stubs {
   const company = signal<Company | null>(initial.company ?? null);
   const vehicle = signal<Vehicle | null>(initial.vehicle ?? null);
@@ -39,7 +45,10 @@ function makeStubs(initial: {
     load,
   } as unknown as MasterDataService;
 
-  return { company, vehicle, loading, error, load, service };
+  const resolveSupportingSheetId = vi.fn(async () => initial.sheetId ?? SHEET_ID);
+  const sheets = { resolveSupportingSheetId } as unknown as SheetsStore;
+
+  return { company, vehicle, loading, error, load, service, resolveSupportingSheetId, sheets };
 }
 
 function render(stubs: Stubs): {
@@ -52,6 +61,7 @@ function render(stubs: Stubs): {
     providers: [
       provideRouter([]),
       { provide: MasterDataService, useValue: stubs.service },
+      { provide: SheetsStore, useValue: stubs.sheets },
     ],
   });
   const fixture = TestBed.createComponent(CompanyInfoComponent);
@@ -112,12 +122,51 @@ describe('CompanyInfoComponent', () => {
     expect(text).toContain(vehicle.RegistrationNumber);
     expect(text).toContain(vehicle.FuelType);
     expect(text).toContain(vehicle.SeatCount);
-    expect(text).toContain(`${vehicle.AverageConsumptionLitersPer100Km} L / 100 km`);
-    expect(text).toContain(`${vehicle.TankCapacityLiters} L`);
-    expect(text).toContain(`${vehicle.OpeningFuelBalance} L`);
+    // Values and their unit suffixes render in adjacent num/unit spans.
+    expect(text).toContain(String(vehicle.AverageConsumptionLitersPer100Km));
+    expect(text).toContain('L / 100 km');
+    expect(text).toContain(String(vehicle.TankCapacityLiters));
+    expect(text).toContain(String(vehicle.OpeningFuelBalance));
+    const units = Array.from(el.querySelectorAll('.unit')).map(u => u.textContent?.trim());
+    expect(units).toContain('L');
+    expect(units).toContain('L / 100 km');
   });
 
-  it('exposes no edit controls — only the back link, no form inputs, textareas, or non-link buttons', () => {
+  it('renders a Read-only pill and the read-only subtitle', () => {
+    const stubs = makeStubs({ company: makeCompany(), vehicle: makeVehicle() });
+    const { el } = render(stubs);
+    expect(el.querySelector('.pill')?.textContent).toContain('Read-only');
+    expect(el.textContent).toContain('sourced from the supporting spreadsheet');
+  });
+
+  it('builds the "Open supporting sheet" link from the resolved id (new tab, noopener)', async () => {
+    const stubs = makeStubs({ company: makeCompany(), vehicle: makeVehicle() });
+    const { el, detect } = render(stubs);
+    // resolveSupportingSheetId() resolves on a microtask; flush then re-render.
+    await new Promise(resolve => setTimeout(resolve));
+    detect();
+    const link = Array.from(el.querySelectorAll('a')).find(a =>
+      a.textContent?.includes('Open supporting sheet'),
+    );
+    expect(stubs.resolveSupportingSheetId).toHaveBeenCalledOnce();
+    expect(link?.getAttribute('href')).toBe(
+      `https://docs.google.com/spreadsheets/d/${SHEET_ID}/edit`,
+    );
+    expect(link?.getAttribute('target')).toBe('_blank');
+    expect(link?.getAttribute('rel')).toBe('noopener');
+  });
+
+  it('leaves the outward link without an href until the id resolves', () => {
+    const stubs = makeStubs({ company: makeCompany(), vehicle: makeVehicle() });
+    const { el } = render(stubs);
+    const link = Array.from(el.querySelectorAll('a')).find(a =>
+      a.textContent?.includes('Open supporting sheet'),
+    );
+    expect(link).toBeTruthy();
+    expect(link?.hasAttribute('href')).toBe(false);
+  });
+
+  it('exposes no edit controls — only links, no form inputs, textareas, or non-link buttons', () => {
     const stubs = makeStubs({ company: makeCompany(), vehicle: makeVehicle() });
     const { el } = render(stubs);
     expect(el.querySelectorAll('input').length).toBe(0);

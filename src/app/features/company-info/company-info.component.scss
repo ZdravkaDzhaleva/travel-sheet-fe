@@ -5,23 +5,97 @@
 }
 
 .company-info {
-  max-width: 48rem;
+  max-width: 52rem;
   margin: 0 auto;
-  padding: 1.5rem 1rem 2rem;
-  padding-left: max(1rem, env(safe-area-inset-left));
-  padding-right: max(1rem, env(safe-area-inset-right));
-  padding-bottom: max(2rem, env(safe-area-inset-bottom));
+  padding: 2rem 1.5rem 3rem;
+  padding-left: max(1.5rem, env(safe-area-inset-left));
+  padding-right: max(1.5rem, env(safe-area-inset-right));
+  padding-bottom: max(3rem, env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
 
+// ── Page header ───────────────────────────────────────────────────────────────
+
+.company-info__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.company-info__titlewrap {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
 .company-info__title {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+  border: 0.0625rem solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.92rem;
+  border-radius: 0.8rem;
+  border: 0.0625rem solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  color: var(--app-text);
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.btn:hover {
+  border-color: var(--app-accent);
+  background: rgba(173, 148, 108, 0.08);
+}
+
+.btn:focus-visible {
+  outline: 0.125rem solid var(--app-accent);
+  outline-offset: 0.125rem;
+}
+
+// An anchor with no resolved href is non-navigable; show it as pending.
+.btn:not([href]) {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.company-info__sub {
+  margin: -0.25rem 0 0.25rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  max-width: 46rem;
+}
+
+// ── Status messages ───────────────────────────────────────────────────────────
 
 .company-info__status {
   margin: 0;
@@ -36,53 +110,84 @@
   color: rgb(120, 30, 30);
 }
 
+// ── Cards ─────────────────────────────────────────────────────────────────────
+
 .card {
   background-color: var(--app-surface);
   color: var(--app-text-on-surface);
-  border-radius: 0.75rem;
-  padding: 1.25rem;
-  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.18);
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
 }
 
-.card__heading {
-  margin: 0 0 0.875rem;
-  font-size: 1.125rem;
-  font-weight: 600;
-  letter-spacing: -0.005em;
+.card__head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 0.0625rem solid rgba(57, 57, 57, 0.1);
 }
 
-.card__fields {
+.card__head svg {
+  color: var(--lr-gold-deep);
+  flex: none;
+}
+
+.card__title {
   margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+// ── Key/value rows ────────────────────────────────────────────────────────────
+
+.kv {
+  margin: 0;
+}
+
+.kv__row {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.875rem 1.25rem;
+  gap: 0.2rem;
+  padding: 0.7rem 1.25rem;
+  border-bottom: 0.0625rem solid rgba(57, 57, 57, 0.1);
 }
 
-.card__field {
-  display: grid;
-  gap: 0.125rem;
+.kv__row:last-child {
+  border-bottom: 0;
 }
 
-.card__field dt {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: rgba(57, 57, 57, 0.7);
+.kv__row dt {
+  font-size: 0.78rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
+  color: rgba(57, 57, 57, 0.62);
 }
 
-.card__field dd {
+.kv__row dd {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.98rem;
   word-break: break-word;
 }
 
-@media (min-width: 480px) {
-  .card {
-    padding: 1.5rem;
-  }
-  .card__fields {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.unit {
+  color: rgba(57, 57, 57, 0.62);
+  font-size: 0.85rem;
+  margin-left: 0.3rem;
+}
+
+// ── Two-column rows once there's room (≥ 540 px) ──────────────────────────────
+
+@media (min-width: 540px) {
+  .kv__row {
+    grid-template-columns: 13rem 1fr;
+    align-items: baseline;
+    gap: 1rem;
   }
 }
 

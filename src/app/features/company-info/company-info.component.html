@@ -1,5 +1,33 @@
 <main class="company-info">
-  <h1 class="company-info__title">Company info</h1>
+  <div class="company-info__head">
+    <div class="company-info__titlewrap">
+      <h1 class="company-info__title">Company info</h1>
+      <span class="pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="13" height="13">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        Read-only
+      </span>
+    </div>
+    <a
+      class="btn"
+      [attr.href]="sheetUrl()"
+      target="_blank"
+      rel="noopener"
+    >
+      Open supporting sheet
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="15" height="15">
+        <path d="M7 17 17 7M9 7h8v8"/>
+      </svg>
+    </a>
+  </div>
+  <p class="company-info__sub">
+    These values are sourced from the supporting spreadsheet. To change them, edit the sheet —
+    the app reads them on the next load.
+  </p>
 
   @if (loading()) {
     <p class="company-info__status" role="status">Loading…</p>
@@ -10,23 +38,32 @@
   } @else {
     @if (company(); as c) {
       <section class="card" aria-labelledby="company-heading">
-        <h2 id="company-heading" class="card__heading">Company</h2>
-        <dl class="card__fields">
-          <div class="card__field">
+        <div class="card__head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="18" height="18">
+            <path d="M3 21h18"/>
+            <path d="M5 21V7l8-4v18"/>
+            <path d="M19 21V11l-6-4"/>
+            <path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/>
+          </svg>
+          <h2 id="company-heading" class="card__title">Company</h2>
+        </div>
+        <dl class="kv">
+          <div class="kv__row">
             <dt>Name</dt>
             <dd>{{ c.Name }}</dd>
           </div>
-          <div class="card__field">
+          <div class="kv__row">
             <dt>EIK</dt>
-            <dd>{{ c.Eik }}</dd>
+            <dd class="num">{{ c.Eik }}</dd>
           </div>
-          <div class="card__field">
+          <div class="kv__row">
             <dt>Address</dt>
             <dd>{{ c.Address }}</dd>
           </div>
-          <div class="card__field">
+          <div class="kv__row">
             <dt>Reporting year</dt>
-            <dd>{{ c.ReportingYear }}</dd>
+            <dd class="num">{{ c.ReportingYear }}</dd>
           </div>
         </dl>
       </section>
@@ -34,35 +71,52 @@
 
     @if (vehicle(); as v) {
       <section class="card" aria-labelledby="vehicle-heading">
-        <h2 id="vehicle-heading" class="card__heading">Active vehicle</h2>
-        <dl class="card__fields">
-          <div class="card__field">
+        <div class="card__head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="18" height="18">
+            <path d="M5 17h14"/>
+            <path d="M5 17a2 2 0 1 1-4 0 2 2 0 0 1 4 0Zm18 0a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z"/>
+            <path d="M3 17v-5l2-5h11l3 5h2v5"/>
+          </svg>
+          <h2 id="vehicle-heading" class="card__title">Active vehicle</h2>
+        </div>
+        <dl class="kv">
+          <div class="kv__row">
             <dt>Name</dt>
             <dd>{{ v.Name }}</dd>
           </div>
-          <div class="card__field">
+          <div class="kv__row">
             <dt>Registration</dt>
             <dd>{{ v.RegistrationNumber }}</dd>
           </div>
-          <div class="card__field">
+          <div class="kv__row">
             <dt>Fuel type</dt>
             <dd>{{ v.FuelType }}</dd>
           </div>
-          <div class="card__field">
+          <div class="kv__row">
             <dt>Seats</dt>
-            <dd>{{ v.SeatCount }}</dd>
+            <dd class="num">{{ v.SeatCount }}</dd>
           </div>
-          <div class="card__field">
+          <div class="kv__row">
             <dt>Avg consumption</dt>
-            <dd>{{ v.AverageConsumptionLitersPer100Km }} L / 100 km</dd>
+            <dd>
+              <span class="num">{{ v.AverageConsumptionLitersPer100Km }}</span>
+              <span class="unit">L / 100 km</span>
+            </dd>
           </div>
-          <div class="card__field">
+          <div class="kv__row">
             <dt>Tank capacity</dt>
-            <dd>{{ v.TankCapacityLiters }} L</dd>
+            <dd>
+              <span class="num">{{ v.TankCapacityLiters }}</span>
+              <span class="unit">L</span>
+            </dd>
           </div>
-          <div class="card__field">
+          <div class="kv__row">
             <dt>Opening fuel balance</dt>
-            <dd>{{ v.OpeningFuelBalance }} L</dd>
+            <dd>
+              <span class="num">{{ v.OpeningFuelBalance }}</span>
+              <span class="unit">L</span>
+            </dd>
           </div>
         </dl>
       </section>
