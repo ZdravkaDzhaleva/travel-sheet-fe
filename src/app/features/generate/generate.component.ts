@@ -1,6 +1,5 @@
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 
 import { GenerateMonthService } from '../../application/generate-month.service';
 import { InfeasibleMonthError } from '../../domain/generation/infeasible-month.error';
@@ -29,7 +28,7 @@ const MONTHS: readonly MonthOption[] = [
 @Component({
   selector: 'app-generate',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule],
   templateUrl: './generate.component.html',
   styleUrl: './generate.component.scss',
 })

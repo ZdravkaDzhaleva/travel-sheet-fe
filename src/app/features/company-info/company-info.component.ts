@@ -1,12 +1,11 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
 
 import { MasterDataService } from '../../application/master-data.service';
 
 @Component({
   selector: 'app-company-info',
   standalone: true,
-  imports: [RouterLink],
+  imports: [],
   templateUrl: './company-info.component.html',
   styleUrl: './company-info.component.scss',
 })

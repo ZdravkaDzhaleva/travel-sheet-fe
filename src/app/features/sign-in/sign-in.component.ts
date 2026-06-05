@@ -22,7 +22,7 @@ export class SignInComponent {
     this.error.set(null);
     try {
       await this.auth.signInWithGoogle();
-      await this.router.navigateByUrl('/home');
+      await this.router.navigateByUrl('/invoices');
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : String(err));
     } finally {

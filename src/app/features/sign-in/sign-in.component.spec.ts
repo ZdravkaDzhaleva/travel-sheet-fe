@@ -38,11 +38,11 @@ describe('SignInComponent', () => {
     stubs = makeStubs();
   });
 
-  it('calls GoogleAuth.signInWithGoogle and navigates to /home on success', async () => {
+  it('calls GoogleAuth.signInWithGoogle and navigates to /invoices on success', async () => {
     const cmp = makeComponent(stubs);
     await (cmp as unknown as { signIn(): Promise<void> }).signIn();
     expect(stubs.signIn).toHaveBeenCalledOnce();
-    expect(stubs.navigate).toHaveBeenCalledWith('/home');
+    expect(stubs.navigate).toHaveBeenCalledWith('/invoices');
   });
 
   it('surfaces the error message and does not navigate when sign-in fails', async () => {

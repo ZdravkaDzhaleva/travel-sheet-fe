@@ -1,6 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 
 import { InvoiceService } from '../../application/invoice.service';
 import { MasterDataService } from '../../application/master-data.service';
@@ -29,7 +28,7 @@ function emptyForm(): InvoiceFormState {
 @Component({
   selector: 'app-invoices',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule],
   templateUrl: './invoices.component.html',
   styleUrl: './invoices.component.scss',
 })

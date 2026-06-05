@@ -1,0 +1,57 @@
+<header class="nav" [class.nav--open]="menuOpen()" role="banner">
+  <div class="nav__inner">
+    <a class="nav__brand" routerLink="/invoices" aria-label="Home">Пътен лист</a>
+
+    <div class="nav__menu" id="main-nav">
+      <nav class="nav__links" aria-label="Main navigation">
+        <a
+          class="nav__link"
+          routerLink="/invoices"
+          routerLinkActive="nav__link--active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          (click)="closeMenu()"
+        >Invoices</a>
+        <a
+          class="nav__link"
+          routerLink="/generate"
+          routerLinkActive="nav__link--active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          (click)="closeMenu()"
+        >Generate</a>
+        <a
+          class="nav__link"
+          routerLink="/company-info"
+          routerLinkActive="nav__link--active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          (click)="closeMenu()"
+        >Company info</a>
+      </nav>
+
+      <button
+        type="button"
+        class="nav__sign-out"
+        [disabled]="busy()"
+        (click)="signOut()"
+      >
+        {{ busy() ? 'Signing out…' : 'Sign out' }}
+      </button>
+    </div>
+
+    <button
+      type="button"
+      class="nav__burger"
+      (click)="toggleMenu()"
+      [attr.aria-expanded]="menuOpen()"
+      aria-controls="main-nav"
+      [attr.aria-label]="menuOpen() ? 'Close menu' : 'Open menu'"
+    >
+      <span class="nav__burger-bar"></span>
+      <span class="nav__burger-bar"></span>
+      <span class="nav__burger-bar"></span>
+    </button>
+  </div>
+</header>
+
+<div class="shell-content">
+  <router-outlet />
+</div>

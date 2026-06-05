@@ -1,1 +1,6 @@
 <router-outlet />
+@if (!authReady()) {
+  <div class="app-loading" role="status" aria-label="Loading application">
+    <div class="app-loading__spinner" aria-hidden="true"></div>
+  </div>
+}

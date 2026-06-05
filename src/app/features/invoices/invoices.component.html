@@ -1,8 +1,5 @@
 <main class="invoices">
-  <header class="invoices__header">
-    <a class="invoices__back" routerLink="/home">← Back</a>
-    <h1 class="invoices__title">Invoices</h1>
-  </header>
+  <h1 class="invoices__title">Invoices</h1>
 
   @if (!masterReady() && masterError() === null) {
     <p class="invoices__status" role="status">Loading workspace…</p>
