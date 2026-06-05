@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Navbar — Phase 7 UI mockup</title>
+  <style>
+    :root {
+      --lr-dark: rgb(57, 57, 57);
+      --lr-on-dark: rgb(255, 255, 255);
+      --lr-gold: rgb(173, 148, 108);
+      --lr-gold-deep: rgb(155, 132, 100);
+      --lr-gold-bright: rgb(244, 214, 116);
+      --lr-on-light: rgb(57, 57, 57);
+      --app-bg: var(--lr-dark);
+      --app-text: var(--lr-on-dark);
+      --app-accent: var(--lr-gold);
+      --hairline: rgba(255,255,255,0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: #2c2c2c; color: var(--app-text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .label { max-width: 70rem; margin: 1.5rem auto 0.5rem; padding: 0 1rem; color: rgba(255,255,255,0.5); font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase; }
+
+    /* ── shell ── */
+    .nav {
+      background: var(--app-bg);
+      border-bottom: 1px solid var(--hairline);
+    }
+    .nav__inner {
+      display: flex; align-items: center; gap: 0.5rem;
+      min-height: 3.5rem; padding: 0 1.5rem; max-width: 70rem; margin: 0 auto;
+    }
+    .nav__brand {
+      flex-shrink: 0; display: inline-flex; align-items: center; padding: 0 0.5rem 0 0;
+      font-weight: 700; letter-spacing: 0.18em; font-size: 0.82rem; text-decoration: none;
+      background: linear-gradient(135deg, var(--lr-gold-deep), var(--lr-gold), var(--lr-gold-bright));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+
+    /* nav links centered/left, active underline indicator */
+    .nav__links { display: flex; gap: 0.25rem; margin-left: 1.5rem; }
+    .nav__link {
+      position: relative; display: inline-flex; align-items: center;
+      min-height: 3.5rem; padding: 0 1rem; color: rgba(255,255,255,0.72);
+      text-decoration: none; font-size: 0.82rem; font-weight: 500; letter-spacing: 0.1em;
+      transition: color 0.15s ease;
+    }
+    .nav__link:hover { color: #fff; }
+    .nav__link--active { color: var(--lr-gold); }
+    .nav__link--active::after {
+      content: ""; position: absolute; left: 1rem; right: 1rem; bottom: 0; height: 2px;
+      background: var(--lr-gold); border-radius: 2px 2px 0 0;
+    }
+
+    /* account cluster, separated from nav by a divider */
+    .nav__account { margin-left: auto; display: flex; align-items: center; gap: 0.75rem; }
+    .nav__divider { width: 1px; height: 1.5rem; background: var(--hairline); }
+    .acct {
+      display: flex; align-items: center; gap: 0.6rem;
+      background: transparent; border: 1px solid transparent; border-radius: 999px;
+      padding: 0.3rem 0.4rem 0.3rem 0.3rem; cursor: pointer; color: var(--app-text);
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .acct:hover { background: rgba(255,255,255,0.06); border-color: var(--hairline); }
+    .avatar {
+      width: 2rem; height: 2rem; border-radius: 50%; flex: none;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 0.78rem; font-weight: 700; color: var(--lr-on-light);
+      background: linear-gradient(135deg, var(--lr-gold-deep), var(--lr-gold-bright));
+    }
+    .acct__email { font-size: 0.82rem; color: rgba(255,255,255,0.82); max-width: 13rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .acct__chev { width: 0.8rem; height: 0.8rem; color: rgba(255,255,255,0.55); }
+
+    /* account dropdown */
+    .menu {
+      position: absolute; right: 1.5rem; margin-top: 0.4rem; min-width: 14rem;
+      background: #fff; color: var(--lr-on-light); border-radius: 0.6rem;
+      box-shadow: 0 1rem 2rem rgba(0,0,0,0.35); overflow: hidden; z-index: 20;
+    }
+    .menu__head { padding: 0.85rem 1rem; border-bottom: 1px solid rgba(57,57,57,0.1); }
+    .menu__name { font-weight: 600; font-size: 0.9rem; }
+    .menu__email { font-size: 0.78rem; color: rgba(57,57,57,0.6); }
+    .menu__item {
+      display: flex; align-items: center; gap: 0.6rem; width: 100%;
+      padding: 0.7rem 1rem; background: transparent; border: 0; cursor: pointer;
+      font: inherit; font-size: 0.9rem; color: var(--lr-on-light); text-align: left;
+    }
+    .menu__item:hover { background: rgba(57,57,57,0.06); }
+    .menu__item svg { width: 1.05rem; height: 1.05rem; color: rgba(57,57,57,0.7); }
+
+    .shellwrap { position: relative; max-width: 70rem; margin: 0 auto; }
+    .frame { position: relative; }
+
+    /* faux page body */
+    .body { max-width: 70rem; margin: 0 auto; padding: 2rem 1.5rem; color: rgba(255,255,255,0.35); }
+
+    /* toast outlet note */
+    .toast {
+      position: absolute; right: 1.5rem; bottom: 1rem; z-index: 30;
+      display: flex; align-items: center; gap: 0.6rem;
+      background: #fff; color: var(--lr-on-light); border-radius: 0.55rem;
+      padding: 0.7rem 0.9rem; box-shadow: 0 0.8rem 1.6rem rgba(0,0,0,0.3); font-size: 0.86rem;
+      border-left: 3px solid #2e7d4f;
+    }
+    .toast svg { width: 1.1rem; height: 1.1rem; color: #2e7d4f; }
+
+    /* ── mobile variant ── */
+    .phone {
+      width: 22rem; margin: 0 auto; border: 1px solid var(--hairline); border-radius: 1rem; overflow: hidden;
+    }
+    .phone .nav__inner { padding: 0 1rem; }
+    .phone .nav__links, .phone .nav__account { display: none; }
+    .burger {
+      margin-left: auto; display: inline-flex; flex-direction: column; gap: 5px;
+      width: 2.75rem; height: 2.75rem; align-items: center; justify-content: center;
+      background: transparent; border: 0; cursor: pointer; color: var(--app-text);
+    }
+    .burger span { display: block; width: 1.375rem; height: 2px; background: currentColor; border-radius: 1px; }
+    /* mobile open drawer with scrim */
+    .scrim { position: relative; }
+    .drawer { background: var(--app-bg); border-bottom: 1px solid var(--hairline); padding: 0.5rem 0 0.75rem; }
+    .drawer a, .drawer button {
+      display: flex; align-items: center; min-height: 2.75rem; padding: 0 1.25rem;
+      color: var(--app-text); text-decoration: none; font-size: 0.85rem; letter-spacing: 0.1em;
+      background: transparent; border: 0; width: 100%; text-align: left; cursor: pointer; font: inherit; font-weight: 500;
+    }
+    .drawer a.active { color: var(--lr-gold); box-shadow: inset 3px 0 0 var(--lr-gold); }
+    .drawer__acct { border-top: 1px solid var(--hairline); margin-top: 0.4rem; padding-top: 0.4rem; display: flex; align-items: center; gap: 0.6rem; padding-left: 1.25rem; min-height: 3rem; }
+  </style>
+</head>
+<body>
+
+  <p class="label">Desktop — account cluster (divider + avatar + email + chevron), active underline indicator, global toast outlet</p>
+  <div class="shellwrap frame">
+    <div class="nav">
+      <div class="nav__inner">
+        <a class="nav__brand" href="#">VELA LOGISTICS</a>
+        <nav class="nav__links">
+          <a class="nav__link nav__link--active" href="#">INVOICES</a>
+          <a class="nav__link" href="#">GENERATE</a>
+          <a class="nav__link" href="#">COMPANY INFO</a>
+        </nav>
+        <div class="nav__account">
+          <span class="nav__divider"></span>
+          <button class="acct">
+            <span class="avatar">MI</span>
+            <span class="acct__email">maria.ivanova@example.com</span>
+            <svg class="acct__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="menu">
+      <div class="menu__head">
+        <div class="menu__name">Maria Ivanova</div>
+        <div class="menu__email">maria.ivanova@example.com</div>
+      </div>
+      <button class="menu__item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+        Sign out
+      </button>
+    </div>
+    <div class="body">— page content —</div>
+    <div class="toast">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      Invoice saved
+    </div>
+  </div>
+
+  <p class="label">Mobile — open drawer with active indicator bar + account row at the bottom (closes on Esc / outside tap)</p>
+  <div class="phone">
+    <div class="nav">
+      <div class="nav__inner">
+        <a class="nav__brand" href="#">VELA LOGISTICS</a>
+        <button class="burger" aria-label="Close menu"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+    <div class="drawer">
+      <a class="active" href="#">INVOICES</a>
+      <a href="#">GENERATE</a>
+      <a href="#">COMPANY INFO</a>
+      <div class="drawer__acct">
+        <span class="avatar">MI</span>
+        <div>
+          <div style="font-size:0.82rem;">Maria Ivanova</div>
+          <div style="font-size:0.72rem;color:rgba(255,255,255,0.55);">maria.ivanova@example.com</div>
+        </div>
+      </div>
+      <button>Sign out</button>
+    </div>
+  </div>
+
+  <div style="height:2rem;"></div>
+</body>
+</html>
