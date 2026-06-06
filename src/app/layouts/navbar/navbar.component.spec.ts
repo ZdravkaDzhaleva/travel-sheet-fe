@@ -5,6 +5,7 @@ import type { User } from 'firebase/auth';
 
 import { GoogleAuth } from '../../core/auth/google-auth';
 import { AuthState } from '../../core/auth/auth-state';
+import { ToastService } from '../../shared/ui/toast/toast.service';
 import { NavbarComponent } from './navbar.component';
 
 function makeAuthStub(signOutImpl: () => Promise<void> = () => Promise.resolve()) {
@@ -188,5 +189,16 @@ describe('NavbarComponent', () => {
     const img = el.querySelector<HTMLImageElement>('.nav__avatar-img');
     expect(img).not.toBeNull();
     expect(img!.getAttribute('src')).toBe('https://img.example/p.png');
+  });
+
+  // ── Global toast outlet ───────────────────────────────────────────────────
+
+  it('renders a queued toast from the shell toast outlet', () => {
+    const { fixture, el } = render();
+    const toastService = TestBed.inject(ToastService);
+    toastService.show('Sheet generated', 'success');
+    fixture.detectChanges();
+    expect(el.querySelector('.toast')).not.toBeNull();
+    expect(el.textContent).toContain('Sheet generated');
   });
 });

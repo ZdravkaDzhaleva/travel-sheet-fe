@@ -3,11 +3,12 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 
 import { GoogleAuth } from '../../core/auth/google-auth';
 import { AuthState } from '../../core/auth/auth-state';
+import { ToastOutletComponent } from '../../shared/ui/toast/toast-outlet.component';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastOutletComponent],
   templateUrl: './navbar.component.html',
   styleUrl: './navbar.component.scss',
 })
