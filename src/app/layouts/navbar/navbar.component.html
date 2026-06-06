@@ -29,14 +29,86 @@
         >COMPANY INFO</a>
       </nav>
 
+      <!-- Mobile drawer: account row + sign out at the bottom (hidden ≥768px) -->
+      <div class="nav__drawer-account">
+        <span class="nav__avatar" aria-hidden="true">
+          @if (photoURL(); as photo) {
+            <img class="nav__avatar-img" [src]="photo" alt="" referrerpolicy="no-referrer" />
+          } @else {
+            {{ initials() }}
+          }
+        </span>
+        <span class="nav__drawer-identity">
+          @if (displayName(); as name) {
+            <span class="nav__drawer-name">{{ name }}</span>
+          }
+          @if (email(); as mail) {
+            <span class="nav__drawer-email">{{ mail }}</span>
+          }
+        </span>
+      </div>
       <button
         type="button"
-        class="nav__sign-out"
+        class="nav__signout nav__signout--drawer"
         [disabled]="busy()"
         (click)="signOut()"
       >
         {{ busy() ? 'Signing out…' : 'Sign out' }}
       </button>
+    </div>
+
+    <!-- Desktop account cluster: divider + avatar/email button → dropdown -->
+    <div class="nav__account">
+      <span class="nav__divider" aria-hidden="true"></span>
+      <button
+        type="button"
+        class="nav__acct"
+        aria-haspopup="menu"
+        [attr.aria-expanded]="accountOpen()"
+        (click)="toggleAccount()"
+      >
+        <span class="nav__avatar" aria-hidden="true">
+          @if (photoURL(); as photo) {
+            <img class="nav__avatar-img" [src]="photo" alt="" referrerpolicy="no-referrer" />
+          } @else {
+            {{ initials() }}
+          }
+        </span>
+        @if (email(); as mail) {
+          <span class="nav__acct-email">{{ mail }}</span>
+        }
+        <svg class="nav__acct-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+             width="14" height="14">
+          <path d="m6 9 6 6 6-6"/>
+        </svg>
+      </button>
+
+      @if (accountOpen()) {
+        <div class="nav__dropdown" role="menu">
+          <div class="nav__dropdown-head">
+            @if (displayName(); as name) {
+              <div class="nav__dropdown-name">{{ name }}</div>
+            }
+            @if (email(); as mail) {
+              <div class="nav__dropdown-email">{{ mail }}</div>
+            }
+          </div>
+          <button
+            type="button"
+            class="nav__dropdown-item nav__signout"
+            role="menuitem"
+            [disabled]="busy()"
+            (click)="signOut()"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="17" height="17">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>
+            </svg>
+            {{ busy() ? 'Signing out…' : 'Sign out' }}
+          </button>
+        </div>
+      }
     </div>
 
     <button
