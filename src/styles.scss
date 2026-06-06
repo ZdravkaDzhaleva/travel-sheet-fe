@@ -23,6 +23,22 @@
   /* Danger / error (on light surfaces) */
   --app-danger:          rgb(150, 40, 40);  /* rail, icon, accents */
   --app-danger-text:     rgb(120, 30, 30);  /* error body text on light */
+  --app-danger-bg:       rgba(192, 57, 43, 0.12);
+
+  /* Radii */
+  --radius-sm:   0.5rem;
+  --radius-md:   0.75rem;
+  --radius-lg:   1rem;
+  --radius-pill: 999px;
+
+  /* Elevation */
+  --shadow-card: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
+  --shadow-pop:  0 1rem 2rem rgba(0, 0, 0, 0.35);
+
+  /* Hairlines & muted text */
+  --hairline-on-dark:    rgba(255, 255, 255, 0.1);
+  --hairline-on-surface: rgba(57, 57, 57, 0.1);
+  --muted-on-surface:    rgba(57, 57, 57, 0.62);
 }
 
 * {
@@ -60,4 +76,87 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .sk-bar { animation: none; }
+}
+
+/* ── Shared card surface ───────────────────────────────────────────────────
+   Light surface for dense data (lists, key/value, results) on the dark shell. */
+.card {
+  background-color: var(--app-surface);
+  color: var(--app-text-on-surface);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+/* ── Shared button primitive ───────────────────────────────────────────────
+   Base is colour-less (layout only); variants carry context-correct colour.
+   --primary  gold fill (any bg)        --danger     red fill (any bg)
+   --ghost    dark text  (light surface) --ghost-dark light text (dark shell) */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  border-radius: var(--radius-md);
+  border: 0.0625rem solid transparent;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+  transition: filter 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn:focus-visible {
+  outline: 0.125rem solid var(--app-accent);
+  outline-offset: 0.125rem;
+}
+
+.btn:disabled {
+  cursor: progress;
+  opacity: 0.65;
+}
+
+.btn--primary {
+  background-color: var(--app-accent);
+  color: var(--app-accent-text);
+  border-color: var(--app-accent);
+}
+.btn--primary:hover:not(:disabled) { filter: brightness(1.06); }
+
+.btn--danger {
+  background-color: var(--app-danger);
+  color: var(--lr-on-dark);
+  border-color: var(--app-danger);
+}
+.btn--danger:hover:not(:disabled) { filter: brightness(1.08); }
+
+/* Ghost on a light surface (e.g. modal "Cancel") */
+.btn--ghost {
+  color: var(--app-text-on-surface);
+  border-color: rgba(57, 57, 57, 0.25);
+}
+.btn--ghost:hover:not(:disabled) {
+  border-color: rgba(57, 57, 57, 0.45);
+  background: rgba(57, 57, 57, 0.05);
+}
+
+/* Ghost on the dark shell (e.g. outward link in a page header).
+   `a.btn--ghost-dark:not([href])` shows the pending/disabled state for links
+   whose href hasn't resolved yet. */
+.btn--ghost-dark {
+  color: var(--app-text);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.btn--ghost-dark:hover:not(:disabled) {
+  border-color: var(--app-accent);
+  background: rgba(173, 148, 108, 0.08);
+}
+a.btn--ghost-dark:not([href]) {
+  opacity: 0.55;
+  pointer-events: none;
 }

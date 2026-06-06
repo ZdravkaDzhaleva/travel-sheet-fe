@@ -53,43 +53,8 @@
   padding: 0.2rem 0.6rem;
 }
 
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 2.75rem;
-  padding: 0 1rem;
-  font: inherit;
-  font-weight: 600;
-  font-size: 0.92rem;
-  border-radius: 0.8rem;
-  border: 0.0625rem solid rgba(255, 255, 255, 0.25);
-  background: transparent;
-  color: var(--app-text);
-  cursor: pointer;
-  text-decoration: none;
-  transition: border-color 0.15s ease, background 0.15s ease;
-}
-
-// Scoped to the anchor link only — must not repaint the Retry <button>, whose
-// white text would become invisible on the translucent-gold hover fill.
-a.btn:hover {
-  border-color: var(--app-accent);
-  background: rgba(173, 148, 108, 0.08);
-}
-
-.btn:focus-visible {
-  outline: 0.125rem solid var(--app-accent);
-  outline-offset: 0.125rem;
-}
-
-// An anchor with no resolved href is non-navigable; show it as pending.
-// Scoped to `a.btn` so it never matches <button> elements (which have no href
-// and would otherwise be permanently disabled — e.g. the Retry button).
-a.btn:not([href]) {
-  opacity: 0.55;
-  pointer-events: none;
-}
+// The outward link uses the global `.btn .btn--ghost-dark` primitive
+// (src/styles.scss), incl. its pending `a.btn--ghost-dark:not([href])` state.
 
 .company-info__sub {
   margin: -0.25rem 0 0.25rem;
@@ -133,15 +98,7 @@ a.btn:not([href]) {
   max-width: 16rem;
 }
 
-// ── Cards ─────────────────────────────────────────────────────────────────────
-
-.card {
-  background-color: var(--app-surface);
-  color: var(--app-text-on-surface);
-  border-radius: 1rem;
-  overflow: hidden;
-  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
-}
+// ── Cards (`.card` is a global primitive) ─────────────────────────────────────
 
 .card__head {
   display: flex;

@@ -71,65 +71,8 @@
   }
 }
 
-// ── Shared button tokens ───────────────────────────────────────────────────────
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 2.75rem;
-  padding: 0 1.1rem;
-  font: inherit;
-  font-weight: 600;
-  font-size: 0.9375rem;
-  border-radius: 0.8rem;
-  border: 0.0625rem solid transparent;
-  cursor: pointer;
-  transition: filter 0.15s ease;
-  background-color: transparent;
-  color: var(--app-text);
-  border-color: rgba(255, 255, 255, 0.25);
-}
-
-.btn:focus-visible {
-  outline: 0.125rem solid var(--app-accent);
-  outline-offset: 0.125rem;
-}
-
-.btn:disabled {
-  cursor: progress;
-  opacity: 0.65;
-}
-
-.btn--primary {
-  background-color: var(--app-accent);
-  color: var(--app-accent-text);
-  border-color: var(--app-accent);
-}
-
-.btn--primary:hover:not(:disabled) {
-  filter: brightness(1.06);
-}
-
-.btn--danger {
-  background-color: rgb(150, 40, 40);
-  color: #fff;
-  border-color: rgb(150, 40, 40);
-}
-
-.btn--danger:hover:not(:disabled) {
-  filter: brightness(1.08);
-}
-
-// ── Card ──────────────────────────────────────────────────────────────────────
-
-.card {
-  background-color: var(--app-surface);
-  color: var(--app-text-on-surface);
-  border-radius: 1rem;
-  overflow: hidden;
-  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
-}
+// `.btn`/`.btn--primary`/`.btn--danger` and `.card` are global primitives
+// (src/styles.scss). Only page-specific extensions live here.
 
 .card__heading {
   margin: 0 0 1rem;
