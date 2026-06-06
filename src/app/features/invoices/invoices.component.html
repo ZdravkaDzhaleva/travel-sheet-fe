@@ -1,11 +1,30 @@
 <main class="invoices">
 
   @if (!masterReady() && masterError() === null) {
-    <p class="invoices__status" role="status">Loading workspace…</p>
+    <span class="sr-only" role="status">Loading your workspace…</span>
+    <div class="invoices__head">
+      <span class="sk-bar" style="width: 7rem; height: 1.4rem"></span>
+      <span class="sk-bar" style="width: 9rem; height: 2.75rem; border-radius: 0.8rem"></span>
+    </div>
+    <section class="card" aria-hidden="true">
+      @for (row of skeletonRows; track row) {
+        <div class="sk-row">
+          <span class="sk-bar" style="width: 70%"></span>
+          <span class="sk-bar" style="width: 55%"></span>
+          <span class="sk-bar" style="width: 45%"></span>
+          <span class="sk-bar" style="width: 60%"></span>
+          <span class="sk-bar" style="width: 58%"></span>
+          <span class="sk-bar sk-row__action"></span>
+        </div>
+      }
+    </section>
   } @else if (masterError(); as err) {
-    <p class="invoices__status invoices__status--error" role="alert">
-      Could not load master data: {{ err.message }}
-    </p>
+    <app-error-alert
+      title="Couldn't load your invoices"
+      [message]="err.message"
+      [retryable]="true"
+      (retry)="retryMaster()"
+    />
   } @else {
     <div class="invoices__head">
       <h1 class="invoices__title">

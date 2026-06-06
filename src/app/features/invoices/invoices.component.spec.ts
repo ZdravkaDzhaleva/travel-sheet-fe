@@ -455,15 +455,49 @@ describe('InvoicesComponent', () => {
     expect(cmp.localError()).toBeNull();
   });
 
-  it('shows a master-data load error and no form controls when master data fails', () => {
+  it('shows a branded master-data error alert (+ toast) and no form controls when master data fails', () => {
     const master = makeMasterStubs({ company: null, vehicle: null });
     master.error.set(new Error('master boom'));
     const inv = makeInvoiceStubs();
     const fixture = render(master, inv);
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('Could not load master data');
-    expect(text).toContain('master boom');
+    const el = fixture.nativeElement as HTMLElement;
+    const alert = el.querySelector('app-error-alert [role="alert"]');
+    expect(alert).not.toBeNull();
+    expect(alert?.textContent).toContain('load your invoices'); // friendly title
+    expect(alert?.textContent).toContain('master boom'); // technical detail
     // Neither the add button nor the list is rendered in the error state
-    expect(text).not.toContain('Add invoice');
+    expect(el.textContent).not.toContain('Add invoice');
+    // …and the failure is mirrored to an error toast (consistent with Company info).
+    const toast = TestBed.inject(ToastService);
+    expect(toast.toasts().some(t => t.type === 'error')).toBe(true);
+  });
+
+  it('renders a table skeleton (not plain text) while master data loads', () => {
+    const master = makeMasterStubs({ company: null, vehicle: null }); // not ready, no error
+    const inv = makeInvoiceStubs();
+    const fixture = render(master, inv);
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[role="status"]')?.textContent).toContain('Loading');
+    expect(el.querySelectorAll('.sk-row').length).toBeGreaterThan(0);
+    expect(el.querySelectorAll('.sk-bar').length).toBeGreaterThan(0);
+    expect(el.textContent).not.toContain('Add invoice');
+  });
+
+  it('master-error Retry re-invokes the loads, forcing the consent prompt', () => {
+    const master = makeMasterStubs({ company: null, vehicle: null });
+    master.error.set(new Error('master boom'));
+    const inv = makeInvoiceStubs();
+    const fixture = render(master, inv);
+    const el = fixture.nativeElement as HTMLElement;
+    const retry = Array.from(el.querySelectorAll('button')).find(b =>
+      b.textContent?.includes('Retry'),
+    ) as HTMLButtonElement;
+    expect(retry).toBeTruthy();
+    expect(retry.disabled).toBe(false);
+    master.load.mockClear();
+    inv.load.mockClear();
+    retry.click();
+    expect(master.load).toHaveBeenCalledWith({ forceConsent: true });
+    expect(inv.load).toHaveBeenCalledOnce();
   });
 });

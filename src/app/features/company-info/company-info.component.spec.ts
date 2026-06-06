@@ -112,7 +112,7 @@ describe('CompanyInfoComponent', () => {
     expect(el.querySelector('[role="status"]')?.textContent).toContain('Loading');
     // ...and visible shimmer placeholders rather than a "Loading…" paragraph.
     expect(el.querySelectorAll('.skeleton').length).toBeGreaterThan(0);
-    expect(el.querySelectorAll('.skeleton__bar').length).toBeGreaterThan(0);
+    expect(el.querySelectorAll('.sk-bar').length).toBeGreaterThan(0);
     // The error/Retry view is mutually exclusive with loading, so a retry in
     // flight cannot be re-fired — the skeleton replaces the Retry button.
     expect(el.querySelector('[role="alert"]')).toBeNull();

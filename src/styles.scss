@@ -19,6 +19,10 @@
   --app-text-on-surface: var(--lr-on-light);
   --app-accent:          var(--lr-gold);
   --app-accent-text:     var(--lr-on-light);
+
+  /* Danger / error (on light surfaces) */
+  --app-danger:          rgb(150, 40, 40);  /* rail, icon, accents */
+  --app-danger-text:     rgb(120, 30, 30);  /* error body text on light */
 }
 
 * {
@@ -30,4 +34,30 @@ body {
   background-color: var(--app-bg);
   color: var(--app-text);
   font-family: sans-serif;
+}
+
+/* ── Shared skeleton primitive ─────────────────────────────────────────────
+   Global (unscoped) so any feature can compose page-specific skeleton shapes
+   from a single shimmer definition. */
+.sk-bar {
+  display: block;
+  height: 0.7rem;
+  border-radius: 0.35rem;
+  background: linear-gradient(
+    90deg,
+    rgba(57, 57, 57, 0.08) 25%,
+    rgba(57, 57, 57, 0.16) 37%,
+    rgba(57, 57, 57, 0.08) 63%
+  );
+  background-size: 400% 100%;
+  animation: sk-shimmer 1.4s ease infinite;
+}
+
+@keyframes sk-shimmer {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sk-bar { animation: none; }
 }

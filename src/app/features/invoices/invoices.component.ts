@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, effect, inject, signal } from '@angular/core';
 import { FormsModule, } from '@angular/forms';
 import { KeyValuePipe } from '@angular/common';
 
@@ -6,6 +6,7 @@ import { InvoiceService } from '../../application/invoice.service';
 import { MasterDataService } from '../../application/master-data.service';
 import { ModalComponent } from '../../shared/ui/modal/modal.component';
 import { ToastService } from '../../shared/ui/toast/toast.service';
+import { ErrorAlertComponent } from '../../shared/ui/error-alert/error-alert.component';
 import type { Invoice } from '../../domain/entities/index';
 
 interface InvoiceFormState {
@@ -31,7 +32,7 @@ function emptyForm(): InvoiceFormState {
 @Component({
   selector: 'app-invoices',
   standalone: true,
-  imports: [FormsModule, KeyValuePipe, ModalComponent],
+  imports: [FormsModule, KeyValuePipe, ModalComponent, ErrorAlertComponent],
   templateUrl: './invoices.component.html',
   styleUrl: './invoices.component.scss',
 })
@@ -47,6 +48,10 @@ export class InvoicesComponent implements OnInit {
   protected readonly vehicle = this.masterData.vehicle;
   protected readonly masterReady = this.masterData.ready;
   protected readonly masterError = this.masterData.error;
+  protected readonly masterLoading = this.masterData.loading;
+
+  /** Placeholder rows for the loading skeleton. */
+  protected readonly skeletonRows = [0, 1, 2, 3];
 
   protected formData: InvoiceFormState = emptyForm();
   protected file: File | null = null;
@@ -57,10 +62,31 @@ export class InvoicesComponent implements OnInit {
   /** Becomes true on the first submit attempt; gates inline field errors. */
   protected readonly submitted = signal(false);
 
+  /** Mirror a master-data load failure to a toast once per distinct error. */
+  private lastToastedMasterError: Error | null = null;
+  private readonly _masterErrorToast = effect(() => {
+    const err = this.masterError();
+    if (err && err !== this.lastToastedMasterError) {
+      this.lastToastedMasterError = err;
+      this.toast.show('Could not load your workspace', 'error', {
+        label: 'Retry',
+        fn: () => this.retryMaster(),
+      });
+    } else if (!err) {
+      this.lastToastedMasterError = null;
+    }
+  });
+
   ngOnInit(): void {
-    if (!this.masterReady() && !this.masterData.loading() && this.masterError() === null) {
+    if (!this.masterReady() && !this.masterLoading() && this.masterError() === null) {
       void this.masterData.load();
     }
+    void this.invoiceService.load();
+  }
+
+  /** Retry the master-data + invoice load, forcing the Google consent prompt. */
+  protected retryMaster(): void {
+    void this.masterData.load({ forceConsent: true }).catch(() => undefined);
     void this.invoiceService.load();
   }
 

@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Consistent error & loading states — Phase 7 UI mockup</title>
+  <style>
+    :root {
+      --lr-dark: rgb(57, 57, 57);
+      --lr-on-dark: rgb(255, 255, 255);
+      --lr-gold: rgb(173, 148, 108);
+      --lr-gold-deep: rgb(155, 132, 100);
+      --lr-gold-bright: rgb(244, 214, 116);
+      --lr-on-light: rgb(57, 57, 57);
+      --lr-light: rgb(255, 255, 255);
+
+      --app-bg: var(--lr-dark);
+      --app-surface: var(--lr-light);
+      --app-text: var(--lr-on-dark);
+      --app-text-on-surface: var(--lr-on-light);
+      --app-accent: var(--lr-gold);
+
+      --danger: rgb(150, 40, 40);
+      --muted: rgba(57, 57, 57, 0.6);
+      --hairline: rgba(57, 57, 57, 0.1);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--app-bg); color: var(--app-text);
+      -webkit-font-smoothing: antialiased;
+    }
+    .nav {
+      display: flex; align-items: center; gap: 2rem;
+      padding: 1rem 2rem; border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .nav__brand {
+      font-weight: 700; letter-spacing: 0.18em; font-size: 0.85rem;
+      background: linear-gradient(135deg, var(--lr-gold-deep), var(--lr-gold), var(--lr-gold-bright));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .nav__links { display: flex; gap: 1.75rem; margin-left: auto; align-items: center; }
+    .nav__link { color: rgba(255,255,255,0.65); text-decoration: none; font-size: 0.9rem; letter-spacing: 0.06em; }
+    .nav__link--active { color: var(--lr-gold); }
+
+    .page { max-width: 60rem; margin: 0 auto; padding: 2rem 1.5rem 1rem; }
+    .page__head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; }
+    .page__title { margin: 0; font-size: 1.6rem; font-weight: 600; letter-spacing: -0.01em; }
+    .page__count { font-size: 1rem; font-weight: 400; color: rgba(255,255,255,0.5); margin-left: 0.4rem; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      min-height: 2.75rem; padding: 0 1.1rem; font: inherit; font-weight: 600; font-size: 0.9375rem;
+      border-radius: 0.8rem; border: 1px solid transparent; cursor: pointer;
+    }
+    .btn--primary { background: var(--app-accent); color: var(--app-text-on-surface); border-color: var(--app-accent); }
+    .btn svg { width: 16px; height: 16px; }
+
+    .section-label {
+      max-width: 60rem; margin: 1.5rem auto 0.5rem; padding: 0 1.5rem;
+      font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.4);
+    }
+
+    /* ─────────────────────────────────────────────────────────────────────────
+       THE SHARED PIECE: app-error-alert
+       Identical markup/style on Invoices, Company info, and Generate.
+       Light surface, danger rail, alert glyph, readable dark text, solid Retry.
+       ───────────────────────────────────────────────────────────────────────── */
+    .error-alert {
+      display: flex; align-items: flex-start; gap: 0.75rem;
+      background: var(--app-surface); color: var(--app-text-on-surface);
+      border-left: 0.25rem solid var(--danger); border-radius: 0.5rem;
+      padding: 1rem 1.25rem; box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.2);
+    }
+    .error-alert__icon { color: var(--danger); flex: none; margin-top: 0.1rem; }
+    .error-alert__icon svg { width: 18px; height: 18px; }
+    .error-alert__body { display: flex; flex-direction: column; gap: 0.75rem; align-items: flex-start; }
+    .error-alert__title { margin: 0; font-weight: 600; font-size: 0.98rem; }
+    .error-alert__text { margin: 0; font-size: 0.92rem; line-height: 1.5; word-break: break-word; color: var(--muted); }
+    .error-alert__retry {
+      display: inline-flex; align-items: center; gap: 0.45rem;
+      min-height: 2.5rem; padding: 0 1rem; font: inherit; font-weight: 600; font-size: 0.9rem;
+      border-radius: 0.6rem; cursor: pointer;
+      background: var(--app-text-on-surface); color: var(--app-surface); border: 1px solid var(--app-text-on-surface);
+    }
+    .error-alert__retry:hover { filter: brightness(1.3); }
+    .error-alert__retry svg { width: 15px; height: 15px; }
+
+    /* Skeleton primitive — shared shimmer, composed into page-specific shapes. */
+    .sk {
+      display: block; height: 0.7rem; border-radius: 0.35rem;
+      background: linear-gradient(90deg, rgba(57,57,57,0.08) 25%, rgba(57,57,57,0.16) 37%, rgba(57,57,57,0.08) 63%);
+      background-size: 400% 100%; animation: sh 1.4s ease infinite;
+    }
+    @keyframes sh { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+    .card { background: var(--app-surface); border-radius: 1rem; overflow: hidden; box-shadow: 0 0.5rem 1.5rem rgba(0,0,0,0.2); }
+    .sk-row { display: grid; grid-template-columns: 1.4fr 1fr 0.8fr 1fr 1fr 5.5rem; gap: 1rem; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid var(--hairline); }
+    .sk-row:last-child { border-bottom: 0; }
+    .sk-head { background: rgba(57,57,57,0.03); }
+
+    .note { max-width: 60rem; margin: 2rem auto; padding: 0 1.5rem; color: rgba(255,255,255,0.5); font-size: 0.85rem; line-height: 1.6; }
+    .note code { background: rgba(255,255,255,0.08); padding: 0.1rem 0.35rem; border-radius: 0.25rem; }
+    .compare { display: grid; gap: 1rem; max-width: 60rem; margin: 0 auto; padding: 0 1.5rem; }
+    .before {
+      padding: 1rem; border-radius: 0.5rem; role: alert;
+      background: rgba(192,57,43,0.12); color: rgb(120,30,30);
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <span class="nav__brand">VELA LOGISTICS</span>
+    <div class="nav__links">
+      <a class="nav__link nav__link--active" href="#">Invoices</a>
+      <a class="nav__link" href="#">Generate</a>
+      <a class="nav__link" href="#">Company info</a>
+      <span class="nav__link">Sign out</span>
+    </div>
+  </nav>
+
+  <!-- ════════════ BEFORE (today) ════════════ -->
+  <p class="section-label">Invoices — error state · BEFORE (current: dark-red on dark, unreadable)</p>
+  <div class="compare">
+    <div class="before">Could not load master data: Google Identity Services did not respond within 20000 ms — verify that http://localhost:4200 is in the OAuth client's Authorized JavaScript origins and that the user has granted the required scopes.</div>
+  </div>
+
+  <!-- ════════════ AFTER — error state ════════════ -->
+  <p class="section-label">Invoices — error state · AFTER (shared app-error-alert)</p>
+  <main class="page">
+    <div class="error-alert" role="alert">
+      <span class="error-alert__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+      </span>
+      <div class="error-alert__body">
+        <p class="error-alert__title">Couldn't load your invoices</p>
+        <p class="error-alert__text">Google Identity Services did not respond within 20000 ms — verify that http://localhost:4200 is in the OAuth client's Authorized JavaScript origins and that the user has granted the required scopes.</p>
+        <button class="error-alert__retry" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+          Retry
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ════════════ AFTER — loading skeleton ════════════ -->
+  <p class="section-label">Invoices — loading state · AFTER (table-shaped skeleton, replaces “Loading workspace…”)</p>
+  <main class="page">
+    <div class="page__head">
+      <h1 class="page__title">Invoices</h1>
+      <span class="btn btn--primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Add invoice</span>
+    </div>
+    <div class="card" aria-hidden="true">
+      <div class="sk-row sk-head">
+        <span class="sk" style="width:4rem"></span><span class="sk" style="width:3rem"></span><span class="sk" style="width:3rem"></span><span class="sk" style="width:4rem"></span><span class="sk" style="width:3rem"></span><span class="sk" style="width:2.5rem"></span>
+      </div>
+      <div class="sk-row"><span class="sk" style="width:70%"></span><span class="sk" style="width:60%"></span><span class="sk" style="width:50%"></span><span class="sk" style="width:65%"></span><span class="sk" style="width:60%"></span><span class="sk" style="width:2.4rem;height:2.4rem;border-radius:0.5rem"></span></div>
+      <div class="sk-row"><span class="sk" style="width:55%"></span><span class="sk" style="width:60%"></span><span class="sk" style="width:45%"></span><span class="sk" style="width:70%"></span><span class="sk" style="width:55%"></span><span class="sk" style="width:2.4rem;height:2.4rem;border-radius:0.5rem"></span></div>
+      <div class="sk-row"><span class="sk" style="width:65%"></span><span class="sk" style="width:55%"></span><span class="sk" style="width:50%"></span><span class="sk" style="width:60%"></span><span class="sk" style="width:62%"></span><span class="sk" style="width:2.4rem;height:2.4rem;border-radius:0.5rem"></span></div>
+    </div>
+  </main>
+
+  <p class="note">
+    <strong>Consistency plan.</strong> The light alert above is the <em>same</em> component as Company info's error box (T7.6) —
+    extracted into a shared <code>app-error-alert</code> (inputs: <code>title</code>, <code>message</code>; optional <code>(retry)</code> output) under <code>shared/ui/</code>,
+    alongside the existing Modal/Toast primitives. Invoices, Company info, and (next) Generate all render it, so every page's error looks and behaves identically:
+    light surface, danger rail, alert glyph, readable text, solid Retry. The shimmer <code>.sk</code> primitive is likewise shared; each page composes its own skeleton shape
+    (table rows here, key/value cards on Company info). On a load failure each page also enqueues the existing error <code>Toast</code> — unchanged.
+  </p>
+</body>
+</html>

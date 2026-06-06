@@ -3,11 +3,12 @@ import { Component, OnInit, computed, effect, inject, signal } from '@angular/co
 import { MasterDataService } from '../../application/master-data.service';
 import { SheetsStore } from '../../infrastructure/sheets.store';
 import { ToastService } from '../../shared/ui/toast/toast.service';
+import { ErrorAlertComponent } from '../../shared/ui/error-alert/error-alert.component';
 
 @Component({
   selector: 'app-company-info',
   standalone: true,
-  imports: [],
+  imports: [ErrorAlertComponent],
   templateUrl: './company-info.component.html',
   styleUrl: './company-info.component.scss',
 })

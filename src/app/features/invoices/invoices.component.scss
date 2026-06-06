@@ -41,17 +41,34 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
-.invoices__status {
-  margin: 0;
-  padding: 1rem;
-  background-color: var(--app-surface);
-  color: var(--app-text-on-surface);
-  border-radius: 0.5rem;
+// ── Loading skeleton rows (.sk-bar base + shimmer are global) ─────────────────
+
+.sk-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 0.0625rem solid rgba(57, 57, 57, 0.1);
 }
 
-.invoices__status--error {
-  background-color: rgba(192, 57, 43, 0.12);
-  color: rgb(120, 30, 30);
+.sk-row:last-child {
+  border-bottom: 0;
+}
+
+.sk-row__action {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.5rem;
+  justify-self: end;
+}
+
+@media (min-width: 640px) {
+  .sk-row {
+    grid-template-columns: 1.4fr 1fr 0.8fr 1fr 1fr 5.5rem;
+    align-items: center;
+    gap: 0 1rem;
+    padding: 0.95rem 1.5rem;
+  }
 }
 
 // ── Shared button tokens ───────────────────────────────────────────────────────
