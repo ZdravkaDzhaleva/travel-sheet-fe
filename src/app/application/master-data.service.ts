@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 
+import { GoogleAuth } from '../core/auth/google-auth';
 import { SheetsStore } from '../infrastructure/sheets.store';
 import type {
   Company,
@@ -16,6 +17,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class MasterDataService {
   private readonly store = inject(SheetsStore);
+  private readonly auth = inject(GoogleAuth);
 
   private readonly _company = signal<Company | null>(null);
   private readonly _vehicle = signal<Vehicle | null>(null);
@@ -34,10 +36,18 @@ export class MasterDataService {
     () => this._company() !== null && this._vehicle() !== null,
   );
 
-  async load(): Promise<void> {
+  /**
+   * @param options.forceConsent re-runs the Google consent prompt before
+   *   loading (used by the Company-info Retry to recover from a silent GIS
+   *   failure). The consent token is cached, so the data calls reuse it.
+   */
+  async load(options: { forceConsent?: boolean } = {}): Promise<void> {
     this._loading.set(true);
     this._error.set(null);
     try {
+      if (options.forceConsent) {
+        await this.auth.reauthorize();
+      }
       const [companies, vehicles, locations, routeLegs] = await Promise.all([
         this.store.loadCompanies(),
         this.store.loadVehicles(),

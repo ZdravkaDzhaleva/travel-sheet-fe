@@ -8,6 +8,7 @@ import {
   NoCompanyError,
 } from './master-data.errors';
 import { SheetsStore } from '../infrastructure/sheets.store';
+import { GoogleAuth } from '../core/auth/google-auth';
 import {
   makeCompany,
   makeVehicle,
@@ -34,10 +35,19 @@ function makeStore(overrides: StoreOverrides = {}): SheetsStore {
   } as unknown as SheetsStore;
 }
 
-function makeService(store: SheetsStore): MasterDataService {
+function makeAuth(
+  reauthorize: ReturnType<typeof vi.fn> = vi.fn(async () => undefined),
+): GoogleAuth {
+  return { reauthorize } as unknown as GoogleAuth;
+}
+
+function makeService(store: SheetsStore, auth: GoogleAuth = makeAuth()): MasterDataService {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
-    providers: [{ provide: SheetsStore, useValue: store }],
+    providers: [
+      { provide: SheetsStore, useValue: store },
+      { provide: GoogleAuth, useValue: auth },
+    ],
   });
   return TestBed.inject(MasterDataService);
 }
@@ -107,6 +117,42 @@ describe('MasterDataService.load — error cases', () => {
     await svc2.load();
     expect(svc2.error()).toBeNull();
     expect(svc2.ready()).toBe(true);
+  });
+});
+
+describe('MasterDataService.load — forceConsent', () => {
+  it('does not reauthorize by default', async () => {
+    const reauthorize = vi.fn(async () => undefined);
+    const svc = makeService(makeStore(), makeAuth(reauthorize));
+    await svc.load();
+    expect(reauthorize).not.toHaveBeenCalled();
+  });
+
+  it('reauthorizes before loading when forceConsent is set', async () => {
+    const order: string[] = [];
+    const reauthorize = vi.fn(async () => {
+      order.push('reauthorize');
+    });
+    const store = makeStore();
+    (store.loadCompanies as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      order.push('loadCompanies');
+      return [makeCompany()];
+    });
+    const svc = makeService(store, makeAuth(reauthorize));
+    await svc.load({ forceConsent: true });
+    expect(reauthorize).toHaveBeenCalledOnce();
+    expect(order[0]).toBe('reauthorize'); // consent happens before the data calls
+    expect(svc.ready()).toBe(true);
+  });
+
+  it('surfaces a reauthorize failure through the error signal', async () => {
+    const reauthorize = vi.fn(async () => {
+      throw new Error('consent denied');
+    });
+    const svc = makeService(makeStore(), makeAuth(reauthorize));
+    await expect(svc.load({ forceConsent: true })).rejects.toThrow('consent denied');
+    expect(svc.error()).toBeInstanceOf(Error);
+    expect(svc.loading()).toBe(false);
   });
 });
 

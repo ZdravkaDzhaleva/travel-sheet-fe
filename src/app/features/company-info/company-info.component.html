@@ -30,11 +30,40 @@
   </p>
 
   @if (loading()) {
-    <p class="company-info__status" role="status">Loading…</p>
+    <span class="sr-only" role="status">Loading company info…</span>
+    @for (card of skeletonCards; track $index) {
+      <section class="card skeleton" aria-hidden="true">
+        <div class="card__head">
+          <span class="skeleton__bar skeleton__bar--icon"></span>
+          <span class="skeleton__bar skeleton__bar--title"></span>
+        </div>
+        <div class="kv">
+          @for (row of card; track row) {
+            <div class="kv__row">
+              <span class="skeleton__bar skeleton__bar--label"></span>
+              <span class="skeleton__bar skeleton__bar--value"></span>
+            </div>
+          }
+        </div>
+      </section>
+    }
   } @else if (error(); as err) {
-    <p class="company-info__status company-info__status--error" role="alert">
-      Could not load master data: {{ err.message }}
-    </p>
+    <div class="company-info__error" role="alert">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="18" height="18">
+        <circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/>
+      </svg>
+      <div class="company-info__error-body">
+        <p class="company-info__error-text">Could not load company info: {{ err.message }}</p>
+        <button type="button" class="btn btn--retry" (click)="retry()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="15" height="15">
+            <path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>
+          </svg>
+          Retry
+        </button>
+      </div>
+    </div>
   } @else {
     @if (company(); as c) {
       <section class="card" aria-labelledby="company-heading">

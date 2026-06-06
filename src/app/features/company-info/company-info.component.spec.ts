@@ -6,6 +6,7 @@ import { signal, type Signal } from '@angular/core';
 import { CompanyInfoComponent } from './company-info.component';
 import { MasterDataService } from '../../application/master-data.service';
 import { SheetsStore } from '../../infrastructure/sheets.store';
+import { ToastService } from '../../shared/ui/toast/toast.service';
 import { NoActiveVehicleError } from '../../application/master-data.errors';
 import { makeCompany, makeVehicle } from '../../../test-fixtures/index';
 import type { Company, Vehicle } from '../../domain/entities/index';
@@ -21,6 +22,8 @@ interface Stubs {
   readonly service: MasterDataService;
   readonly resolveSupportingSheetId: ReturnType<typeof vi.fn>;
   readonly sheets: SheetsStore;
+  readonly toastShow: ReturnType<typeof vi.fn>;
+  readonly toast: ToastService;
 }
 
 function makeStubs(initial: {
@@ -48,7 +51,13 @@ function makeStubs(initial: {
   const resolveSupportingSheetId = vi.fn(async () => initial.sheetId ?? SHEET_ID);
   const sheets = { resolveSupportingSheetId } as unknown as SheetsStore;
 
-  return { company, vehicle, loading, error, load, service, resolveSupportingSheetId, sheets };
+  const toastShow = vi.fn();
+  const toast = { show: toastShow } as unknown as ToastService;
+
+  return {
+    company, vehicle, loading, error, load, service,
+    resolveSupportingSheetId, sheets, toastShow, toast,
+  };
 }
 
 function render(stubs: Stubs): {
@@ -62,6 +71,7 @@ function render(stubs: Stubs): {
       provideRouter([]),
       { provide: MasterDataService, useValue: stubs.service },
       { provide: SheetsStore, useValue: stubs.sheets },
+      { provide: ToastService, useValue: stubs.toast },
     ],
   });
   const fixture = TestBed.createComponent(CompanyInfoComponent);
@@ -95,18 +105,53 @@ describe('CompanyInfoComponent', () => {
     expect(stubs.load).not.toHaveBeenCalled();
   });
 
-  it('renders the loading state when MasterDataService.loading() is true', () => {
+  it('renders skeleton cards (not plain text) while loading', () => {
     const stubs = makeStubs({ loading: true });
     const { el } = render(stubs);
+    // Accessible status for screen readers...
     expect(el.querySelector('[role="status"]')?.textContent).toContain('Loading');
+    // ...and visible shimmer placeholders rather than a "Loading…" paragraph.
+    expect(el.querySelectorAll('.skeleton').length).toBeGreaterThan(0);
+    expect(el.querySelectorAll('.skeleton__bar').length).toBeGreaterThan(0);
+    // The error/Retry view is mutually exclusive with loading, so a retry in
+    // flight cannot be re-fired — the skeleton replaces the Retry button.
+    expect(el.querySelector('[role="alert"]')).toBeNull();
+    expect(
+      Array.from(el.querySelectorAll('button')).some(b => b.textContent?.includes('Retry')),
+    ).toBe(false);
   });
 
-  it('renders the error state when MasterDataService.error() is set', () => {
+  it('renders a branded error alert with a Retry button when error() is set', () => {
     const stubs = makeStubs({ error: new NoActiveVehicleError() });
     const { el } = render(stubs);
     const alert = el.querySelector('[role="alert"]');
     expect(alert).not.toBeNull();
     expect(alert?.textContent).toContain('No active Vehicle found');
+    const retry = Array.from(el.querySelectorAll('button')).find(b =>
+      b.textContent?.includes('Retry'),
+    );
+    expect(retry).toBeTruthy();
+  });
+
+  it('fires an error toast when a load failure is present', () => {
+    const stubs = makeStubs({ error: new NoActiveVehicleError() });
+    render(stubs);
+    expect(stubs.toastShow).toHaveBeenCalledOnce();
+    expect(stubs.toastShow.mock.calls[0]?.[1]).toBe('error');
+  });
+
+  it('Retry re-invokes the master-data load, forcing the consent prompt', () => {
+    const stubs = makeStubs({ error: new NoActiveVehicleError() });
+    const { el } = render(stubs);
+    const retry = Array.from(el.querySelectorAll('button')).find(b =>
+      b.textContent?.includes('Retry'),
+    ) as HTMLButtonElement;
+    expect(retry.tagName).toBe('BUTTON'); // a real button, not an <a> (the a.btn:not([href]) rule must not reach it)
+    expect(retry.disabled).toBe(false); // never rendered in a disabled state
+    stubs.load.mockClear();
+    retry.click();
+    expect(stubs.load).toHaveBeenCalledOnce();
+    expect(stubs.load).toHaveBeenCalledWith({ forceConsent: true });
   });
 
   it('renders the company and vehicle fields when both signals are populated', () => {
@@ -166,14 +211,29 @@ describe('CompanyInfoComponent', () => {
     expect(link?.hasAttribute('href')).toBe(false);
   });
 
-  it('exposes no edit controls — only links, no form inputs, textareas, or non-link buttons', () => {
+  it('exposes no edit/input controls (T5.2: Retry + outward link are non-mutating)', () => {
+    // Relaxed from "zero buttons": a non-data state may surface a Retry button and
+    // the outward link, but nothing that edits master data.
     const stubs = makeStubs({ company: makeCompany(), vehicle: makeVehicle() });
     const { el } = render(stubs);
     expect(el.querySelectorAll('input').length).toBe(0);
     expect(el.querySelectorAll('textarea').length).toBe(0);
     expect(el.querySelectorAll('select').length).toBe(0);
-    expect(el.querySelectorAll('button').length).toBe(0);
     expect(el.querySelectorAll('[contenteditable="true"]').length).toBe(0);
+    // The success view carries no buttons at all (Retry only appears on error).
+    expect(el.querySelectorAll('button').length).toBe(0);
+  });
+
+  it('error state surfaces only the non-mutating Retry button — no edit/input controls', () => {
+    const stubs = makeStubs({ error: new NoActiveVehicleError() });
+    const { el } = render(stubs);
+    expect(el.querySelectorAll('input').length).toBe(0);
+    expect(el.querySelectorAll('textarea').length).toBe(0);
+    expect(el.querySelectorAll('select').length).toBe(0);
+    expect(el.querySelectorAll('[contenteditable="true"]').length).toBe(0);
+    const buttons = Array.from(el.querySelectorAll('button'));
+    expect(buttons.length).toBe(1);
+    expect(buttons[0].textContent).toContain('Retry');
   });
 
   it('uses interpolation only — no [innerHTML] bindings are present in the template', () => {

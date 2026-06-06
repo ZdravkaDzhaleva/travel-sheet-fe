@@ -809,5 +809,32 @@ describe('buildRouteColumnLayoutRequests', () => {
   });
 });
 
+describe('SheetsStore.resolveSupportingSheetId — failure is not cached', () => {
+  it('re-attempts the lookup after a failure instead of replaying the rejection', async () => {
+    let supportingAttempts = 0;
+    const drive = {
+      findByName: vi.fn(async (name: string) => {
+        if (name === DRIVE_FOLDER_NAME) {
+          return { id: 'folder-1', name, mimeType: 'application/vnd.google-apps.folder' };
+        }
+        if (name === SUPPORTING_SHEET_NAME) {
+          supportingAttempts += 1;
+          // First attempt: sheet missing (e.g. renamed). Second: present again.
+          return supportingAttempts === 1
+            ? null
+            : { id: 'supporting-1', name, mimeType: 'application/vnd.google-apps.spreadsheet' };
+        }
+        return null;
+      }),
+    } as unknown as DriveClient;
+
+    const { store } = makeStore({ drive });
+    await expect(store.resolveSupportingSheetId()).rejects.toBeTruthy();
+    // A second call must hit Drive again (not return the cached rejection)…
+    await expect(store.resolveSupportingSheetId()).resolves.toBe('supporting-1');
+    expect(supportingAttempts).toBe(2);
+  });
+});
+
 // Silence unused-import warning for vi.
 void beforeEach;

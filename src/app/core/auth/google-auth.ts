@@ -23,7 +23,7 @@ const FIREBASE_OAUTH_TOKEN_LIFETIME_S = 3600;
 // Hard ceiling on the silent GIS request. Without this, if the browser blocks
 // the popup or the origin isn't authorized for the GIS client, the callback
 // never fires and the entire load chain stalls indefinitely.
-const GIS_TOKEN_REQUEST_TIMEOUT_MS = 30_000;
+const GIS_TOKEN_REQUEST_TIMEOUT_MS = 20_000;
 
 declare global {
   interface Window {
@@ -73,6 +73,18 @@ export class GoogleAuth {
       return this.cachedToken!.accessToken;
     }
     return this.requestNewToken('');
+  }
+
+  /**
+   * Drops the cached token and forces a fresh interactive token request with the
+   * Google consent prompt. Use to recover from a silent (empty-prompt) GIS
+   * failure — ungranted scopes, an unauthorized origin, or a stalled session.
+   * On success the token is cached, so the subsequent data loads reuse it
+   * without re-prompting (and without racing parallel GIS requests).
+   */
+  async reauthorize(): Promise<void> {
+    this.cachedToken = null;
+    await this.requestNewToken('consent');
   }
 
   private requestNewToken(prompt: string): Promise<string> {

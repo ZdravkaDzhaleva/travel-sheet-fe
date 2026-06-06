@@ -271,10 +271,18 @@ export class SheetsStore {
     return null;
   }
 
-  /** Resolves the supporting spreadsheet's Drive file id by name (memoized). */
+  /**
+   * Resolves the supporting spreadsheet's Drive file id by name.
+   * Memoizes the *successful* result only — a rejection clears the cache so a
+   * later call (e.g. the Company-info Retry) re-attempts the lookup instead of
+   * replaying a stale failure.
+   */
   resolveSupportingSheetId(): Promise<string> {
     if (!this.supportingSheetIdPromise) {
-      this.supportingSheetIdPromise = this.lookupSupportingSheetId();
+      this.supportingSheetIdPromise = this.lookupSupportingSheetId().catch(err => {
+        this.supportingSheetIdPromise = null;
+        throw err;
+      });
     }
     return this.supportingSheetIdPromise;
   }
@@ -287,7 +295,10 @@ export class SheetsStore {
 
   private resolveWorkbookId(): Promise<string> {
     if (!this.workbookIdPromise) {
-      this.workbookIdPromise = this.lookupWorkbookId();
+      this.workbookIdPromise = this.lookupWorkbookId().catch(err => {
+        this.workbookIdPromise = null; // don't cache failures — allow retry
+        throw err;
+      });
     }
     return this.workbookIdPromise;
   }
@@ -296,7 +307,11 @@ export class SheetsStore {
     if (!this.folderIdPromise) {
       this.folderIdPromise = this.drive
         .findByName(DRIVE_FOLDER_NAME, { mimeType: MIME_FOLDER })
-        .then(folder => folder?.id ?? null);
+        .then(folder => folder?.id ?? null)
+        .catch(err => {
+          this.folderIdPromise = null; // don't cache failures — allow retry
+          throw err;
+        });
     }
     return this.folderIdPromise;
   }
@@ -310,7 +325,10 @@ export class SheetsStore {
 
   private resolveInvoiceTabSheetId(): Promise<number> {
     if (!this.invoiceTabSheetIdPromise) {
-      this.invoiceTabSheetIdPromise = this.lookupInvoiceTabSheetId();
+      this.invoiceTabSheetIdPromise = this.lookupInvoiceTabSheetId().catch(err => {
+        this.invoiceTabSheetIdPromise = null; // don't cache failures — allow retry
+        throw err;
+      });
     }
     return this.invoiceTabSheetIdPromise;
   }
