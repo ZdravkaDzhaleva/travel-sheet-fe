@@ -108,6 +108,18 @@ The app must be fully usable from a mobile browser (the user generates and revie
 - **Verification:** for any UI task, before marking it done you must (1) exercise it in Chrome DevTools' device toolbar at 360×640 *and* 768×1024, and (2) confirm tap targets, no horizontal scroll, and that all forms can be completed with the soft keyboard up. Note this verification in the task entry.
 - **Accessibility carry-overs from §8:** the gold-on-white contrast rule still applies — on mobile, dense lists with small gold text fail AA fast. Default to dark text on light surfaces for data.
 
+## 8b. Shared styles vs component styles (no duplication)
+
+Angular scopes a component's SCSS to that component (emulated encapsulation). That's good for genuinely page-specific layout — but it means a primitive copy-pasted into several component SCSS files (a button, a card, a status box) silently diverges and bloats each file. Don't do that.
+
+- **Global, reusable, presentational → `src/styles.scss`.** Design tokens and any visual primitive shared by ≥2 pages live there as unscoped CSS custom properties / utility classes. Rules emitted from `styles.scss` are **not** encapsulated, so they style any component's DOM.
+  - **Tokens already defined** (reference these, don't hardcode): colour `--app-*` / `--lr-*` (§8); danger `--app-danger`, `--app-danger-text`, `--app-danger-bg`; radii `--radius-sm|md|lg|pill`; elevation `--shadow-card`, `--shadow-pop`; `--hairline-on-dark`, `--hairline-on-surface`, `--muted-on-surface`.
+  - **Primitives already global:** `.card` (light surface); `.btn` (colour-less base) + `.btn--primary` (gold), `.btn--danger` (red), `.btn--ghost` (dark text — for light surfaces), `.btn--ghost-dark` (light text — for the dark shell, incl. the pending `a.btn--ghost-dark:not([href])` state); `.sk-bar` (skeleton shimmer).
+- **Page-specific only → the component's SCSS.** Layout and one-off rules that no other page needs (e.g. the invoice table grid, the company-info `.kv` rows). If you find yourself writing the same rule in a second component, promote it to `styles.scss` instead.
+- **Behaviour/state → a `shared/ui` component, not a class.** Anything with logic, projected content, focus management, or signals (Modal, Toast, ErrorAlert) is a standalone component under `shared/ui/`. Reserve global CSS for purely presentational primitives.
+- **Picking the variant matters:** buttons on the **dark shell** use `--ghost-dark`; buttons on a **light surface** (inside a modal/card) use `--ghost`. Mismatching them produces white-on-white / dark-on-dark — verify the surface before choosing.
+- **The style budget is the guardrail.** The `anyComponentStyle` budget in `angular.json` is intentionally tight; if a component SCSS trips it, that's almost always a primitive that should have been global — extract it rather than raising the budget.
+
 ## 9. Angular specifics
 - Standalone components, no NgModules.
 - State via signals; avoid manual `Subscription` management where a signal/`toSignal` works.
