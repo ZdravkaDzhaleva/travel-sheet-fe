@@ -24,9 +24,46 @@ export class SignInComponent {
       await this.auth.signInWithGoogle();
       await this.router.navigateByUrl('/invoices');
     } catch (err) {
-      this.error.set(err instanceof Error ? err.message : String(err));
+      this.error.set(mapSignInError(err));
     } finally {
       this.busy.set(false);
     }
   }
+}
+
+/**
+ * Map a raw sign-in failure (Firebase `auth/*` code or a GIS error) to a short,
+ * friendly message. Unknown failures fall back to a generic line — we never
+ * surface a raw `err.message` to the end user.
+ */
+export function mapSignInError(err: unknown): string {
+  const code = ((err as { code?: unknown })?.code ?? '').toString().toLowerCase();
+  const message = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  const hay = `${code} ${message}`;
+
+  if (hay.includes('popup-blocked') || hay.includes('popup blocked')) {
+    return 'Your browser blocked the sign-in window. Allow pop-ups for this site, then try again.';
+  }
+  if (
+    hay.includes('popup-closed') ||
+    hay.includes('cancelled-popup') ||
+    hay.includes('canceled-popup') ||
+    hay.includes('popup closed') ||
+    hay.includes('user-cancelled') ||
+    hay.includes('closed')
+  ) {
+    return 'The sign-in window was closed before finishing. Please try again.';
+  }
+  if (hay.includes('unauthorized-domain') || hay.includes('unauthorized domain')) {
+    return 'This site isn’t authorised for sign-in yet. Contact the administrator.';
+  }
+  if (
+    hay.includes('did not respond') ||
+    hay.includes('timeout') ||
+    hay.includes('timed out') ||
+    hay.includes('network')
+  ) {
+    return 'Google didn’t respond in time. Check your connection and try again.';
+  }
+  return 'Sign-in failed. Please try again.';
 }

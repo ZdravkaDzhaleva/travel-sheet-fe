@@ -1,87 +1,134 @@
 :host {
   display: block;
   min-height: 100dvh;
-  background-color: var(--app-bg);
   color: var(--app-text);
+  background:
+    radial-gradient(55rem 38rem at 50% -12%, rgba(173, 148, 108, 0.16), transparent 60%),
+    radial-gradient(38rem 28rem at 90% 112%, rgba(244, 214, 116, 0.05), transparent 60%),
+    var(--app-bg);
 }
 
 .sign-in {
   min-height: 100dvh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 1.5rem;
   padding: 1.5rem env(safe-area-inset-right) 1.5rem env(safe-area-inset-left);
   padding-top: max(1.5rem, env(safe-area-inset-top));
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
 }
 
-.card {
+// `.card` is the global surface primitive; this adds the sign-in layout.
+.sign-in__card {
   width: 100%;
-  max-width: 26rem;
-  background-color: var(--app-surface);
-  color: var(--app-text-on-surface);
-  border-radius: 0.75rem;
-  padding: 1.75rem 1.5rem;
+  max-width: 25rem;
+  padding: 2.25rem 2rem 2rem;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.25);
+  align-items: center;
+  gap: 1.1rem;
 }
 
-.card__title {
+.sign-in__logo {
+  width: 8.5rem;
+  height: auto;
+  margin-bottom: 0.25rem;
+}
+
+.sign-in__title {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 600;
   letter-spacing: -0.01em;
+  text-align: center;
 }
 
-.card__intro {
+.sign-in__intro {
   margin: 0;
-  font-size: 1rem;
-  line-height: 1.4;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--muted-on-surface);
 }
 
-.card__error {
+// Friendly inline error — a flat danger-tinted box inside the light card
+// (intentionally not the shadowed app-error-alert, which is for the dark shell).
+.sign-in__error {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  width: 100%;
   margin: 0;
-  padding: 0.75rem 1rem;
-  background-color: rgba(192, 57, 43, 0.08);
-  color: rgb(120, 30, 30);
-  border-radius: 0.5rem;
-  font-size: 0.9375rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--app-danger-bg);
+  border: 0.0625rem solid rgba(150, 40, 40, 0.22);
+  border-radius: var(--radius-md);
+  color: var(--app-danger);
+  font-size: 0.88rem;
   line-height: 1.4;
-  word-break: break-word;
+  text-align: left;
 }
 
-.card__button {
-  min-height: 2.75rem;
-  padding: 0.75rem 1.25rem;
+.sign-in__error svg {
+  flex: none;
+  margin-top: 0.05rem;
+}
+
+// Google-standard sign-in button (light, 1px grey border, multicolour "G").
+// Colours are Google's brand spec — kept literal on purpose.
+.gbtn {
+  width: 100%;
+  min-height: 2.85rem;
+  margin-top: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: #fff;
+  color: #1f1f1f;
+  border: 0.0625rem solid #dadce0;
+  border-radius: var(--radius-md);
   font: inherit;
+  font-size: 0.95rem;
   font-weight: 600;
-  background-color: var(--app-accent);
-  color: var(--app-accent-text);
-  border: 0;
-  border-radius: 0.5rem;
   cursor: pointer;
-  transition: filter 0.15s ease;
+  transition: box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
 
-.card__button:hover:not(:disabled),
-.card__button:focus-visible {
-  filter: brightness(1.05);
+.gbtn:hover:not(:disabled) {
+  background: #f8f9fa;
+  box-shadow: 0 0.0625rem 0.1875rem rgba(60, 64, 67, 0.25);
 }
 
-.card__button:focus-visible {
+.gbtn:focus-visible {
   outline: 0.125rem solid var(--app-accent);
   outline-offset: 0.125rem;
 }
 
-.card__button:disabled {
+.gbtn:disabled {
   cursor: progress;
-  opacity: 0.75;
+  opacity: 0.7;
 }
 
-@media (min-width: 480px) {
-  .card {
-    padding: 2rem;
-  }
+.gbtn__g {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: none;
+}
+
+.sign-in__foot {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--muted-on-surface);
+  text-align: center;
+}
+
+.sign-in__pagefoot {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: center;
 }
