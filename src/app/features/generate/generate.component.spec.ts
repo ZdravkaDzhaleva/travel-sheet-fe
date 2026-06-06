@@ -8,6 +8,7 @@ import {
   GenerateMonthService,
   type GenerateMonthResult,
 } from '../../application/generate-month.service';
+import { ToastService } from '../../shared/ui/toast/toast.service';
 import { InfeasibleMonthError } from '../../domain/generation/infeasible-month.error';
 
 interface Stubs {
@@ -15,35 +16,51 @@ interface Stubs {
   readonly error: ReturnType<typeof signal<Error | null>>;
   readonly result: ReturnType<typeof signal<GenerateMonthResult | null>>;
   readonly generateMonth: ReturnType<typeof vi.fn>;
+  readonly monthExists: ReturnType<typeof vi.fn>;
+  readonly clearError: ReturnType<typeof vi.fn>;
+  readonly clearResult: ReturnType<typeof vi.fn>;
   readonly service: GenerateMonthService;
 }
 
-function makeStubs(): Stubs {
+function makeResult(year: number, month: number, over: Partial<GenerateMonthResult> = {}): GenerateMonthResult {
+  return {
+    year,
+    month,
+    sheetName: `м_${String(month).padStart(2, '0')}`,
+    openingBalance: 5,
+    openingSource: 'vehicleConfig',
+    closingBalance: 4.25,
+    rowCount: 21,
+    holidaySource: 'api',
+    warnings: [],
+    workbookId: 'wb-1',
+    sheetId: 123,
+    ...over,
+  };
+}
+
+function makeStubs(monthExistsValue = false): Stubs {
   const loading = signal<boolean>(false);
   const error = signal<Error | null>(null);
   const result = signal<GenerateMonthResult | null>(null);
   const generateMonth = vi.fn(async (year: number, month: number) => {
-    const r: GenerateMonthResult = {
-      year,
-      month,
-      sheetName: `м_${String(month).padStart(2, '0')}`,
-      openingBalance: 5,
-      openingSource: 'vehicleConfig',
-      closingBalance: 4.25,
-      rowCount: 21,
-      holidaySource: 'api',
-      warnings: [],
-    };
+    const r = makeResult(year, month);
     result.set(r);
     return r;
   });
+  const monthExists = vi.fn(async () => monthExistsValue);
+  const clearError = vi.fn(() => error.set(null));
+  const clearResult = vi.fn(() => result.set(null));
   const service = {
     loading: loading.asReadonly() as Signal<boolean>,
     error: error.asReadonly() as Signal<Error | null>,
     result: result.asReadonly() as Signal<GenerateMonthResult | null>,
     generateMonth,
+    monthExists,
+    clearError,
+    clearResult,
   } as unknown as GenerateMonthService;
-  return { loading, error, result, generateMonth, service };
+  return { loading, error, result, generateMonth, monthExists, clearError, clearResult, service };
 }
 
 function render(stubs: Stubs): ComponentFixture<GenerateComponent> {
@@ -60,10 +77,16 @@ function render(stubs: Stubs): ComponentFixture<GenerateComponent> {
   return fixture;
 }
 
+/** Let the async existence check (ngOnInit / onPeriodChange) settle. */
+function flush(): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve));
+}
+
 interface InternalGenerate {
   year: number;
   month: number;
   generate(): Promise<void>;
+  onPeriodChange(): void;
 }
 
 function instance(fixture: ComponentFixture<GenerateComponent>): InternalGenerate {
@@ -76,8 +99,7 @@ describe('GenerateComponent', () => {
   });
 
   it('initializes year and month to the current calendar period', () => {
-    const stubs = makeStubs();
-    const fixture = render(stubs);
+    const fixture = render(makeStubs());
     const cmp = instance(fixture);
     const now = new Date();
     expect(cmp.year).toBe(now.getFullYear());
@@ -94,7 +116,7 @@ describe('GenerateComponent', () => {
     expect(stubs.generateMonth).toHaveBeenCalledWith(2026, 3);
   });
 
-  it('renders the success result with sheetName, period, balances, opening source, and holiday source', async () => {
+  it('renders a slim success card (period, sheet, rows) + an Open-workbook deep link', async () => {
     const stubs = makeStubs();
     const fixture = render(stubs);
     const cmp = instance(fixture);
@@ -102,29 +124,52 @@ describe('GenerateComponent', () => {
     cmp.month = 1;
     await cmp.generate();
     fixture.detectChanges();
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('м_01');
-    expect(text).toContain('1/2026');
-    expect(text).toContain('21'); // rowCount
-    expect(text).toContain('5');  // openingBalance
-    expect(text).toContain('4.25'); // closingBalance
-    expect(text).toContain('Seeded from the active vehicle configuration');
-    expect(text).toContain('Nager.Date API');
+    const el = fixture.nativeElement as HTMLElement;
+    const text = el.textContent ?? '';
+    expect(text).toContain('January 2026 generated'); // friendly period heading
+    expect(text).toContain('м_01');                    // sheet
+    expect(text).toContain('21');                      // working-day rows
+    const link = el.querySelector<HTMLAnchorElement>('a.result__open');
+    expect(link?.getAttribute('href')).toBe('https://docs.google.com/spreadsheets/d/wb-1/edit#gid=123');
+    expect(link?.getAttribute('target')).toBe('_blank');
+    expect(link?.getAttribute('rel')).toBe('noopener');
+  });
+
+  it('keeps developer fields behind a collapsed "Technical details" disclosure', async () => {
+    const stubs = makeStubs();
+    const fixture = render(stubs);
+    const cmp = instance(fixture);
+    cmp.year = 2026;
+    cmp.month = 1;
+    await cmp.generate();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const details = el.querySelector<HTMLDetailsElement>('details.tech');
+    expect(details).not.toBeNull();
+    expect(details?.open).toBe(false); // collapsed by default
+    expect(details?.textContent).toContain('Seeded from the active vehicle configuration');
+    expect(details?.textContent).toContain('Closing balance');
+    expect(details?.textContent).toContain('Nager.Date API');
+  });
+
+  it('fires an auto-dismissing success toast with an Open-workbook action', async () => {
+    const stubs = makeStubs();
+    const fixture = render(stubs);
+    const cmp = instance(fixture);
+    cmp.year = 2026;
+    cmp.month = 1;
+    await cmp.generate();
+    const toasts = TestBed.inject(ToastService).toasts();
+    expect(toasts.length).toBe(1);
+    expect(toasts[0].type).toBe('success');
+    expect(toasts[0].message).toContain('January 2026 generated');
+    expect(toasts[0].action?.label).toBe('Open workbook');
   });
 
   it('labels opening source as carry-forward when prior sheet was used', async () => {
     const stubs = makeStubs();
     stubs.generateMonth.mockImplementationOnce(async (year: number, month: number) => {
-      const r: GenerateMonthResult = {
-        year, month,
-        sheetName: 'м_02',
-        openingBalance: 4.25,
-        openingSource: 'priorSheet',
-        closingBalance: 3,
-        rowCount: 20,
-        holidaySource: 'api',
-        warnings: [],
-      };
+      const r = makeResult(year, month, { sheetName: 'м_02', openingBalance: 4.25, openingSource: 'priorSheet', closingBalance: 3, rowCount: 20 });
       stubs.result.set(r);
       return r;
     });
@@ -134,24 +179,19 @@ describe('GenerateComponent', () => {
     cmp.month = 2;
     await cmp.generate();
     fixture.detectChanges();
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('Carried forward from the previous month');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Carried forward from the previous month');
   });
 
   it('renders warnings emitted by the service', async () => {
     const stubs = makeStubs();
     stubs.generateMonth.mockImplementationOnce(async (year: number, month: number) => {
-      const r: GenerateMonthResult = {
-        year, month,
-        sheetName: 'м_01',
-        openingBalance: 5, openingSource: 'vehicleConfig',
-        closingBalance: 4, rowCount: 21,
-        holidaySource: 'override',
+      const r = makeResult(year, month, {
+        sheetName: 'м_01', closingBalance: 4, holidaySource: 'override',
         warnings: [
           'Falling back to supporting-sheet override: Holiday API responded 500',
           'Holiday cross-check mismatch: 1 missing, 0 extra (got 13, expected 14)',
         ],
-      };
+      });
       stubs.result.set(r);
       return r;
     });
@@ -162,10 +202,9 @@ describe('GenerateComponent', () => {
     expect(text).toContain('Warnings');
     expect(text).toContain('Falling back to supporting-sheet override');
     expect(text).toContain('cross-check mismatch');
-    expect(text).toContain('Supporting-sheet override');
   });
 
-  it('renders an Infeasible-month specific error when the service throws InfeasibleMonthError', async () => {
+  it('renders an Infeasible-month specific error (light surface) when the service throws InfeasibleMonthError', async () => {
     const stubs = makeStubs();
     const err = new InfeasibleMonthError('Over-fueled month: must burn at least 4348.00 km');
     stubs.generateMonth.mockImplementationOnce(async () => {
@@ -175,7 +214,10 @@ describe('GenerateComponent', () => {
     const fixture = render(stubs);
     await instance(fixture).generate();
     fixture.detectChanges();
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    const el = fixture.nativeElement as HTMLElement;
+    const errorCard = el.querySelector('.card--error');
+    expect(errorCard).not.toBeNull(); // light .card surface + danger rail (T7.10)
+    const text = errorCard?.textContent ?? '';
     expect(text).toContain('Infeasible month');
     expect(text).toContain("can't land in the allowed window");
     expect(text).toContain('Over-fueled month');
@@ -212,6 +254,74 @@ describe('GenerateComponent', () => {
     const stubs = makeStubs();
     stubs.loading.set(true);
     const fixture = render(stubs);
+    await instance(fixture).generate();
+    expect(stubs.generateMonth).not.toHaveBeenCalled();
+  });
+
+  // ── T7.12: already-generated guard ────────────────────────────────────────
+
+  it('blocks regeneration when the selected month already exists', async () => {
+    const stubs = makeStubs(true); // monthExists() → true
+    const fixture = render(stubs);
+    await flush();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.notice')).not.toBeNull();
+    expect(el.querySelector('.notice')?.textContent).toContain('already generated');
+    const btn = el.querySelector<HTMLButtonElement>('button[type="submit"]');
+    expect(btn?.disabled).toBe(true);
+  });
+
+  it('does not block (button enabled, no notice) when the month does not exist', async () => {
+    const stubs = makeStubs(false);
+    const fixture = render(stubs);
+    await flush();
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.notice')).toBeNull();
+    const btn = el.querySelector<HTMLButtonElement>('button[type="submit"]');
+    expect(btn?.disabled).toBe(false);
+  });
+
+  it('re-checks existence when the period changes', async () => {
+    const stubs = makeStubs(false);
+    const fixture = render(stubs);
+    await flush();
+    stubs.monthExists.mockClear();
+    const cmp = instance(fixture);
+    cmp.month = 5;
+    cmp.onPeriodChange();
+    await flush();
+    expect(stubs.monthExists).toHaveBeenCalledWith(5);
+  });
+
+  it('clears a prior error when the period changes', async () => {
+    const stubs = makeStubs();
+    stubs.error.set(new Error('boom'));
+    const fixture = render(stubs);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.card--error')).not.toBeNull();
+    instance(fixture).onPeriodChange();
+    await flush();
+    fixture.detectChanges();
+    expect(stubs.clearError).toHaveBeenCalled();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.card--error')).toBeNull();
+  });
+
+  it('clears the error and the success result when the page is left (ngOnDestroy)', () => {
+    const stubs = makeStubs();
+    stubs.error.set(new Error('boom'));
+    stubs.result.set(makeResult(2026, 1));
+    const fixture = render(stubs);
+    fixture.destroy();
+    expect(stubs.clearError).toHaveBeenCalled();
+    expect(stubs.clearResult).toHaveBeenCalled();
+  });
+
+  it('does not generate when the month already exists (guard short-circuits)', async () => {
+    const stubs = makeStubs(true);
+    const fixture = render(stubs);
+    await flush();
     await instance(fixture).generate();
     expect(stubs.generateMonth).not.toHaveBeenCalled();
   });

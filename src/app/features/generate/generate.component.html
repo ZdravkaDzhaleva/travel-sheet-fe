@@ -12,6 +12,7 @@
           inputmode="numeric"
           name="year"
           [(ngModel)]="year"
+          (ngModelChange)="onPeriodChange()"
           class="form__input"
           min="2020"
           max="2100"
@@ -24,6 +25,7 @@
         <select
           name="month"
           [(ngModel)]="month"
+          (ngModelChange)="onPeriodChange()"
           class="form__input"
           required
         >
@@ -36,8 +38,8 @@
       <div class="form__actions">
         <button
           type="submit"
-          class="form__button form__button--primary"
-          [disabled]="loading()"
+          class="btn btn--primary"
+          [disabled]="loading() || checkingExists() || monthExists()"
         >
           {{ loading() ? 'Generating…' : 'Generate' }}
         </button>
@@ -45,13 +47,28 @@
     </form>
   </section>
 
+  <!-- Already-generated guard (light surface, per T7.10) -->
+  @if (monthExists() && !resultMatchesSelection()) {
+    <section class="card notice" role="alert" aria-labelledby="exists-heading">
+      <h2 id="exists-heading" class="notice__heading">
+        {{ monthName(month) }} {{ year }} is already generated
+      </h2>
+      <p class="notice__body">
+        The <strong>{{ tabName() }}</strong> tab already exists in the workbook. To avoid
+        silently overwriting it (which would also invalidate later months' opening balances),
+        in-app regeneration is blocked. To redo this month, delete the
+        <strong>{{ tabName() }}</strong> tab in the workbook, then generate again.
+      </p>
+    </section>
+  }
+
   @if (error(); as err) {
     <section
       class="card card--error"
       role="alert"
       aria-labelledby="error-heading"
     >
-      <h2 id="error-heading" class="card__heading">
+      <h2 id="error-heading" class="card__heading card__heading--error">
         @if (isInsufficientData(err)) {
           Not enough data
         } @else if (isInfeasible(err)) {
@@ -76,35 +93,32 @@
   @if (result(); as r) {
     <section class="card card--success" aria-labelledby="result-heading">
       <h2 id="result-heading" class="card__heading">
-        Sheet written: {{ r.sheetName }}
+        {{ monthName(r.month) }} {{ r.year }} generated
       </h2>
 
       <dl class="result">
         <div class="result__field">
-          <dt>Period</dt>
-          <dd>{{ r.month }}/{{ r.year }}</dd>
+          <dt>Sheet</dt>
+          <dd>{{ r.sheetName }}</dd>
         </div>
         <div class="result__field">
-          <dt>Rows generated</dt>
+          <dt>Working-day rows</dt>
           <dd>{{ r.rowCount }}</dd>
         </div>
-        <div class="result__field">
-          <dt>Opening balance</dt>
-          <dd>{{ r.openingBalance }} L</dd>
-        </div>
-        <div class="result__field">
-          <dt>Opening source</dt>
-          <dd>{{ openingSourceLabel(r.openingSource) }}</dd>
-        </div>
-        <div class="result__field">
-          <dt>Closing balance</dt>
-          <dd>{{ r.closingBalance }} L</dd>
-        </div>
-        <div class="result__field">
-          <dt>Holidays</dt>
-          <dd>{{ holidaySourceLabel(r.holidaySource) }}</dd>
-        </div>
       </dl>
+
+      <a
+        class="btn btn--primary result__open"
+        [href]="workbookUrl(r)"
+        target="_blank"
+        rel="noopener"
+      >
+        Open workbook
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" width="15" height="15">
+          <path d="M7 17 17 7M9 7h8v8"/>
+        </svg>
+      </a>
 
       @if (r.warnings.length > 0) {
         <div class="warnings" role="status">
@@ -116,6 +130,28 @@
           </ul>
         </div>
       }
+
+      <details class="tech">
+        <summary class="tech__summary">Technical details</summary>
+        <dl class="tech__list">
+          <div class="result__field">
+            <dt>Opening balance</dt>
+            <dd>{{ r.openingBalance }} L</dd>
+          </div>
+          <div class="result__field">
+            <dt>Opening source</dt>
+            <dd>{{ openingSourceLabel(r.openingSource) }}</dd>
+          </div>
+          <div class="result__field">
+            <dt>Closing balance</dt>
+            <dd>{{ r.closingBalance }} L</dd>
+          </div>
+          <div class="result__field">
+            <dt>Holidays</dt>
+            <dd>{{ holidaySourceLabel(r.holidaySource) }}</dd>
+          </div>
+        </dl>
+      </details>
     </section>
   }
 </main>

@@ -179,12 +179,27 @@ export class SheetsStore {
     ]);
   }
 
-  /** Adds or clears+re-adds `sheetName`, then writes `cells` into it. */
+  /**
+   * Checks whether a tab named `sheetName` already exists in the workbook.
+   * Reads tab *titles only* (never row content) — read-back exception (b),
+   * ARCHITECTURE §6. Backs the already-generated guard (TASKS T7.12).
+   */
+  async sheetExists(sheetName: string): Promise<boolean> {
+    const workbookId = await this.resolveWorkbookId();
+    const meta = await this.sheets.getSpreadsheet(workbookId);
+    return meta.sheets.some(s => s.properties.title === sheetName);
+  }
+
+  /**
+   * Adds or clears+re-adds `sheetName`, then writes `cells` into it.
+   * Returns the workbook id and the new tab's numeric `sheetId` (gid) so callers
+   * can deep-link to the written sheet.
+   */
   async writeSheet(
     cells: readonly CellModel[],
     sheetName: string,
     mergeRegions: MergeRegion[] = [...SHEET_MERGES],
-  ): Promise<void> {
+  ): Promise<{ workbookId: string; sheetId: number | null }> {
     const workbookId = await this.resolveWorkbookId();
     const meta = await this.sheets.getSpreadsheet(workbookId);
     const existing = meta.sheets.find(s => s.properties.title === sheetName);
@@ -235,6 +250,8 @@ export class SheetsStore {
       // Route column: fixed width + word-wrap for long route / fuel strings.
       await this.sheets.batchUpdate(workbookId, buildRouteColumnLayoutRequests(newSheetId));
     }
+
+    return { workbookId, sheetId: newSheetId ?? null };
   }
 
   /**

@@ -99,7 +99,7 @@ function makeStubs(opts: StubOpts = {}): Stubs {
 
   const loadInvoices = vi.fn(async () => opts.invoices ?? defaultInvoicesWithLookAhead());
   const readPriorClosing = vi.fn(async () => opts.priorClosing ?? null);
-  const writeSheet = vi.fn(async () => undefined);
+  const writeSheet = vi.fn(async () => ({ workbookId: 'wb-1', sheetId: 123 }));
   const sheets = {
     loadInvoices,
     readPreviousMonthClosing: readPriorClosing,

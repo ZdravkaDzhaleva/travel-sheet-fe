@@ -23,6 +23,8 @@ export interface GenerateMonthResult {
   readonly rowCount: number;
   readonly holidaySource: HolidaySource;
   readonly warnings: readonly string[];
+  readonly workbookId: string;
+  readonly sheetId: number | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -38,6 +40,18 @@ export class GenerateMonthService {
   readonly loading = this._loading.asReadonly();
   readonly error = this._error.asReadonly();
   readonly result = this._result.asReadonly();
+
+  async monthExists(month: number): Promise<boolean> {
+    return this.sheets.sheetExists(monthSheetName(month));
+  }
+
+  clearError(): void {
+    this._error.set(null);
+  }
+
+  clearResult(): void {
+    this._result.set(null);
+  }
 
   async generateMonth(year: number, month: number): Promise<GenerateMonthResult> {
     this._loading.set(true);
@@ -94,7 +108,7 @@ export class GenerateMonthService {
 
       const cells = toSheetCells(rows, company, vehicle, { year, month });
       const sheetName = monthSheetName(month);
-      await this.sheets.writeSheet(cells, sheetName);
+      const { workbookId, sheetId } = await this.sheets.writeSheet(cells, sheetName);
 
       const closingBalance = rows[rows.length - 1].balance;
       const result: GenerateMonthResult = {
@@ -107,6 +121,8 @@ export class GenerateMonthService {
         rowCount: rows.length,
         holidaySource: cal.source,
         warnings: cal.warnings,
+        workbookId,
+        sheetId,
       };
       this._result.set(result);
       return result;

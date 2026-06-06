@@ -836,5 +836,23 @@ describe('SheetsStore.resolveSupportingSheetId — failure is not cached', () =>
   });
 });
 
+describe('SheetsStore.sheetExists', () => {
+  it('returns true for an existing tab title and false otherwise (metadata only)', async () => {
+    const { client, state } = makeSheetsStub({
+      meta: {
+        sheets: [
+          { properties: { sheetId: 0, title: 'м_01' } },
+          { properties: { sheetId: 1, title: 'м_02' } },
+        ],
+      },
+    });
+    const { store } = makeStore({ sheets: client, sheetsState: state });
+    await expect(store.sheetExists('м_01')).resolves.toBe(true);
+    await expect(store.sheetExists('м_05')).resolves.toBe(false);
+    // Reads tab metadata only — never row values.
+    expect(client.valuesGet).not.toHaveBeenCalled();
+  });
+});
+
 // Silence unused-import warning for vi.
 void beforeEach;
