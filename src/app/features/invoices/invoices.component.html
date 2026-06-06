@@ -2,7 +2,7 @@
 
   @if (!masterReady() && masterError() === null) {
     <span class="sr-only" role="status">Loading your workspace…</span>
-    <div class="invoices__head">
+    <div class="page-head">
       <span class="sk-bar" style="width: 7rem; height: 1.4rem"></span>
       <span class="sk-bar" style="width: 9rem; height: 2.75rem; border-radius: 0.8rem"></span>
     </div>
@@ -26,11 +26,11 @@
       (retry)="retryMaster()"
     />
   } @else {
-    <div class="invoices__head">
-      <h1 class="invoices__title">
+    <div class="page-head">
+      <h1 class="page-title">
         Invoices
         @if (invoices().length > 0) {
-          <span class="invoices__count">{{ '('+invoices().length+')' }}</span>
+          <span class="page-count">{{ '('+invoices().length+')' }}</span>
         }
       </h1>
       <button

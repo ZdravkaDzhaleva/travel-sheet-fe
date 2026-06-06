@@ -1,3 +1,6 @@
+@use './styles/forms';
+@use './styles/layout';
+
 :root {
   /* Brand core */
   --lr-dark:        rgb(57, 57, 57);
@@ -86,6 +89,15 @@ body {
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow-card);
+}
+
+// Simple padded card that stacks its children (forms, results). Cards with
+// their own head/body sections (e.g. Company info) stay plain `.card`.
+.card--pad {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 /* ── Shared button primitive ───────────────────────────────────────────────

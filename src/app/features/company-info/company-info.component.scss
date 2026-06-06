@@ -16,54 +16,6 @@
   gap: 1.25rem;
 }
 
-// ── Page header ───────────────────────────────────────────────────────────────
-
-.company-info__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.company-info__titlewrap {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-}
-
-.company-info__title {
-  margin: 0;
-  font-size: 1.6rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.7);
-  border: 0.0625rem solid rgba(255, 255, 255, 0.22);
-  border-radius: 999px;
-  padding: 0.2rem 0.6rem;
-}
-
-// The outward link uses the global `.btn .btn--ghost-dark` primitive
-// (src/styles.scss), incl. its pending `a.btn--ghost-dark:not([href])` state.
-
-.company-info__sub {
-  margin: -0.25rem 0 0.25rem;
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.88rem;
-  line-height: 1.5;
-  max-width: 46rem;
-}
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -98,14 +50,14 @@
   max-width: 16rem;
 }
 
-// ── Cards (`.card` is a global primitive) ─────────────────────────────────────
+// ── Card head (icon + title) ─────────────────
 
 .card__head {
   display: flex;
   align-items: center;
   gap: 0.6rem;
   padding: 1rem 1.25rem;
-  border-bottom: 0.0625rem solid rgba(57, 57, 57, 0.1);
+  border-bottom: 0.0625rem solid var(--hairline-on-surface);
 }
 
 .card__head svg {
@@ -117,58 +69,6 @@
   margin: 0;
   font-size: 1.05rem;
   font-weight: 600;
-}
-
-// ── Key/value rows ────────────────────────────────────────────────────────────
-
-.kv {
-  margin: 0;
-}
-
-.kv__row {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.2rem;
-  padding: 0.7rem 1.25rem;
-  border-bottom: 0.0625rem solid rgba(57, 57, 57, 0.1);
-}
-
-.kv__row:last-child {
-  border-bottom: 0;
-}
-
-.kv__row dt {
-  font-size: 0.78rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: rgba(57, 57, 57, 0.62);
-}
-
-.kv__row dd {
-  margin: 0;
-  font-size: 0.98rem;
-  word-break: break-word;
-}
-
-.num {
-  font-variant-numeric: tabular-nums;
-}
-
-.unit {
-  color: rgba(57, 57, 57, 0.62);
-  font-size: 0.85rem;
-  margin-left: 0.3rem;
-}
-
-// ── Two-column rows once there's room (≥ 540 px) ──────────────────────────────
-
-@media (min-width: 540px) {
-  .kv__row {
-    grid-template-columns: 13rem 1fr;
-    align-items: baseline;
-    gap: 1rem;
-  }
 }
 
 @media (min-width: 768px) {

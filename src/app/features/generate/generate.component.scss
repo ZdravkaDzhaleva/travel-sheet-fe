@@ -16,24 +16,6 @@
   gap: 1.25rem;
 }
 
-.generate__title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.card {
-  background-color: var(--app-surface);
-  color: var(--app-text-on-surface);
-  border-radius: 0.75rem;
-  padding: 1.25rem;
-  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.18);
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
 .card__heading {
   margin: 0;
   font-size: 1.125rem;
@@ -53,8 +35,6 @@
   word-break: break-word;
 }
 
-// Readable error: keep the light card surface, add a danger left rail + dark-red
-// heading (was an unreadable translucent-red fill over the dark shell).
 .card--error {
   border-left: 0.25rem solid var(--app-danger);
 }
@@ -91,48 +71,10 @@
   color: var(--app-text-on-surface);
 }
 
-.form {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.875rem;
-}
-
-.form__field {
-  display: grid;
-  gap: 0.375rem;
-}
-
-.form__label {
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: rgba(57, 57, 57, 0.75);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.form__input {
-  min-height: 2.75rem;
-  padding: 0 0.75rem;
-  font: inherit;
-  background-color: var(--app-surface);
-  color: var(--app-text-on-surface);
-  border: 0.0625rem solid rgba(57, 57, 57, 0.25);
-  border-radius: 0.5rem;
-  width: 100%;
-}
-
-.form__input:focus-visible {
-  outline: 0.125rem solid var(--app-accent);
-  outline-offset: 0.0625rem;
-  border-color: var(--app-accent);
-}
-
 .form__actions {
   display: flex;
   gap: 0.5rem;
 }
-
-// (The submit button uses the global `.btn .btn--primary` primitive.)
 
 .result {
   margin: 0;

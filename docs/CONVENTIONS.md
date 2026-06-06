@@ -112,13 +112,19 @@ The app must be fully usable from a mobile browser (the user generates and revie
 
 Angular scopes a component's SCSS to that component (emulated encapsulation). That's good for genuinely page-specific layout — but it means a primitive copy-pasted into several component SCSS files (a button, a card, a status box) silently diverges and bloats each file. Don't do that.
 
-- **Global, reusable, presentational → `src/styles.scss`.** Design tokens and any visual primitive shared by ≥2 pages live there as unscoped CSS custom properties / utility classes. Rules emitted from `styles.scss` are **not** encapsulated, so they style any component's DOM.
+- **Global, reusable, presentational → `src/styles.scss` (+ `src/styles/_*.scss` partials `@use`d from it).** Design tokens and any visual primitive shared by ≥2 pages live there as unscoped CSS custom properties / utility classes. Rules emitted from these are **not** encapsulated, so they style any component's DOM. Partials: `_forms.scss` (form fields), `_layout.scss` (page header + key/value).
   - **Tokens already defined** (reference these, don't hardcode): colour `--app-*` / `--lr-*` (§8); danger `--app-danger`, `--app-danger-text`, `--app-danger-bg`; radii `--radius-sm|md|lg|pill`; elevation `--shadow-card`, `--shadow-pop`; `--hairline-on-dark`, `--hairline-on-surface`, `--muted-on-surface`.
-  - **Primitives already global:** `.card` (light surface); `.btn` (colour-less base) + `.btn--primary` (gold), `.btn--danger` (red), `.btn--ghost` (dark text — for light surfaces), `.btn--ghost-dark` (light text — for the dark shell, incl. the pending `a.btn--ghost-dark:not([href])` state); `.sk-bar` (skeleton shimmer).
-- **Page-specific only → the component's SCSS.** Layout and one-off rules that no other page needs (e.g. the invoice table grid, the company-info `.kv` rows). If you find yourself writing the same rule in a second component, promote it to `styles.scss` instead.
+  - **Primitives already global:**
+    - Surface: `.card` (light surface) + `.card--pad` (padded, stacking).
+    - Buttons: `.btn` (colour-less base) + `.btn--primary` (gold), `.btn--danger` (red), `.btn--ghost` (dark text — light surfaces), `.btn--ghost-dark` (light text — dark shell, incl. pending `a.btn--ghost-dark:not([href])`).
+    - Forms (`_forms.scss`): `.form`, `.form__field`, `.form__label`, `.form__input`.
+    - Page chrome (`_layout.scss`): `.page-head`, `.page-titlewrap`, `.page-title`, `.page-count`, `.page-sub`, `.pill`.
+    - Data: `.kv` / `.kv__row` (key/value rows), `.num` (tabular), `.unit` (muted suffix), `.sk-bar` (skeleton shimmer).
+    - Modal: `.modal-actions` (footer button row).
+- **Page-specific only → the component's SCSS.** Layout and one-off rules that no other page needs (e.g. the invoice table grid, the invoice form's validation states, the navbar dropdown/drawer). If you find yourself writing the same rule in a second component, promote it to a global class/partial instead.
 - **Behaviour/state → a `shared/ui` component, not a class.** Anything with logic, projected content, focus management, or signals (Modal, Toast, ErrorAlert) is a standalone component under `shared/ui/`. Reserve global CSS for purely presentational primitives.
 - **Picking the variant matters:** buttons on the **dark shell** use `--ghost-dark`; buttons on a **light surface** (inside a modal/card) use `--ghost`. Mismatching them produces white-on-white / dark-on-dark — verify the surface before choosing.
-- **The style budget is the guardrail.** The `anyComponentStyle` budget in `angular.json` is intentionally tight; if a component SCSS trips it, that's almost always a primitive that should have been global — extract it rather than raising the budget.
+- **The style budget is the guardrail.** The `anyComponentStyle` budget in `angular.json` is intentionally tight (**6 kB**, just above the two largest *legit* page styles — navbar and invoices); if a component SCSS trips it, that's almost always a primitive that should have been global — extract it rather than raising the budget.
 
 ## 9. Angular specifics
 - Standalone components, no NgModules.

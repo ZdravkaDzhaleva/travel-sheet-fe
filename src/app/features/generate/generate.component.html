@@ -1,7 +1,7 @@
 <main class="generate">
-  <h1 class="generate__title">Generate month</h1>
+  <h1 class="page-title">Generate month</h1>
 
-  <section class="card" aria-labelledby="form-heading">
+  <section class="card card--pad" aria-labelledby="form-heading">
     <h2 id="form-heading" class="card__heading">Pick a period</h2>
 
     <form class="form" (ngSubmit)="generate()">
@@ -49,7 +49,7 @@
 
   <!-- Already-generated guard (light surface, per T7.10) -->
   @if (monthExists() && !resultMatchesSelection()) {
-    <section class="card notice" role="alert" aria-labelledby="exists-heading">
+    <section class="card card--pad notice" role="alert" aria-labelledby="exists-heading">
       <h2 id="exists-heading" class="notice__heading">
         {{ monthName(month) }} {{ year }} is already generated
       </h2>
@@ -64,7 +64,7 @@
 
   @if (error(); as err) {
     <section
-      class="card card--error"
+      class="card card--pad card--error"
       role="alert"
       aria-labelledby="error-heading"
     >
@@ -91,7 +91,7 @@
   }
 
   @if (result(); as r) {
-    <section class="card card--success" aria-labelledby="result-heading">
+    <section class="card card--pad card--success" aria-labelledby="result-heading">
       <h2 id="result-heading" class="card__heading">
         {{ monthName(r.month) }} {{ r.year }} generated
       </h2>
