@@ -160,3 +160,13 @@ a.btn--ghost-dark:not([href]) {
   opacity: 0.55;
   pointer-events: none;
 }
+
+/* Footer action row for a Modal's [modal-footer] slot. The slot's projected
+   wrapper is a single flex child of .modal-foot, so the gap must live here to
+   actually space the buttons. */
+.modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.875rem;
+}
