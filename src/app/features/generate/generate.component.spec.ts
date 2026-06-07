@@ -306,6 +306,7 @@ describe('GenerateComponent', () => {
     fixture.detectChanges();
     expect(stubs.clearError).toHaveBeenCalled();
     expect((fixture.nativeElement as HTMLElement).querySelector('.card--error')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.card--success')).toBeNull();
   });
 
   it('clears the error and the success result when the page is left (ngOnDestroy)', () => {

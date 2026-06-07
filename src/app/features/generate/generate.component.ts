@@ -71,6 +71,7 @@ export class GenerateComponent implements OnInit, OnDestroy {
   protected onPeriodChange(): void {
     // A prior failure no longer applies to the newly selected period.
     this.service.clearError();
+    this.service.clearResult();
     void this.refreshExists();
   }
 
