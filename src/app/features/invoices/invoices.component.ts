@@ -1,4 +1,4 @@
-import { Component, OnInit, effect, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, effect, inject, signal } from '@angular/core';
 import { FormsModule, } from '@angular/forms';
 import { KeyValuePipe } from '@angular/common';
 
@@ -37,6 +37,9 @@ function emptyForm(): InvoiceFormState {
   styleUrl: './invoices.component.scss',
 })
 export class InvoicesComponent implements OnInit {
+
+  @ViewChild('fileEl') private fileElRef!: ElementRef<HTMLInputElement>;
+  
   private readonly invoiceService = inject(InvoiceService);
   private readonly masterData = inject(MasterDataService);
   private readonly toast = inject(ToastService);
@@ -99,6 +102,7 @@ export class InvoicesComponent implements OnInit {
     this.editingId.set(null);
     this.formData = emptyForm();
     this.file = null;
+    this.fileElRef.nativeElement.value = '';
     this.localError.set(null);
     this.formOpen.set(true);
   }
