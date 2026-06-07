@@ -7,7 +7,11 @@ import {
   isZeroTripDay,
   type ZeroTripContext,
 } from './zero-trip-rules';
-import { BALANCE_MIN, BALANCE_MAX } from '../../core/config/generation.config';
+import { BALANCE_MIN } from '../../core/config/generation.config';
+
+// These helpers take an explicit [min, max] window, so the tests supply a fixed
+// upper bound to exercise the boundary logic independently of any config value.
+const BALANCE_MAX = 8;
 
 describe('hasNoDestination', () => {
   it('returns true for an empty stops array', () => {

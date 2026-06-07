@@ -26,7 +26,7 @@
 - All fuel/distance math uses plain `number`, rounded with a single shared helper `round2(n)` = round to 2 decimals. Never hand-roll rounding inline.
 - Liters and kilometers: 2 decimals. Consumption rate (`avg`) is stored as given (e.g. `12.0`).
 - Currency values from invoices are carried as-is for display; no FX, no recomputation.
-- Comparisons against the balance window use the config constants `BALANCE_MIN`/`BALANCE_MAX` — never literal `0`/`8` in code.
+- Balance constants live in `core/config/generation.config.ts` — use them, never literals: `BALANCE_MIN` (the running balance never goes below it) and `FUEL_FILL_TOLERANCE_L` (how far below a full tank a refuel may land). A fuel event fills to `Vehicle.TankCapacityLiters`; the pre-fuel target window is derived as `[C − liters − FUEL_FILL_TOLERANCE_L, C − liters]`, not a fixed window.
 
 ## 4a. Dates & timezone (domain-critical)
 The app runs in Bulgaria (EET/EEST = UTC+2/+3). Dates are calendar dates, not instants — getting this wrong shifts a day across the timezone boundary and silently corrupts working-day calendars, invoice dates, and month boundaries (often only failing in summer or only in winter).

@@ -8,6 +8,7 @@ import { SheetsStore } from '../infrastructure/sheets.store';
 import {
   InfeasibleMonthError,
   InsufficientDataError,
+  maxDailyRouteKm,
 } from '../domain/generation/trip-generator';
 import {
   makeCompany,
@@ -142,8 +143,9 @@ describe('GenerateMonthService — happy path', () => {
     expect(result.sheetName).toBe('м_01');
     expect(result.openingBalance).toBe(5);
     expect(result.openingSource).toBe('vehicleConfig');
-    // Month-end closing is unconstrained on the upper side — it rolls forward
-    // as next month's opening. Only the pre-fuel-event balances must sit in [0, 8].
+    // Month-end closing is capped only by the next-month look-ahead; it rolls
+    // forward as next month's opening. Each fuel event fills the tank to full,
+    // so every fuel-row balance stays ≤ tank capacity.
     expect(result.closingBalance).toBeGreaterThanOrEqual(0);
     expect(result.holidaySource).toBe('api');
     expect(svc.loading()).toBe(false);
@@ -223,11 +225,12 @@ describe('GenerateMonthService — invoice filtering', () => {
 });
 
 describe('GenerateMonthService — infeasible month', () => {
-  it('surfaces InfeasibleMonthError and never writes when a fuel event arrives too soon to drop balance to [0, 8]', async () => {
+  it('surfaces InfeasibleMonthError and never writes when a fuel event arrives too soon to drain the tank', async () => {
     // Pre-fuel infeasibility: opening 50 L with a fuel event on Jan 2 (the first
     // working day of Jan 2026 — Jan 1 is a holiday). Segment 0 has zero working
-    // days before Jan 2, so the balance cannot drop from 50 L into [0, 8] L
-    // before refueling — generation must fail rather than emit a bad sheet.
+    // days before Jan 2, so the balance cannot drop from 50 L to the pre-fuel
+    // target (capacity − liters) before refueling — generation must fail rather
+    // than emit a sheet whose fuel row overflows the tank.
     const tooEarly: Invoice = {
       ...makeInvoices()[0],
       Id: 999,
@@ -281,23 +284,28 @@ describe('GenerateMonthService — next-month look-ahead', () => {
   });
 
   it('caps the closing balance using the next-month first-fuel constraint (Jan 2026 + Feb 4 anchor)', async () => {
-    // Regression: opening 37.34 + Jan fuels 60.23 (Jan 8) + 60.82 (Jan 26) +
-    // next-month anchor 61.46 L on Feb 4. With 2 working days before Feb 4
-    // (Feb 2, 3) and avg 11.5 L/100 km, trailingTmax = 8 + 2×80×11.5/100 =
-    // 8 + 18.4 = 26.4. Closing must land ≤ 26.4 L for Feb to be feasible.
+    // Opening 37.34 + Jan fuels 60.23 (Jan 8) + 60.82 (Jan 26) + next-month
+    // anchor 40 L on Feb 4. Feb fills the tank to (66 − 40) = 26 L, and the 2
+    // working days before Feb 4 (Feb 2, 3) can each burn at most the longest
+    // available route — so Jan's closing is capped at that target plus that burn.
+    // The cap MUST use the same per-day ceiling the generator enforces (the
+    // longest route), not MAX_KM_PER_DAY, or Feb becomes infeasible.
+    const vehicle = makeVehicle({ OpeningFuelBalance: 37.34 });
     const userInvoices: Invoice[] = [
       { ...makeInvoices()[0], Id: 301, InvoiceDate: new Date(2026, 0, 8), QuantityLiters: 60.23 },
       { ...makeInvoices()[0], Id: 302, InvoiceDate: new Date(2026, 0, 26), QuantityLiters: 60.82 },
-      { ...makeInvoices()[0], Id: 303, InvoiceDate: new Date(2026, 1, 4),  QuantityLiters: 61.46 },
+      { ...makeInvoices()[0], Id: 303, InvoiceDate: new Date(2026, 1, 4),  QuantityLiters: 40 },
     ];
-    const stubs = makeStubs({
-      vehicle: makeVehicle({ OpeningFuelBalance: 37.34 }),
-      invoices: userInvoices,
-    });
+    const stubs = makeStubs({ vehicle, invoices: userInvoices });
     const svc = makeService(stubs);
+
+    const maxDayKm = maxDailyRouteKm(makeLocations(), makeRouteLegs());
+    const trailingTmax =
+      (vehicle.TankCapacityLiters - 40) +
+      (2 * maxDayKm * vehicle.AverageConsumptionLitersPer100Km) / 100;
 
     const result = await svc.generateMonth(2026, 1);
     expect(result.closingBalance).toBeGreaterThanOrEqual(0);
-    expect(result.closingBalance).toBeLessThanOrEqual(26.4 + 1e-6);
+    expect(result.closingBalance).toBeLessThanOrEqual(trailingTmax + 1e-6);
   });
 });

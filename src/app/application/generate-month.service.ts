@@ -3,11 +3,10 @@ import { Injectable, inject, signal } from '@angular/core';
 import { SheetsStore } from '../infrastructure/sheets.store';
 import { CalendarService } from './calendar.service';
 import { MasterDataService } from './master-data.service';
-import { generate } from '../domain/generation/trip-generator';
+import { generate, maxDailyRouteKm } from '../domain/generation/trip-generator';
 import { InsufficientDataError } from '../domain/generation/insufficient-data.error';
 import { toSheetCells } from '../domain/mapping/row-mapper';
 import { monthSheetName } from '../core/config/workbook.template';
-import { BALANCE_MAX, MAX_KM_PER_DAY } from '../core/config/generation.config';
 import type { FuelEvent, Invoice, Vehicle } from '../domain/entities/index';
 import type { HolidaySource } from '../infrastructure/holiday.provider';
 
@@ -92,9 +91,15 @@ export class GenerateMonthService {
       const nextPreFuelWorkingDays = nextCal.workingDays.filter(
         d => d.getTime() < nextFirstInvoice.InvoiceDate.getTime(),
       ).length;
+      // Next month's first refuel fills the tank to full. Cap this
+      // month's closing at that target plus what next month's pre-fuel days can
+      // burn, so next month can reach its own pre-fuel target.
+      const nextPreFuelTarget =
+        vehicle.TankCapacityLiters - nextFirstInvoice.QuantityLiters;
+      const maxDayKm = maxDailyRouteKm(locations, routeLegs);
       const trailingTmax =
-        BALANCE_MAX +
-        (nextPreFuelWorkingDays * MAX_KM_PER_DAY * vehicle.AverageConsumptionLitersPer100Km) / 100;
+        nextPreFuelTarget +
+        (nextPreFuelWorkingDays * maxDayKm * vehicle.AverageConsumptionLitersPer100Km) / 100;
 
       const rows = generate({
         workingDays: cal.workingDays,

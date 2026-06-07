@@ -1,7 +1,6 @@
 // FILL ME: set these to match your actual Google Drive setup before using the app.
-// All three workspace files are looked up by name inside the configured Drive folder —
-// create the folder, the supporting spreadsheet, and the (initially empty) workbook
-// with these exact names beforehand. Names are not secrets, but they are project-specific.
+// All three workspace files are looked up by name inside the configured Drive folder. 
+// Names are not secrets, but they are project-specific.
 
 export const DRIVE_FOLDER_NAME = 'Travel Sheets 2026';
 

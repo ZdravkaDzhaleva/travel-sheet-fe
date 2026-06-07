@@ -20,7 +20,7 @@ import {
 
 import {
   BALANCE_MIN,
-  BALANCE_MAX,
+  FUEL_FILL_TOLERANCE_L,
   MAX_STOPS_PER_DAY,
   MAX_KM_PER_DAY,
 } from './generation.config';
@@ -100,18 +100,18 @@ describe('workbook.template', () => {
 });
 
 describe('generation.config', () => {
-  it('balance window is [0, 8]', () => {
+  it('balance floor is 0 (running balance never negative)', () => {
     expect(BALANCE_MIN).toBe(0);
-    expect(BALANCE_MAX).toBe(8);
+  });
+
+  it('fuel-fill tolerance is a small positive number of liters', () => {
+    expect(FUEL_FILL_TOLERANCE_L).toBe(0.5);
+    expect(FUEL_FILL_TOLERANCE_L).toBeGreaterThan(0);
   });
 
   it('per-day caps match D1 defaults', () => {
-    expect(MAX_STOPS_PER_DAY).toBe(3);
-    expect(MAX_KM_PER_DAY).toBe(80);
-  });
-
-  it('BALANCE_MIN < BALANCE_MAX', () => {
-    expect(BALANCE_MIN).toBeLessThan(BALANCE_MAX);
+    expect(MAX_STOPS_PER_DAY).toBe(5);
+    expect(MAX_KM_PER_DAY).toBe(110);
   });
 });
 
