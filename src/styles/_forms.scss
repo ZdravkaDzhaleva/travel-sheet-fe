@@ -38,3 +38,8 @@
   outline-offset: 0.0625rem;
   border-color: var(--app-accent);
 }
+
+.form__input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+}

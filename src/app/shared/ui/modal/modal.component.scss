@@ -22,6 +22,7 @@
   background: var(--app-surface);
   color: var(--app-text-on-surface);
   border-radius: 0.75rem;
+  overflow: hidden;
   box-shadow: 0 1.5rem 3rem rgba(0, 0, 0, 0.45);
   outline: none;
   animation: modal-pop 0.16s ease-out;
