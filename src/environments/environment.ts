@@ -5,7 +5,7 @@ export const environment = {
   production: true,
   firebase: {
     apiKey:            'AIzaSyCQkGRD575MIOhcGO2FwOLDm-w5VMuSH94',
-    authDomain:        'latituderealize-travel-sheet.firebaseapp.com',
+    authDomain:        'latituderealize-travel-sheet.web.app',
     projectId:         'latituderealize-travel-sheet',
     storageBucket:     'latituderealize-travel-sheet.firebasestorage.app',
     messagingSenderId: '111457365029',

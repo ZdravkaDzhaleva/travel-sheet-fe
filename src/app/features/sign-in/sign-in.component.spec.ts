@@ -11,14 +11,24 @@ interface Stubs {
   readonly router: Router;
   readonly signIn: ReturnType<typeof vi.fn>;
   readonly navigate: ReturnType<typeof vi.fn>;
+  readonly hasPendingRedirect: ReturnType<typeof vi.fn>;
+  readonly completeRedirect: ReturnType<typeof vi.fn>;
 }
 
 function makeStubs(): Stubs {
   const signIn = vi.fn(async () => ({ uid: 'u1' }) as User);
   const navigate = vi.fn(async () => true);
-  const auth = { signInWithGoogle: signIn, signOut: vi.fn(), getAccessToken: vi.fn() } as unknown as GoogleAuth;
+  const hasPendingRedirect = vi.fn(() => false);
+  const completeRedirect = vi.fn(async () => null as User | null);
+  const auth = {
+    signInWithGoogle: signIn,
+    signOut: vi.fn(),
+    getAccessToken: vi.fn(),
+    hasPendingRedirect,
+    completeRedirectSignIn: completeRedirect,
+  } as unknown as GoogleAuth;
   const router = { navigateByUrl: navigate } as unknown as Router;
-  return { auth, router, signIn, navigate };
+  return { auth, router, signIn, navigate, hasPendingRedirect, completeRedirect };
 }
 
 function render(stubs: Stubs): {
@@ -96,6 +106,30 @@ describe('SignInComponent', () => {
     stubs.signIn.mockRejectedValueOnce(new Error('x'));
     await cmp.signIn();
     expect(cmp.busy()).toBe(false);
+  });
+
+  it('navigates only after a user is returned (mobile redirect returns null, no navigation)', async () => {
+    stubs.signIn.mockResolvedValueOnce(null);
+    const { cmp } = render(stubs);
+    await cmp.signIn();
+    expect(stubs.signIn).toHaveBeenCalledOnce();
+    expect(stubs.navigate).not.toHaveBeenCalled();
+  });
+
+  it('completes a pending sign-in redirect on init and navigates to /invoices', async () => {
+    stubs.hasPendingRedirect.mockReturnValue(true);
+    stubs.completeRedirect.mockResolvedValueOnce({ uid: 'u1' } as User);
+    render(stubs);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(stubs.completeRedirect).toHaveBeenCalledOnce();
+    expect(stubs.navigate).toHaveBeenCalledWith('/invoices');
+  });
+
+  it('does not touch the redirect flow on a normal load (no pending redirect)', () => {
+    render(stubs);
+    expect(stubs.completeRedirect).not.toHaveBeenCalled();
+    expect(stubs.navigate).not.toHaveBeenCalled();
   });
 
   it('ignores re-entrant clicks while a sign-in is already in flight', async () => {

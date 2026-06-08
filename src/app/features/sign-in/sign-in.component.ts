@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, type OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { GoogleAuth } from '../../core/auth/google-auth';
@@ -9,20 +9,38 @@ import { GoogleAuth } from '../../core/auth/google-auth';
   templateUrl: './sign-in.component.html',
   styleUrl: './sign-in.component.scss',
 })
-export class SignInComponent {
+export class SignInComponent implements OnInit {
   private readonly auth = inject(GoogleAuth);
   private readonly router = inject(Router);
 
   protected readonly busy = signal(false);
   protected readonly error = signal<string | null>(null);
 
+  /**
+   * On the load that follows a mobile sign-in redirect, collect the result and
+   * navigate. `hasPendingRedirect()` is false on every normal load, so this is
+   * a no-op for desktop and for direct visits to the sign-in page.
+   */
+  async ngOnInit(): Promise<void> {
+    if (!this.auth.hasPendingRedirect()) return;
+    this.busy.set(true);
+    try {
+      const user = await this.auth.completeRedirectSignIn();
+      if (user) await this.router.navigateByUrl('/invoices');
+    } catch (err) {
+      this.error.set(mapSignInError(err));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
   async signIn(): Promise<void> {
     if (this.busy()) return;
     this.busy.set(true);
     this.error.set(null);
     try {
-      await this.auth.signInWithGoogle();
-      await this.router.navigateByUrl('/invoices');
+      const user = await this.auth.signInWithGoogle();
+      if (user) await this.router.navigateByUrl('/invoices');
     } catch (err) {
       this.error.set(mapSignInError(err));
     } finally {
