@@ -71,6 +71,19 @@
   color: var(--app-text-on-surface);
 }
 
+// Month dropdown — custom chevron so the arrow's distance from the border
+// is controllable (native <select> arrow placement is browser-defined).
+select.form__input {
+  appearance: none;
+  // Leave room for the chevron so option text never sits under it.
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23393939' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  // Distance of the arrow from the dropdown's right border.
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+}
+
 .form__actions {
   display: flex;
   gap: 0.5rem;
