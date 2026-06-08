@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 
 import { DriveClient } from '../core/google/drive.client';
+import { GoogleApiError } from '../core/google/google-http';
 import { DRIVE_FOLDER_NAME } from '../core/config/workspace.config';
 import { DriveFolderNotFoundError } from './drive-store.errors';
 
@@ -30,6 +31,19 @@ export class DriveStore {
       file,
     );
     return created.id;
+  }
+
+  /**
+   * Moves an invoice file to Drive trash. A file that is already gone (404) is
+   * treated as success; any other Drive error is rethrown.
+   */
+  async trashInvoiceFile(fileId: DriveFileId): Promise<void> {
+    try {
+      await this.drive.trashFile(fileId);
+    } catch (err) {
+      if (err instanceof GoogleApiError && err.status === 404) return;
+      throw err;
+    }
   }
 
   private resolveFolderId(): Promise<string> {

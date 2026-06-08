@@ -52,6 +52,20 @@ export class DriveClient {
     );
   }
 
+  /** Moves the file to Drive trash (recoverable). Throws GoogleApiError on non-2xx. */
+  async trashFile(fileId: string): Promise<void> {
+    const token = await this.auth.getAccessToken();
+    await googleFetch<DriveFile>(
+      `${DRIVE_FILES_BASE}/${encodeURIComponent(fileId)}?fields=id`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trashed: true }),
+      },
+      token,
+    );
+  }
+
   /** Returns the first non-trashed file matching `name` (and the optional parent / mime-type), or null. */
   async findByName(
     name: string,

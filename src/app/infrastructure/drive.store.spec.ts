@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { DriveStore } from './drive.store';
 import { DriveFolderNotFoundError } from './drive-store.errors';
 import { DriveClient, type DriveFile, type DriveFileMetadata } from '../core/google/drive.client';
+import { GoogleApiError } from '../core/google/google-http';
 import { DRIVE_FOLDER_NAME } from '../core/config/workspace.config';
 
 interface DriveStubState {
@@ -108,5 +109,34 @@ describe('DriveStore.uploadInvoice', () => {
     await store.uploadInvoice(new Blob(['a']), 'a.pdf');
     await store.uploadInvoice(new Blob(['b']), 'b.pdf');
     expect(findByNameSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('DriveStore.trashInvoiceFile', () => {
+  function makeTrashStub(trashFile: ReturnType<typeof vi.fn>): DriveClient {
+    return { trashFile } as unknown as DriveClient;
+  }
+
+  it('delegates to DriveClient.trashFile with the given id', async () => {
+    const trashFile = vi.fn(async () => undefined);
+    const store = makeStore(makeTrashStub(trashFile));
+    await store.trashInvoiceFile('file-1');
+    expect(trashFile).toHaveBeenCalledWith('file-1');
+  });
+
+  it('treats a 404 (file already gone) as success', async () => {
+    const trashFile = vi.fn(async () => {
+      throw new GoogleApiError(404, 'url', 'not found');
+    });
+    const store = makeStore(makeTrashStub(trashFile));
+    await expect(store.trashInvoiceFile('gone')).resolves.toBeUndefined();
+  });
+
+  it('rethrows non-404 Drive errors', async () => {
+    const trashFile = vi.fn(async () => {
+      throw new GoogleApiError(500, 'url', 'boom');
+    });
+    const store = makeStore(makeTrashStub(trashFile));
+    await expect(store.trashInvoiceFile('x')).rejects.toBeInstanceOf(GoogleApiError);
   });
 });

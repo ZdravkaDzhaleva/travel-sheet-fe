@@ -64,6 +64,39 @@ describe('DriveClient.createFile', () => {
   });
 });
 
+describe('DriveClient.trashFile', () => {
+  let fetchSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    fetchSpy = vi.spyOn(globalThis, 'fetch');
+  });
+  afterEach(() => fetchSpy.mockRestore());
+
+  it('PATCHes the file endpoint with trashed:true and Authorization header', async () => {
+    fetchSpy.mockResolvedValue(jsonResponse(200, { id: 'file-1' }));
+    const client = makeClient('access-xyz');
+    await client.trashFile('file-1');
+    const [url, init] = fetchSpy.mock.calls[0];
+    expect(url).toBe('https://www.googleapis.com/drive/v3/files/file-1?fields=id');
+    expect(init?.method).toBe('PATCH');
+    const headers = new Headers(init?.headers);
+    expect(headers.get('Authorization')).toBe('Bearer access-xyz');
+    expect(headers.get('Content-Type')).toBe('application/json');
+    expect(init?.body).toBe('{"trashed":true}');
+  });
+
+  it('URL-encodes the file id', async () => {
+    fetchSpy.mockResolvedValue(jsonResponse(200, { id: 'a b' }));
+    await makeClient().trashFile('a b');
+    const [url] = fetchSpy.mock.calls[0];
+    expect(String(url)).toBe('https://www.googleapis.com/drive/v3/files/a%20b?fields=id');
+  });
+
+  it('throws GoogleApiError on non-2xx', async () => {
+    fetchSpy.mockResolvedValue(jsonResponse(404, { error: 'not found' }));
+    await expect(makeClient().trashFile('gone')).rejects.toBeInstanceOf(GoogleApiError);
+  });
+});
+
 describe('buildMultipartBody', () => {
   async function readBody(b: Blob): Promise<string> {
     return await b.text();

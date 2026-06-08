@@ -16,6 +16,7 @@ interface StoreStub {
   readonly updateInvoice: ReturnType<typeof vi.fn>;
   readonly deleteInvoice: ReturnType<typeof vi.fn>;
   readonly uploadInvoice: ReturnType<typeof vi.fn>;
+  readonly trashInvoiceFile: ReturnType<typeof vi.fn>;
 }
 
 function makeStubs(initial: Invoice[] = []): StoreStub {
@@ -37,10 +38,11 @@ function makeStubs(initial: Invoice[] = []): StoreStub {
     invoices = invoices.filter(x => x.Id !== id);
   });
   const uploadInvoice = vi.fn(async () => 'drive-new');
+  const trashInvoiceFile = vi.fn(async () => undefined);
 
   const sheets = { loadInvoices, appendInvoice, updateInvoice, deleteInvoice } as unknown as SheetsStore;
-  const drive = { uploadInvoice } as unknown as DriveStore;
-  return { sheets, drive, loadInvoices, appendInvoice, updateInvoice, deleteInvoice, uploadInvoice };
+  const drive = { uploadInvoice, trashInvoiceFile } as unknown as DriveStore;
+  return { sheets, drive, loadInvoices, appendInvoice, updateInvoice, deleteInvoice, uploadInvoice, trashInvoiceFile };
 }
 
 function makeService(stubs: StoreStub): InvoiceService {
@@ -189,6 +191,44 @@ describe('InvoiceService.delete', () => {
     await svc.delete(1);
     expect(stubs.deleteInvoice).toHaveBeenCalledWith(1);
     expect(svc.invoices().map(i => i.Id)).toEqual([2]);
+  });
+
+  it('trashes the Drive file before deleting the row', async () => {
+    const stubs = makeStubs(makeInvoices());
+    const order: string[] = [];
+    stubs.trashInvoiceFile.mockImplementationOnce(async () => {
+      order.push('drive');
+    });
+    stubs.deleteInvoice.mockImplementationOnce(async () => {
+      order.push('sheets');
+    });
+    const svc = makeService(stubs);
+    await svc.load();
+    await svc.delete(1);
+    expect(stubs.trashInvoiceFile).toHaveBeenCalledWith('fixture-drive-id-1');
+    expect(order).toEqual(['drive', 'sheets']);
+  });
+
+  it('aborts (keeps the row) when trashing the Drive file fails', async () => {
+    const stubs = makeStubs(makeInvoices());
+    stubs.trashInvoiceFile.mockRejectedValueOnce(new Error('drive 500'));
+    const svc = makeService(stubs);
+    await svc.load();
+    await expect(svc.delete(1)).rejects.toThrow('drive 500');
+    expect(stubs.deleteInvoice).not.toHaveBeenCalled();
+    expect(svc.invoices().map(i => i.Id)).toEqual([1, 2]);
+    expect(svc.error()?.message).toBe('drive 500');
+  });
+
+  it('skips the Drive trash when the invoice has no DriveFileId', async () => {
+    const [first] = makeInvoices();
+    const stubs = makeStubs([{ ...first, DriveFileId: '' }]);
+    const svc = makeService(stubs);
+    await svc.load();
+    await svc.delete(first.Id);
+    expect(stubs.trashInvoiceFile).not.toHaveBeenCalled();
+    expect(stubs.deleteInvoice).toHaveBeenCalledWith(first.Id);
+    expect(svc.invoices()).toEqual([]);
   });
 
   it('propagates InvoiceNotFoundError from SheetsStore', async () => {

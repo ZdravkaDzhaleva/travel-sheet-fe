@@ -77,9 +77,17 @@ export class InvoiceService {
     });
   }
 
-  /** Removes the row with the given Id and refreshes the signal. */
+  /**
+   * Trashes the invoice's Drive file, then removes the row and refreshes the signal.
+   * The Drive file is trashed first: if that fails the row is left intact so file
+   * and metadata stay in sync. Legacy rows without a DriveFileId skip the Drive step.
+   */
   async delete(invoiceId: number): Promise<void> {
     await this.run(async () => {
+      const target = this._invoices().find(i => i.Id === invoiceId);
+      if (target?.DriveFileId) {
+        await this.drive.trashInvoiceFile(target.DriveFileId); // throws => abort, row kept
+      }
       await this.sheets.deleteInvoice(invoiceId);
       this._invoices.update(list => list.filter(i => i.Id !== invoiceId));
     });
