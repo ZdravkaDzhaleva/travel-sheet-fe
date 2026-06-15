@@ -4,7 +4,6 @@ import { Component } from '@angular/core';
 import { ModalComponent } from './modal.component';
 
 @Component({
-  standalone: true,
   imports: [ModalComponent],
   template: `
     <app-modal [open]="open" [title]="title" (closed)="onClose()">

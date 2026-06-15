@@ -563,7 +563,6 @@ import {
 
 @Component({
   selector: 'app-root',
-  standalone: true,
   imports: [FormField],
   templateUrl: './app.html',
   changeDetection: ChangeDetectionStrategy.OnPush,

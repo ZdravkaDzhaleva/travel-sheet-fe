@@ -29,7 +29,6 @@ const MONTHS: readonly MonthOption[] = [
 
 @Component({
   selector: 'app-generate',
-  standalone: true,
   imports: [FormsModule],
   templateUrl: './generate.component.html',
   styleUrl: './generate.component.scss',

@@ -5,7 +5,6 @@ import { GoogleAuth } from '../../core/auth/google-auth';
 
 @Component({
   selector: 'app-sign-in',
-  standalone: true,
   templateUrl: './sign-in.component.html',
   styleUrl: './sign-in.component.scss',
 })

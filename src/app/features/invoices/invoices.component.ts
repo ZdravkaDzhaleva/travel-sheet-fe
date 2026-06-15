@@ -31,7 +31,6 @@ function emptyForm(): InvoiceFormState {
 
 @Component({
   selector: 'app-invoices',
-  standalone: true,
   imports: [FormsModule, KeyValuePipe, ModalComponent, ErrorAlertComponent],
   templateUrl: './invoices.component.html',
   styleUrl: './invoices.component.scss',

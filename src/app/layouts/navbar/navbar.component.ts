@@ -7,7 +7,6 @@ import { ToastOutletComponent } from '../../shared/ui/toast/toast-outlet.compone
 
 @Component({
   selector: 'app-navbar',
-  standalone: true,
   imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastOutletComponent],
   templateUrl: './navbar.component.html',
   styleUrl: './navbar.component.scss',

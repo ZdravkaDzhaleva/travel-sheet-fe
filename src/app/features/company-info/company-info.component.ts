@@ -7,7 +7,6 @@ import { ErrorAlertComponent } from '../../shared/ui/error-alert/error-alert.com
 
 @Component({
   selector: 'app-company-info',
-  standalone: true,
   imports: [ErrorAlertComponent],
   templateUrl: './company-info.component.html',
   styleUrl: './company-info.component.scss',

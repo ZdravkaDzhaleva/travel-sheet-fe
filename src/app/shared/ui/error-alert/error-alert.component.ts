@@ -6,7 +6,6 @@ import { Component, input, output } from '@angular/core';
  */
 @Component({
   selector: 'app-error-alert',
-  standalone: true,
   imports: [],
   templateUrl: './error-alert.component.html',
   styleUrl: './error-alert.component.scss',

@@ -3,7 +3,6 @@ import { ToastService, type Toast } from './toast.service';
 
 @Component({
   selector: 'app-toast-outlet',
-  standalone: true,
   imports: [],
   styleUrl: './toast-outlet.component.scss',
   template: `
