@@ -1,4 +1,4 @@
-@if (open) {
+@if (open()) {
   <div class="modal-scrim" (click)="onBackdropClick($event)" (keydown.escape)="close()" tabindex="-1">
     <div
       class="modal-dialog"
@@ -9,7 +9,7 @@
       #dialogEl
     >
       <div class="modal-head">
-        <h2 class="modal-title" [id]="titleId">{{ title }}</h2>
+        <h2 class="modal-title" [id]="titleId">{{ title() }}</h2>
         <button type="button" class="modal-close" aria-label="Close" (click)="close()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
                stroke-linecap="round" aria-hidden="true" width="18" height="18">

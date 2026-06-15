@@ -2,15 +2,14 @@ import {
   Component,
   DOCUMENT,
   ElementRef,
-  EventEmitter,
   HostListener,
-  Input,
   OnChanges,
   OnDestroy,
-  Output,
   SimpleChanges,
   ViewChild,
   inject,
+  input,
+  output
 } from '@angular/core';
 
 let _idSeq = 0;
@@ -27,20 +26,20 @@ const FOCUSABLE =
   styleUrl: './modal.component.scss',
 })
 export class ModalComponent implements OnChanges, OnDestroy {
-  private readonly doc = inject(DOCUMENT);
-
-  @Input() open = false;
-  @Input() title = '';
-  @Output() readonly closed = new EventEmitter<void>();
+  readonly open = input(false);
+  readonly title = input('');
+  readonly closed = output<void>();
 
   @ViewChild('dialogEl') private dialogElRef?: ElementRef<HTMLElement>;
 
   protected readonly titleId = `modal-title-${++_idSeq}`;
+  
+  private readonly doc = inject(DOCUMENT);
   private triggerEl: HTMLElement | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (!('open' in changes)) return;
-    if (this.open) {
+    if (this.open()) {
       this.triggerEl = this.doc.activeElement as HTMLElement | null;
       this.doc.body.style.overflow = 'hidden';
       // Defer focus so the dialog is rendered before we query it.
@@ -58,12 +57,12 @@ export class ModalComponent implements OnChanges, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.open) this.doc.body.style.overflow = '';
+    if (this.open()) this.doc.body.style.overflow = '';
   }
 
   @HostListener('document:keydown', ['$event'])
   onDocumentKeydown(event: KeyboardEvent): void {
-    if (!this.open) return;
+    if (!this.open()) return;
     if (event.key === 'Escape') {
       event.preventDefault();
       this.close();
