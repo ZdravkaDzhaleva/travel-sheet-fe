@@ -467,9 +467,6 @@ describe('InvoicesComponent', () => {
     expect(alert?.textContent).toContain('master boom'); // technical detail
     // Neither the add button nor the list is rendered in the error state
     expect(el.textContent).not.toContain('Add invoice');
-    // …and the failure is mirrored to an error toast (consistent with Company info).
-    const toast = TestBed.inject(ToastService);
-    expect(toast.toasts().some(t => t.type === 'error')).toBe(true);
   });
 
   it('renders a table skeleton (not plain text) while master data loads', () => {

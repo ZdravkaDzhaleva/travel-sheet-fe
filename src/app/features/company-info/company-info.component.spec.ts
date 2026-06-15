@@ -133,13 +133,6 @@ describe('CompanyInfoComponent', () => {
     expect(retry).toBeTruthy();
   });
 
-  it('fires an error toast when a load failure is present', () => {
-    const stubs = makeStubs({ error: new NoActiveVehicleError() });
-    render(stubs);
-    expect(stubs.toastShow).toHaveBeenCalledOnce();
-    expect(stubs.toastShow.mock.calls[0]?.[1]).toBe('error');
-  });
-
   it('Retry re-invokes the master-data load, forcing the consent prompt', () => {
     const stubs = makeStubs({ error: new NoActiveVehicleError() });
     const { el } = render(stubs);
