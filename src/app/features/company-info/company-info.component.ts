@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 
 import { MasterDataService } from '../../application/master-data.service';
 import { SheetsStore } from '../../infrastructure/sheets.store';
@@ -34,21 +34,6 @@ export class CompanyInfoComponent implements OnInit {
   protected readonly sheetUrl = computed(() => {
     const id = this.sheetId();
     return id ? `https://docs.google.com/spreadsheets/d/${id}/edit` : null;
-  });
-
-  /** Mirror a load failure to a toast once per distinct error. */
-  private lastToastedError: Error | null = null;
-  private readonly _errorToast = effect(() => {
-    const err = this.error();
-    if (err && err !== this.lastToastedError) {
-      this.lastToastedError = err;
-      this.toast.show('Could not load company info', 'error', {
-        label: 'Retry',
-        fn: () => this.retry(),
-      });
-    } else if (!err) {
-      this.lastToastedError = null;
-    }
   });
 
   ngOnInit(): void {

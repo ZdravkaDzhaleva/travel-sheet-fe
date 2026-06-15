@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild, effect, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
 import { FormsModule, } from '@angular/forms';
 import { KeyValuePipe } from '@angular/common';
 
@@ -64,21 +64,6 @@ export class InvoicesComponent implements OnInit {
   protected readonly localError = signal<string | null>(null);
   /** Becomes true on the first submit attempt; gates inline field errors. */
   protected readonly submitted = signal(false);
-
-  /** Mirror a master-data load failure to a toast once per distinct error. */
-  private lastToastedMasterError: Error | null = null;
-  private readonly _masterErrorToast = effect(() => {
-    const err = this.masterError();
-    if (err && err !== this.lastToastedMasterError) {
-      this.lastToastedMasterError = err;
-      this.toast.show('Could not load your workspace', 'error', {
-        label: 'Retry',
-        fn: () => this.retryMaster(),
-      });
-    } else if (!err) {
-      this.lastToastedMasterError = null;
-    }
-  });
 
   ngOnInit(): void {
     if (!this.masterReady() && !this.masterLoading() && this.masterError() === null) {
