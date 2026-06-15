@@ -35,7 +35,7 @@ module.exports = defineConfig([
   },
   {
     // Domain-purity: no Angular, Firebase, or Google imports allowed in domain/
-    files: ['src/domain/**/*.ts'],
+    files: ['src/app/domain/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
