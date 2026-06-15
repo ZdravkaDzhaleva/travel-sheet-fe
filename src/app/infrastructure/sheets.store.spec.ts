@@ -409,12 +409,12 @@ describe('SheetsStore.readPreviousMonthClosing', () => {
 
   it('returns null when month <= 1 (prior month is in a different annual workbook)', async () => {
     const { store } = makeStore();
-    expect(await store.readPreviousMonthClosing(2026, 1, vehicle)).toBeNull();
+    expect(await store.readPreviousMonthClosing(1, vehicle)).toBeNull();
   });
 
   it('returns null when the prior sheet does not exist', async () => {
     const { store } = makeStore(); // default meta has only "Sheet1"
-    expect(await store.readPreviousMonthClosing(2026, 3, vehicle)).toBeNull();
+    expect(await store.readPreviousMonthClosing(3, vehicle)).toBeNull();
   });
 
   it('returns null when the plate at E9 does not match the supplied vehicle', async () => {
@@ -423,7 +423,7 @@ describe('SheetsStore.readPreviousMonthClosing', () => {
     });
     state.values.set('м_02!E9', [['SOMEONE-ELSE']]);
     const { store } = makeStore({ sheets: client, sheetsState: state });
-    expect(await store.readPreviousMonthClosing(2026, 3, vehicle)).toBeNull();
+    expect(await store.readPreviousMonthClosing(3, vehicle)).toBeNull();
   });
 
   it('returns the closing balance from column H when plate matches', async () => {
@@ -437,7 +437,7 @@ describe('SheetsStore.readPreviousMonthClosing', () => {
       ['Крайно количество', '', '', '', '', '4.25'],
     ]);
     const { store } = makeStore({ sheets: client, sheetsState: state });
-    expect(await store.readPreviousMonthClosing(2026, 3, vehicle)).toBe(4.25);
+    expect(await store.readPreviousMonthClosing(3, vehicle)).toBe(4.25);
   });
 });
 

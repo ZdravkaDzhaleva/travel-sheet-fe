@@ -2,7 +2,6 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 
 import { MasterDataService } from '../../application/master-data.service';
 import { SheetsStore } from '../../infrastructure/sheets.store';
-import { ToastService } from '../../shared/ui/toast/toast.service';
 import { ErrorAlertComponent } from '../../shared/ui/error-alert/error-alert.component';
 
 @Component({
@@ -14,7 +13,6 @@ import { ErrorAlertComponent } from '../../shared/ui/error-alert/error-alert.com
 export class CompanyInfoComponent implements OnInit {
   private readonly masterData = inject(MasterDataService);
   private readonly sheets = inject(SheetsStore);
-  private readonly toast = inject(ToastService);
 
   protected readonly company = this.masterData.company;
   protected readonly vehicle = this.masterData.vehicle;

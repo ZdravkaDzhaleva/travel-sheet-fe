@@ -72,7 +72,7 @@ export class GenerateMonthService {
       const invoices = await this.sheets.loadInvoices();
       const fuelEvents = toFuelEvents(invoices, vehicle, year, month);
 
-      const prior = await this.sheets.readPreviousMonthClosing(year, month, vehicle);
+      const prior = await this.sheets.readPreviousMonthClosing(month, vehicle);
       const openingBalance = prior ?? vehicle.OpeningFuelBalance;
       const openingSource: OpeningBalanceSource = prior === null ? 'vehicleConfig' : 'priorSheet';
 

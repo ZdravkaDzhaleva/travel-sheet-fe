@@ -259,7 +259,6 @@ export class SheetsStore {
    * the supplied vehicle plate (cell E9); else null.
    */
   async readPreviousMonthClosing(
-    year: number,
     month: number,
     vehicle: Vehicle,
   ): Promise<number | null> {
