@@ -1,4 +1,4 @@
-import { Component, OnDestroy, computed, inject, resource, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, computed, inject, resource, signal } from '@angular/core';
 import { form, submit, min, max, FormField } from '@angular/forms/signals';
 
 import { GenerateMonthService, type GenerateMonthResult } from '../../application/generate-month.service';
@@ -43,6 +43,7 @@ function currentPeriod(): PeriodModel {
 
 @Component({
   selector: 'app-generate',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormField],
   templateUrl: './generate.component.html',
   styleUrl: './generate.component.scss',

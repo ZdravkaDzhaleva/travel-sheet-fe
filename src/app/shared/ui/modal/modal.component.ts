@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   DOCUMENT,
   ElementRef,
@@ -19,6 +20,7 @@ const FOCUSABLE =
 
 @Component({
   selector: 'app-modal',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
   templateUrl: './modal.component.html',
   styleUrl: './modal.component.scss',

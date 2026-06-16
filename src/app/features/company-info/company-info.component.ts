@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 
 import { MasterDataService } from '../../application/master-data.service';
 import { SheetsStore } from '../../infrastructure/sheets.store';
@@ -6,6 +6,7 @@ import { ErrorAlertComponent } from '../../shared/ui/error-alert/error-alert.com
 
 @Component({
   selector: 'app-company-info',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ErrorAlertComponent],
   templateUrl: './company-info.component.html',
   styleUrl: './company-info.component.scss',

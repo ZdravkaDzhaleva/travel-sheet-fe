@@ -1,10 +1,11 @@
-import { Component, inject, signal, type OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, type OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { GoogleAuth } from '../../core/auth/google-auth';
 
 @Component({
   selector: 'app-sign-in',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './sign-in.component.html',
   styleUrl: './sign-in.component.scss',
 })

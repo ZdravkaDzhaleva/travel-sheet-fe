@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 /**
  * Branded, readable error alert shared across feature pages (Invoices,
@@ -6,6 +6,7 @@ import { Component, input, output } from '@angular/core';
  */
 @Component({
   selector: 'app-error-alert',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
   templateUrl: './error-alert.component.html',
   styleUrl: './error-alert.component.scss',

@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { GoogleAuth } from '../../core/auth/google-auth';
@@ -7,6 +7,7 @@ import { ToastOutletComponent } from '../../shared/ui/toast/toast-outlet.compone
 
 @Component({
   selector: 'app-navbar',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastOutletComponent],
   templateUrl: './navbar.component.html',
   styleUrl: './navbar.component.scss',

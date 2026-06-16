@@ -1,8 +1,9 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ToastService, type Toast } from './toast.service';
 
 @Component({
   selector: 'app-toast-outlet',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [],
   styleUrl: './toast-outlet.component.scss',
   template: `

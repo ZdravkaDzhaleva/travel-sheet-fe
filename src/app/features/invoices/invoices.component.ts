@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { form, submit, required, validate, FormField } from '@angular/forms/signals';
 
 import { InvoiceService } from '../../application/invoice.service';
@@ -37,6 +37,7 @@ function emptyModel(): InvoiceFormModel {
 
 @Component({
   selector: 'app-invoices',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormField, ModalComponent, ErrorAlertComponent],
   templateUrl: './invoices.component.html',
   styleUrl: './invoices.component.scss',
