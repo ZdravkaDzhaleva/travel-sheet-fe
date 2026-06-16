@@ -18,7 +18,6 @@ export class CompanyInfoComponent implements OnInit {
   protected readonly vehicle = this.masterData.vehicle;
   protected readonly loading = this.masterData.loading;
   protected readonly error = this.masterData.error;
-  protected readonly ready = this.masterData.ready;
 
   /** Row counts for the two skeleton cards (Company / Active vehicle). */
   protected readonly skeletonCards: readonly (readonly number[])[] = [
@@ -34,11 +33,7 @@ export class CompanyInfoComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    if (!this.ready() && !this.loading() && this.error() === null) {
-      // Initial attempt is silent (no consent prompt) — it succeeds if scopes
-      // were already granted this session.
-      void this.masterData.load().catch(() => undefined);
-    }
+    void this.masterData.ensureLoaded();
     this.resolveSheetLink();
   }
 

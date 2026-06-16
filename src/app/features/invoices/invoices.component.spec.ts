@@ -20,6 +20,7 @@ interface MasterStubs {
   readonly loading: ReturnType<typeof signal<boolean>>;
   readonly error: ReturnType<typeof signal<Error | null>>;
   readonly load: ReturnType<typeof vi.fn>;
+  readonly ensureLoaded: ReturnType<typeof vi.fn>;
   readonly service: MasterDataService;
 }
 
@@ -43,6 +44,7 @@ function makeMasterStubs(initial: {
   const loading = signal<boolean>(false);
   const error = signal<Error | null>(null);
   const load = vi.fn(async () => undefined);
+  const ensureLoaded = vi.fn(async () => undefined);
   const service = {
     company: company.asReadonly() as Signal<Company | null>,
     vehicle: vehicle.asReadonly() as Signal<Vehicle | null>,
@@ -50,8 +52,9 @@ function makeMasterStubs(initial: {
     error: error.asReadonly() as Signal<Error | null>,
     ready: () => company() !== null && vehicle() !== null,
     load,
+    ensureLoaded,
   } as unknown as MasterDataService;
-  return { company, vehicle, loading, error, load, service };
+  return { company, vehicle, loading, error, load, ensureLoaded, service };
 }
 
 function makeInvoiceStubs(initial: readonly Invoice[] = []): InvoiceStubs {
@@ -139,18 +142,11 @@ describe('InvoicesComponent', () => {
     TestBed.resetTestingModule();
   });
 
-  it('triggers MasterDataService.load + InvoiceService.load on init', () => {
+  it('delegates first-load to MasterDataService.ensureLoaded + loads invoices on init', () => {
     const master = makeMasterStubs({ company: null, vehicle: null });
     const inv = makeInvoiceStubs();
     render(master, inv);
-    expect(master.load).toHaveBeenCalledOnce();
-    expect(inv.load).toHaveBeenCalledOnce();
-  });
-
-  it('skips MasterDataService.load when master data is already ready', () => {
-    const master = makeMasterStubs();
-    const inv = makeInvoiceStubs();
-    render(master, inv);
+    expect(master.ensureLoaded).toHaveBeenCalledOnce();
     expect(master.load).not.toHaveBeenCalled();
     expect(inv.load).toHaveBeenCalledOnce();
   });

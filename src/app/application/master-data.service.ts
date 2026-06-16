@@ -71,4 +71,15 @@ export class MasterDataService {
       this._loading.set(false);
     }
   }
+
+  /**
+   * Lazily loads master data exactly once. Centralizes the first-load guard
+   * that every feature page would otherwise re-implement in `ngOnInit`; safe to
+   * call from each page. The initial attempt is silent (no consent prompt) and
+   * never rejects — failures surface through the `error` signal.
+   */
+  async ensureLoaded(): Promise<void> {
+    if (this.ready() || this.loading() || this.error() !== null) return;
+    await this.load().catch(() => undefined);
+  }
 }

@@ -55,7 +55,6 @@ export class InvoicesComponent implements OnInit {
   protected readonly vehicle = this.masterData.vehicle;
   protected readonly masterReady = this.masterData.ready;
   protected readonly masterError = this.masterData.error;
-  protected readonly masterLoading = this.masterData.loading;
 
   /** Placeholder rows for the loading skeleton. */
   protected readonly skeletonRows = [0, 1, 2, 3];
@@ -105,9 +104,7 @@ export class InvoicesComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    if (!this.masterReady() && !this.masterLoading() && this.masterError() === null) {
-      void this.masterData.load();
-    }
+    void this.masterData.ensureLoaded();
     void this.invoiceService.load();
   }
 

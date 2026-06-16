@@ -19,6 +19,7 @@ interface Stubs {
   readonly loading: ReturnType<typeof signal<boolean>>;
   readonly error: ReturnType<typeof signal<Error | null>>;
   readonly load: ReturnType<typeof vi.fn>;
+  readonly ensureLoaded: ReturnType<typeof vi.fn>;
   readonly service: MasterDataService;
   readonly resolveSupportingSheetId: ReturnType<typeof vi.fn>;
   readonly sheets: SheetsStore;
@@ -38,6 +39,7 @@ function makeStubs(initial: {
   const loading = signal<boolean>(initial.loading ?? false);
   const error = signal<Error | null>(initial.error ?? null);
   const load = vi.fn(async () => undefined);
+  const ensureLoaded = vi.fn(async () => undefined);
 
   const service = {
     company: company.asReadonly() as Signal<Company | null>,
@@ -46,6 +48,7 @@ function makeStubs(initial: {
     error: error.asReadonly() as Signal<Error | null>,
     ready: () => company() !== null && vehicle() !== null,
     load,
+    ensureLoaded,
   } as unknown as MasterDataService;
 
   const resolveSupportingSheetId = vi.fn(async () => initial.sheetId ?? SHEET_ID);
@@ -55,7 +58,7 @@ function makeStubs(initial: {
   const toast = { show: toastShow } as unknown as ToastService;
 
   return {
-    company, vehicle, loading, error, load, service,
+    company, vehicle, loading, error, load, ensureLoaded, service,
     resolveSupportingSheetId, sheets, toastShow, toast,
   };
 }
@@ -87,21 +90,10 @@ describe('CompanyInfoComponent', () => {
     TestBed.resetTestingModule();
   });
 
-  it('triggers MasterDataService.load() on init when data is not ready and no load is in flight', () => {
+  it('delegates first-load to MasterDataService.ensureLoaded() on init', () => {
     const stubs = makeStubs();
     render(stubs);
-    expect(stubs.load).toHaveBeenCalledOnce();
-  });
-
-  it('does not trigger load when data is already populated', () => {
-    const stubs = makeStubs({ company: makeCompany(), vehicle: makeVehicle() });
-    render(stubs);
-    expect(stubs.load).not.toHaveBeenCalled();
-  });
-
-  it('does not trigger load while another load is already in flight', () => {
-    const stubs = makeStubs({ loading: true });
-    render(stubs);
+    expect(stubs.ensureLoaded).toHaveBeenCalledOnce();
     expect(stubs.load).not.toHaveBeenCalled();
   });
 

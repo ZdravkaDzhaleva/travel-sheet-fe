@@ -168,3 +168,58 @@ describe('MasterDataService — initial state', () => {
     expect(svc.ready()).toBe(false);
   });
 });
+
+describe('MasterDataService.ensureLoaded', () => {
+  it('loads when no data is present yet', async () => {
+    const store = makeStore();
+    const svc = makeService(store);
+    await svc.ensureLoaded();
+    expect(store.loadCompanies).toHaveBeenCalledOnce();
+    expect(svc.ready()).toBe(true);
+  });
+
+  it('no-ops when data is already loaded', async () => {
+    const store = makeStore();
+    const svc = makeService(store);
+    await svc.load();
+    (store.loadCompanies as ReturnType<typeof vi.fn>).mockClear();
+    await svc.ensureLoaded();
+    expect(store.loadCompanies).not.toHaveBeenCalled();
+  });
+
+  it('no-ops while a load is already in flight', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    const store = makeStore();
+    (store.loadCompanies as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      await gate;
+      return [makeCompany()];
+    });
+    const svc = makeService(store);
+
+    const first = svc.ensureLoaded(); // sets loading=true synchronously before suspending
+    await svc.ensureLoaded();         // guard sees loading in flight → no-op
+    release();
+    await first;
+
+    expect(store.loadCompanies).toHaveBeenCalledOnce();
+  });
+
+  it('no-ops after a prior load errored (recovery is via explicit Retry)', async () => {
+    const store = makeStore({ vehicles: [makeVehicle({ IsActive: false })] });
+    const svc = makeService(store);
+    await expect(svc.load()).rejects.toBeInstanceOf(NoActiveVehicleError);
+    (store.loadCompanies as ReturnType<typeof vi.fn>).mockClear();
+
+    await svc.ensureLoaded();
+    expect(store.loadCompanies).not.toHaveBeenCalled();
+  });
+
+  it('does not reject when the underlying load fails — the error surfaces via the signal', async () => {
+    const svc = makeService(makeStore({ companies: [] }));
+    await expect(svc.ensureLoaded()).resolves.toBeUndefined();
+    expect(svc.error()).toBeInstanceOf(NoCompanyError);
+  });
+});
