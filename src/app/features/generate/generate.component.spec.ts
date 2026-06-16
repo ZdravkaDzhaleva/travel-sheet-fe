@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { signal, type Signal } from '@angular/core';
+import { signal, type Signal, type WritableSignal } from '@angular/core';
 
 import { GenerateComponent } from './generate.component';
 import {
@@ -77,20 +77,31 @@ function render(stubs: Stubs): ComponentFixture<GenerateComponent> {
   return fixture;
 }
 
-/** Let the async existence check (ngOnInit / onPeriodChange) settle. */
+/** Let the async existence check (effect / refreshExists) settle. */
 function flush(): Promise<void> {
   return new Promise(resolve => setTimeout(resolve));
 }
 
-interface InternalGenerate {
+interface PeriodModel {
   year: number;
-  month: number;
+  month: string;
+}
+
+interface InternalGenerate {
+  model: WritableSignal<PeriodModel>;
   generate(): Promise<void>;
   onPeriodChange(): void;
 }
 
 function instance(fixture: ComponentFixture<GenerateComponent>): InternalGenerate {
   return fixture.componentInstance as unknown as InternalGenerate;
+}
+
+/** Set the selected period and let the period-change effect settle. */
+function setPeriod(fixture: ComponentFixture<GenerateComponent>, year: number, month: number): Promise<void> {
+  instance(fixture).model.set({ year, month: String(month) });
+  fixture.detectChanges();
+  return flush();
 }
 
 describe('GenerateComponent', () => {
@@ -102,27 +113,23 @@ describe('GenerateComponent', () => {
     const fixture = render(makeStubs());
     const cmp = instance(fixture);
     const now = new Date();
-    expect(cmp.year).toBe(now.getFullYear());
-    expect(cmp.month).toBe(now.getMonth() + 1);
+    expect(cmp.model().year).toBe(now.getFullYear());
+    expect(Number(cmp.model().month)).toBe(now.getMonth() + 1);
   });
 
   it('calls GenerateMonthService.generateMonth with the selected year/month on submit', async () => {
     const stubs = makeStubs();
     const fixture = render(stubs);
-    const cmp = instance(fixture);
-    cmp.year = 2026;
-    cmp.month = 3;
-    await cmp.generate();
+    await setPeriod(fixture, 2026, 3);
+    await instance(fixture).generate();
     expect(stubs.generateMonth).toHaveBeenCalledWith(2026, 3);
   });
 
   it('renders a slim success card (period, sheet, rows) + an Open-workbook deep link', async () => {
     const stubs = makeStubs();
     const fixture = render(stubs);
-    const cmp = instance(fixture);
-    cmp.year = 2026;
-    cmp.month = 1;
-    await cmp.generate();
+    await setPeriod(fixture, 2026, 1);
+    await instance(fixture).generate();
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     const text = el.textContent ?? '';
@@ -138,10 +145,8 @@ describe('GenerateComponent', () => {
   it('keeps developer fields behind a collapsed "Technical details" disclosure', async () => {
     const stubs = makeStubs();
     const fixture = render(stubs);
-    const cmp = instance(fixture);
-    cmp.year = 2026;
-    cmp.month = 1;
-    await cmp.generate();
+    await setPeriod(fixture, 2026, 1);
+    await instance(fixture).generate();
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
     const details = el.querySelector<HTMLDetailsElement>('details.tech');
@@ -155,10 +160,8 @@ describe('GenerateComponent', () => {
   it('fires an auto-dismissing success toast with an Open-workbook action', async () => {
     const stubs = makeStubs();
     const fixture = render(stubs);
-    const cmp = instance(fixture);
-    cmp.year = 2026;
-    cmp.month = 1;
-    await cmp.generate();
+    await setPeriod(fixture, 2026, 1);
+    await instance(fixture).generate();
     const toasts = TestBed.inject(ToastService).toasts();
     expect(toasts.length).toBe(1);
     expect(toasts[0].type).toBe('success');
@@ -174,10 +177,8 @@ describe('GenerateComponent', () => {
       return r;
     });
     const fixture = render(stubs);
-    const cmp = instance(fixture);
-    cmp.year = 2026;
-    cmp.month = 2;
-    await cmp.generate();
+    await setPeriod(fixture, 2026, 2);
+    await instance(fixture).generate();
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Carried forward from the previous month');
   });
@@ -288,10 +289,7 @@ describe('GenerateComponent', () => {
     const fixture = render(stubs);
     await flush();
     stubs.monthExists.mockClear();
-    const cmp = instance(fixture);
-    cmp.month = 5;
-    cmp.onPeriodChange();
-    await flush();
+    await setPeriod(fixture, 2026, 5);
     expect(stubs.monthExists).toHaveBeenCalledWith(5);
   });
 
@@ -302,7 +300,6 @@ describe('GenerateComponent', () => {
     fixture.detectChanges();
     expect((fixture.nativeElement as HTMLElement).querySelector('.card--error')).not.toBeNull();
     instance(fixture).onPeriodChange();
-    await flush();
     fixture.detectChanges();
     expect(stubs.clearError).toHaveBeenCalled();
     expect((fixture.nativeElement as HTMLElement).querySelector('.card--error')).toBeNull();

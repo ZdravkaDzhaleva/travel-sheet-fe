@@ -1,5 +1,5 @@
-import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, OnDestroy, computed, inject, resource, signal } from '@angular/core';
+import { form, submit, min, max, FormField } from '@angular/forms/signals';
 
 import { GenerateMonthService, type GenerateMonthResult } from '../../application/generate-month.service';
 import { ToastService } from '../../shared/ui/toast/toast.service';
@@ -27,13 +27,27 @@ const MONTHS: readonly MonthOption[] = [
   { value: 12, label: 'December' },
 ];
 
+const YEAR_MIN = 2020;
+const YEAR_MAX = 2100;
+
+interface PeriodModel {
+  year: number;
+  /** Stored as a string so it binds to the native `<select>` control. */
+  month: string;
+}
+
+function currentPeriod(): PeriodModel {
+  const now = new Date();
+  return { year: now.getFullYear(), month: String(now.getMonth() + 1) };
+}
+
 @Component({
   selector: 'app-generate',
-  imports: [FormsModule],
+  imports: [FormField],
   templateUrl: './generate.component.html',
   styleUrl: './generate.component.scss',
 })
-export class GenerateComponent implements OnInit, OnDestroy {
+export class GenerateComponent implements OnDestroy {
   private readonly service = inject(GenerateMonthService);
   private readonly toast = inject(ToastService);
 
@@ -42,71 +56,64 @@ export class GenerateComponent implements OnInit, OnDestroy {
   protected readonly result = this.service.result;
   protected readonly months = MONTHS;
 
-  /** Already-generated guard: true when the selected month's tab exists. */
-  protected readonly monthExists = signal(false);
-  protected readonly checkingExists = signal(false);
-  /** Increments per period change so a stale in-flight check can't win. */
-  private existsCheckToken = 0;
+  protected readonly model = signal<PeriodModel>(currentPeriod());
+  protected readonly form = form(this.model, (path) => {
+    min(path.year, YEAR_MIN);
+    max(path.year, YEAR_MAX);
+  });
 
-  protected year: number;
-  protected month: number;
+  protected readonly selectedMonth = computed(() => Number(this.model().month));
 
-  constructor() {
-    const now = new Date();
-    this.year = now.getFullYear();
-    this.month = now.getMonth() + 1;
-  }
+  /**
+   * Already-generated guard. Modeled as a resource so the check re-runs
+   * declaratively whenever the selected month changes — no effect, and the
+   * resource ignores outdated in-flight loads itself (no manual stale-guard).
+   */
+  private readonly existsResource = resource({
+    params: () => this.selectedMonth(),
+    loader: ({ params: month }) => this.service.monthExists(month),
+  });
 
-  ngOnInit(): void {
-    void this.refreshExists();
-  }
+  /** True when the selected month's tab exists. Falsy while loading or on error
+   *  (can't determine → don't block; generation surfaces its own error). */
+  protected readonly monthExists = computed(
+    () => this.existsResource.hasValue() && this.existsResource.value() === true,
+  );
+  protected readonly checkingExists = computed(() => this.existsResource.isLoading());
 
   ngOnDestroy(): void {
-    // Don't carry stale feedback (error or success result) onto the next visit.
     this.service.clearError();
     this.service.clearResult();
   }
 
+  /** User changed the period → drop feedback that no longer applies to it. */
   protected onPeriodChange(): void {
-    // A prior failure no longer applies to the newly selected period.
     this.service.clearError();
     this.service.clearResult();
-    void this.refreshExists();
-  }
-
-  private async refreshExists(): Promise<void> {
-    const token = ++this.existsCheckToken;
-    this.checkingExists.set(true);
-    try {
-      const exists = await this.service.monthExists(this.month);
-      if (token === this.existsCheckToken) this.monthExists.set(exists);
-    } catch {
-      // Can't determine (e.g. not signed in yet) — don't block; generation will
-      // surface its own error if there's a real problem.
-      if (token === this.existsCheckToken) this.monthExists.set(false);
-    } finally {
-      if (token === this.existsCheckToken) this.checkingExists.set(false);
-    }
   }
 
   protected async generate(): Promise<void> {
     if (this.loading() || this.monthExists()) return;
-    try {
-      const r = await this.service.generateMonth(this.year, this.month);
-      this.toast.show(`${this.monthName(r.month)} ${r.year} generated`, 'success', {
-        label: 'Open workbook',
-        fn: () => this.openWorkbook(r),
-      });
-      this.monthExists.set(true); // the tab now exists → block re-generation
-    } catch {
-      // Surfaced via service.error signal.
-    }
+    await submit(this.form, async () => {
+      const year = this.model().year;
+      const month = this.selectedMonth();
+      try {
+        const r = await this.service.generateMonth(year, month);
+        this.toast.show(`${this.monthName(r.month)} ${r.year} generated`, 'success', {
+          label: 'Open workbook',
+          fn: () => this.openWorkbook(r),
+        });
+        this.existsResource.set(true); // the tab now exists → block re-generation
+      } catch {
+        // Surfaced via service.error signal.
+      }
+    });
   }
 
   /** Whether the current result is for the period currently selected in the form. */
   protected resultMatchesSelection(): boolean {
     const r = this.result();
-    return r !== null && r.year === this.year && r.month === this.month;
+    return r !== null && r.year === this.model().year && r.month === this.selectedMonth();
   }
 
   protected monthName(month: number): string {
@@ -115,7 +122,7 @@ export class GenerateComponent implements OnInit, OnDestroy {
 
   /** Workbook tab name for the selected month (e.g. "м_01"). */
   protected tabName(): string {
-    return monthSheetName(this.month);
+    return monthSheetName(this.selectedMonth());
   }
 
   protected workbookUrl(r: GenerateMonthResult): string {

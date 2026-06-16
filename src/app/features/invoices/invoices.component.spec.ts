@@ -89,9 +89,30 @@ function render(master: MasterStubs, inv: InvoiceStubs): ComponentFixture<Invoic
   return fixture;
 }
 
+interface InvoiceFormModel {
+  fuelVendor: string;
+  invoiceDate: string;
+  quantityLiters: number;
+  unitPrice: number;
+  totalAmount: number;
+  currency: string;
+}
+
+/** Field tree shape used by the assertions below (errors() per field). */
+interface FieldErrors {
+  errors(): readonly { readonly message?: string }[];
+}
+interface InvoiceForm {
+  fuelVendor(): FieldErrors;
+  invoiceDate(): FieldErrors;
+  quantityLiters(): FieldErrors;
+  unitPrice(): FieldErrors;
+  totalAmount(): FieldErrors;
+  (): { valid(): boolean };
+}
+
 function instance(fixture: ComponentFixture<InvoicesComponent>): {
   submit(): Promise<void>;
-  fieldErrors(): Record<string, string>;
   openAddForm(): void;
   startEdit(invoice: Invoice): void;
   openEditForm(invoice: Invoice): void;
@@ -99,16 +120,11 @@ function instance(fixture: ComponentFixture<InvoicesComponent>): {
   requestDelete(invoice: Invoice): void;
   cancelDelete(): void;
   confirmDelete(): Promise<void>;
-  deleteInvoice(invoice: Invoice): Promise<void>;
-  formData: {
-    fuelVendor: string;
-    invoiceDate: string;
-    quantityLiters: number | null;
-    unitPrice: number | null;
-    totalAmount: number | null;
-    currency: string;
-  };
-  file: File | null;
+  model: WritableSignal<InvoiceFormModel>;
+  form: InvoiceForm;
+  file: WritableSignal<File | null>;
+  fileError: () => string | null;
+  errorMessages: () => string[];
   editingId: () => number | null;
   formOpen: WritableSignal<boolean>;
   submitted: WritableSignal<boolean>;
@@ -203,15 +219,15 @@ describe('InvoicesComponent', () => {
     const fixture = render(master, inv);
     const cmp = instance(fixture);
 
-    cmp.file = new File(['x'], 'invoice.pdf', { type: 'application/pdf' });
-    cmp.formData = {
+    cmp.file.set(new File(['x'], 'invoice.pdf', { type: 'application/pdf' }));
+    cmp.model.set({
       fuelVendor: '  OMV  ',
       invoiceDate: '2026-02-14',
       quantityLiters: 30,
       unitPrice: 2.95,
       totalAmount: 88.5,
       currency: 'EUR',
-    };
+    });
     await cmp.submit();
 
     expect(inv.upload).toHaveBeenCalledOnce();
@@ -247,18 +263,18 @@ describe('InvoicesComponent', () => {
     const fixture = render(master, inv);
     const cmp = instance(fixture);
 
-    cmp.formData = {
+    cmp.model.set({
       fuelVendor: 'OMV',
       invoiceDate: '2026-02-14',
       quantityLiters: 30,
       unitPrice: 2.95,
       totalAmount: 88.5,
       currency: 'EUR',
-    };
-    cmp.file = null;
+    });
+    cmp.file.set(null);
     await cmp.submit();
     expect(inv.upload).not.toHaveBeenCalled();
-    expect(cmp.fieldErrors()['file']).toBeTruthy();
+    expect(cmp.fileError()).toBeTruthy();
   });
 
   it('blocks submit when invoice date is missing or malformed', async () => {
@@ -267,18 +283,18 @@ describe('InvoicesComponent', () => {
     const fixture = render(master, inv);
     const cmp = instance(fixture);
 
-    cmp.file = new File(['x'], 'i.pdf');
-    cmp.formData = {
+    cmp.file.set(new File(['x'], 'i.pdf'));
+    cmp.model.set({
       fuelVendor: 'OMV',
       invoiceDate: 'not-a-date',
       quantityLiters: 30,
       unitPrice: 2.95,
       totalAmount: 88.5,
       currency: 'EUR',
-    };
+    });
     await cmp.submit();
     expect(inv.upload).not.toHaveBeenCalled();
-    expect(cmp.fieldErrors()['invoiceDate']).toBeTruthy();
+    expect(cmp.form.invoiceDate().errors().length).toBeGreaterThan(0);
   });
 
   it('startEdit pre-fills the form and opens form', () => {
@@ -290,9 +306,9 @@ describe('InvoicesComponent', () => {
     cmp.startEdit(target);
     expect(cmp.editingId()).toBe(target.Id);
     expect(cmp.formOpen()).toBe(true);
-    expect(cmp.formData.fuelVendor).toBe(target.FuelVendor);
-    expect(cmp.formData.invoiceDate).toBe('2026-01-10');
-    expect(cmp.formData.quantityLiters).toBe(target.QuantityLiters);
+    expect(cmp.model().fuelVendor).toBe(target.FuelVendor);
+    expect(cmp.model().invoiceDate).toBe('2026-01-10');
+    expect(cmp.model().quantityLiters).toBe(target.QuantityLiters);
   });
 
   it('edit submit calls InvoiceService.update with the merged Invoice and closes form', async () => {
@@ -302,8 +318,7 @@ describe('InvoicesComponent', () => {
     const cmp = instance(fixture);
 
     cmp.startEdit(makeInvoices()[0]);
-    cmp.formData.fuelVendor = 'Shell';
-    cmp.formData.quantityLiters = 99;
+    cmp.model.update(m => ({ ...m, fuelVendor: 'Shell', quantityLiters: 99 }));
     await cmp.submit();
 
     expect(inv.update).toHaveBeenCalledOnce();
@@ -355,15 +370,15 @@ describe('InvoicesComponent', () => {
     const toast = TestBed.inject(ToastService);
 
     cmp.formOpen.set(true);
-    cmp.file = new File(['x'], 'invoice.pdf', { type: 'application/pdf' });
-    cmp.formData = {
+    cmp.file.set(new File(['x'], 'invoice.pdf', { type: 'application/pdf' }));
+    cmp.model.set({
       fuelVendor: 'OMV',
       invoiceDate: '2026-02-14',
       quantityLiters: 30,
       unitPrice: 2.95,
       totalAmount: 88.5,
       currency: 'EUR',
-    };
+    });
     await cmp.submit();
 
     expect(cmp.formOpen()).toBe(false);
@@ -386,37 +401,38 @@ describe('InvoicesComponent', () => {
 
   // ── T7.4: layered error handling ─────────────────────────────────────────
 
-  it('fieldErrors() reports missing file, date, and numeric fields on an empty add form', () => {
+  it('reports missing file, vendor, date, and numeric fields on an empty add form', () => {
     const master = makeMasterStubs();
     const inv = makeInvoiceStubs();
     const fixture = render(master, inv);
     const cmp = instance(fixture);
     cmp.formOpen.set(true);
     // editingId is null → add mode, file is null
-    const errors = cmp.fieldErrors();
-    expect(errors['file']).toBeTruthy();
-    expect(errors['fuelVendor']).toBeTruthy();
-    expect(errors['invoiceDate']).toBeTruthy();
-    expect(errors['quantityLiters']).toBeTruthy();
-    expect(errors['unitPrice']).toBeTruthy();
-    expect(errors['totalAmount']).toBeTruthy();
+    const messages = cmp.errorMessages();
+    expect(messages).toContain('Choose an invoice file.');
+    expect(messages).toContain('Fuel vendor is required.');
+    expect(messages).toContain('Pick a valid invoice date.');
+    expect(messages).toContain('Quantity is required.');
+    expect(messages).toContain('Unit price is required.');
+    expect(messages).toContain('Total amount is required.');
   });
 
-  it('fieldErrors() clears when all required fields are filled', () => {
+  it('clears all errors when every required field is filled', () => {
     const master = makeMasterStubs();
     const inv = makeInvoiceStubs();
     const fixture = render(master, inv);
     const cmp = instance(fixture);
-    cmp.file = new File(['x'], 'i.pdf');
-    cmp.formData = {
+    cmp.file.set(new File(['x'], 'i.pdf'));
+    cmp.model.set({
       fuelVendor: 'OMV',
       invoiceDate: '2026-01-10',
       quantityLiters: 40,
       unitPrice: 1.5,
       totalAmount: 60,
       currency: 'EUR',
-    };
-    expect(Object.keys(cmp.fieldErrors())).toHaveLength(0);
+    });
+    expect(cmp.errorMessages()).toHaveLength(0);
+    expect(cmp.form().valid()).toBe(true);
   });
 
   it('submit() with validation errors sets submitted=true and does not call upload', async () => {
@@ -438,15 +454,15 @@ describe('InvoicesComponent', () => {
     const cmp = instance(fixture);
     const toast = TestBed.inject(ToastService);
 
-    cmp.file = new File(['x'], 'i.pdf');
-    cmp.formData = {
+    cmp.file.set(new File(['x'], 'i.pdf'));
+    cmp.model.set({
       fuelVendor: 'OMV',
       invoiceDate: '2026-01-10',
       quantityLiters: 40,
       unitPrice: 1.5,
       totalAmount: 60,
       currency: 'EUR',
-    };
+    });
     await cmp.submit();
 
     expect(toast.toasts()[0].type).toBe('error');

@@ -159,7 +159,7 @@ describe('GenerateMonthService — happy path', () => {
 
     const result = await svc.generateMonth(2026, 2);
 
-    expect(stubs.readPriorClosing).toHaveBeenCalledWith(2026, 2, expect.objectContaining({ Id: 1 }));
+    expect(stubs.readPriorClosing).toHaveBeenCalledWith(2, expect.objectContaining({ Id: 1 }));
     expect(result.openingBalance).toBe(4.25);
     expect(result.openingSource).toBe('priorSheet');
     const [cells] = stubs.writeSheet.mock.calls[0] as [CellModel[], string];

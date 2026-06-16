@@ -4,33 +4,23 @@
   <section class="card card--pad" aria-labelledby="form-heading">
     <h2 id="form-heading" class="card__heading">Pick a period</h2>
 
-    <form class="form" (ngSubmit)="generate()">
+    <form class="form" (submit)="generate(); $event.preventDefault()">
       <label class="form__field">
         <span class="form__label">Year</span>
         <input
           type="number"
           inputmode="numeric"
-          name="year"
-          [(ngModel)]="year"
-          (ngModelChange)="onPeriodChange()"
+          [formField]="form.year"
+          (change)="onPeriodChange()"
           class="form__input"
-          min="2020"
-          max="2100"
-          required
         />
       </label>
 
       <label class="form__field">
         <span class="form__label">Month</span>
-        <select
-          name="month"
-          [(ngModel)]="month"
-          (ngModelChange)="onPeriodChange()"
-          class="form__input"
-          required
-        >
+        <select [formField]="form.month" (change)="onPeriodChange()" class="form__input">
           @for (m of months; track m.value) {
-            <option [ngValue]="m.value">{{ m.label }}</option>
+            <option [value]="m.value">{{ m.label }}</option>
           }
         </select>
       </label>
@@ -51,7 +41,7 @@
   @if (monthExists() && !resultMatchesSelection()) {
     <section class="card card--pad notice" role="alert" aria-labelledby="exists-heading">
       <h2 id="exists-heading" class="notice__heading">
-        {{ monthName(month) }} {{ year }} is already generated
+        {{ monthName(selectedMonth()) }} {{ model().year }} is already generated
       </h2>
       <p class="notice__body">
         The <strong>{{ tabName() }}</strong> tab already exists in the workbook. To avoid

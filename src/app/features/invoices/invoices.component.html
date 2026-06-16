@@ -125,16 +125,16 @@
   [title]="editingId() !== null ? 'Edit invoice' : 'Add invoice'"
   (closed)="cancelEdit()"
 >
-  <form modal-body class="form" (ngSubmit)="submit()" #invoiceForm="ngForm">
-    @if (submitted() && (fieldErrors() | keyvalue).length > 0) {
+  <form modal-body class="form" id="invoiceForm" (submit)="submit(); $event.preventDefault()">
+    @if (submitted() && errorMessages().length > 0) {
       <div class="form__summary" role="alert">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
              stroke-linecap="round" aria-hidden="true" width="16" height="16">
           <circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 17h.01"/>
         </svg>
         <ul class="form__summary-list">
-          @for (e of fieldErrors() | keyvalue; track e.key) {
-            <li>{{ e.value }}</li>
+          @for (msg of errorMessages(); track msg) {
+            <li>{{ msg }}</li>
           }
         </ul>
       </div>
@@ -146,7 +146,7 @@
 
     @if (editingId() === null) {
       <label class="form__field form__field--full"
-             [class.form__field--invalid]="submitted() && fieldErrors()['file']">
+             [class.form__field--invalid]="submitted() && fileError()">
         <span class="form__label">Invoice file</span>
         <input
           type="file"
@@ -156,94 +156,81 @@
           (change)="onFileChange($event)"
           class="form__input form__input--file"
         />
-        @if (submitted() && fieldErrors()['file']) {
-          <span class="form__field-error">{{ fieldErrors()['file'] }}</span>
+        @if (submitted() && fileError(); as fe) {
+          <span class="form__field-error">{{ fe }}</span>
         }
       </label>
     }
 
     <label class="form__field form__field--full"
-           [class.form__field--invalid]="submitted() && fieldErrors()['fuelVendor']">
+           [class.form__field--invalid]="submitted() && form.fuelVendor().errors().length">
       <span class="form__label">Fuel vendor</span>
       <input
         type="text"
-        name="fuelVendor"
-        [(ngModel)]="formData.fuelVendor"
+        [formField]="form.fuelVendor"
         class="form__input"
-        required
         autocomplete="off"
       />
-      @if (submitted() && fieldErrors()['fuelVendor']) {
-        <span class="form__field-error">{{ fieldErrors()['fuelVendor'] }}</span>
+      @if (submitted() && form.fuelVendor().errors().length) {
+        <span class="form__field-error">{{ form.fuelVendor().errors()[0].message }}</span>
       }
     </label>
 
     <label class="form__field"
-           [class.form__field--invalid]="submitted() && fieldErrors()['invoiceDate']">
+           [class.form__field--invalid]="submitted() && form.invoiceDate().errors().length">
       <span class="form__label">Invoice date</span>
       <input
         type="date"
-        name="invoiceDate"
-        [(ngModel)]="formData.invoiceDate"
+        [formField]="form.invoiceDate"
         class="form__input"
-        required
       />
-      @if (submitted() && fieldErrors()['invoiceDate']) {
-        <span class="form__field-error">{{ fieldErrors()['invoiceDate'] }}</span>
+      @if (submitted() && form.invoiceDate().errors().length) {
+        <span class="form__field-error">{{ form.invoiceDate().errors()[0].message }}</span>
       }
     </label>
 
     <label class="form__field"
-           [class.form__field--invalid]="submitted() && fieldErrors()['quantityLiters']">
+           [class.form__field--invalid]="submitted() && form.quantityLiters().errors().length">
       <span class="form__label">Quantity (L)</span>
       <input
         type="number"
         inputmode="decimal"
         step="0.01"
-        min="0"
-        name="quantityLiters"
-        [(ngModel)]="formData.quantityLiters"
+        [formField]="form.quantityLiters"
         class="form__input"
-        required
       />
-      @if (submitted() && fieldErrors()['quantityLiters']) {
-        <span class="form__field-error">{{ fieldErrors()['quantityLiters'] }}</span>
+      @if (submitted() && form.quantityLiters().errors().length) {
+        <span class="form__field-error">{{ form.quantityLiters().errors()[0].message }}</span>
       }
     </label>
 
     <label class="form__field"
-           [class.form__field--invalid]="submitted() && fieldErrors()['unitPrice']">
+           [class.form__field--invalid]="submitted() && form.unitPrice().errors().length">
       <span class="form__label">Unit price</span>
       <input
         type="number"
         inputmode="decimal"
         step="0.01"
-        min="0"
-        name="unitPrice"
-        [(ngModel)]="formData.unitPrice"
+        [formField]="form.unitPrice"
         class="form__input"
-        required
       />
-      @if (submitted() && fieldErrors()['unitPrice']) {
-        <span class="form__field-error">{{ fieldErrors()['unitPrice'] }}</span>
+      @if (submitted() && form.unitPrice().errors().length) {
+        <span class="form__field-error">{{ form.unitPrice().errors()[0].message }}</span>
       }
     </label>
 
     <label class="form__field"
-           [class.form__field--invalid]="submitted() && fieldErrors()['totalAmount']">
+           [class.form__field--invalid]="submitted() && form.totalAmount().errors().length">
       <span class="form__label">Total amount</span>
       <input
         type="number"
         inputmode="decimal"
         step="0.01"
-        min="0"
-        name="totalAmount"
-        [(ngModel)]="formData.totalAmount"
+        [formField]="form.totalAmount"
         class="form__input"
-        required
       />
-      @if (submitted() && fieldErrors()['totalAmount']) {
-        <span class="form__field-error">{{ fieldErrors()['totalAmount'] }}</span>
+      @if (submitted() && form.totalAmount().errors().length) {
+        <span class="form__field-error">{{ form.totalAmount().errors()[0].message }}</span>
       }
     </label>
 
@@ -251,10 +238,8 @@
       <span class="form__label">Currency</span>
       <input
         type="text"
-        name="currency"
-        [(ngModel)]="formData.currency"
+        [formField]="form.currency"
         class="form__input"
-        maxlength="6"
         autocomplete="off"
       />
     </label>
@@ -274,7 +259,6 @@
       form="invoiceForm"
       class="btn btn--primary"
       [disabled]="serviceLoading()"
-      (click)="submit()"
     >
       {{ serviceLoading() ? 'Working…' : (editingId() !== null ? 'Save changes' : 'Upload') }}
     </button>

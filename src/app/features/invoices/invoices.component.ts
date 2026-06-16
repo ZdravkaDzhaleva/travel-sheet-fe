@@ -1,6 +1,5 @@
-import { Component, ElementRef, OnInit, ViewChild, inject, signal } from '@angular/core';
-import { FormsModule, } from '@angular/forms';
-import { KeyValuePipe } from '@angular/common';
+import { Component, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { form, submit, required, validate, FormField } from '@angular/forms/signals';
 
 import { InvoiceService } from '../../application/invoice.service';
 import { MasterDataService } from '../../application/master-data.service';
@@ -8,37 +7,43 @@ import { ModalComponent } from '../../shared/ui/modal/modal.component';
 import { ToastService } from '../../shared/ui/toast/toast.service';
 import { ErrorAlertComponent } from '../../shared/ui/error-alert/error-alert.component';
 import type { Invoice } from '../../domain/entities/index';
+import { isPositive } from '../../domain/util/number';
+import { parseDateInput, formatDateInput, formatDateDisplay } from '../../domain/util/date';
 
-interface InvoiceFormState {
+/**
+ * Signal Forms model. Numeric fields default to 0 (never null — Signal Forms
+ * require non-null bound values); a positivity validator enforces fuel 
+ * quantities/prices to be always > 0.
+ */
+interface InvoiceFormModel {
   fuelVendor: string;
   invoiceDate: string; // YYYY-MM-DD from <input type="date">
-  quantityLiters: number | null;
-  unitPrice: number | null;
-  totalAmount: number | null;
+  quantityLiters: number;
+  unitPrice: number;
+  totalAmount: number;
   currency: string;
 }
 
-function emptyForm(): InvoiceFormState {
+function emptyModel(): InvoiceFormModel {
   return {
     fuelVendor: '',
     invoiceDate: '',
-    quantityLiters: null,
-    unitPrice: null,
-    totalAmount: null,
+    quantityLiters: 0,
+    unitPrice: 0,
+    totalAmount: 0,
     currency: 'EUR',
   };
 }
 
 @Component({
   selector: 'app-invoices',
-  imports: [FormsModule, KeyValuePipe, ModalComponent, ErrorAlertComponent],
+  imports: [FormField, ModalComponent, ErrorAlertComponent],
   templateUrl: './invoices.component.html',
   styleUrl: './invoices.component.scss',
 })
 export class InvoicesComponent implements OnInit {
+  private readonly fileInput = viewChild<ElementRef<HTMLInputElement>>('fileEl');
 
-  @ViewChild('fileEl') private fileElRef!: ElementRef<HTMLInputElement>;
-  
   private readonly invoiceService = inject(InvoiceService);
   private readonly masterData = inject(MasterDataService);
   private readonly toast = inject(ToastService);
@@ -55,14 +60,49 @@ export class InvoicesComponent implements OnInit {
   /** Placeholder rows for the loading skeleton. */
   protected readonly skeletonRows = [0, 1, 2, 3];
 
-  protected formData: InvoiceFormState = emptyForm();
-  protected file: File | null = null;
+  protected readonly model = signal<InvoiceFormModel>(emptyModel());
+  protected readonly form = form(this.model, (path) => {
+    required(path.fuelVendor, { message: 'Fuel vendor is required.' });
+    validate(path.invoiceDate, ({ value }) =>
+      parseDateInput(value()) === null
+        ? { kind: 'invalidDate', message: 'Pick a valid invoice date.' }
+        : undefined,
+    );
+    validate(path.quantityLiters, ({ value }) =>
+      isPositive(value()) ? undefined : { kind: 'required', message: 'Quantity is required.' },
+    );
+    validate(path.unitPrice, ({ value }) =>
+      isPositive(value()) ? undefined : { kind: 'required', message: 'Unit price is required.' },
+    );
+    validate(path.totalAmount, ({ value }) =>
+      isPositive(value()) ? undefined : { kind: 'required', message: 'Total amount is required.' },
+    );
+  });
+
+  /** The file lives outside the form: file inputs can't bind to `[formField]`. */
+  protected readonly file = signal<File | null>(null);
   protected readonly editingId = signal<number | null>(null);
   protected readonly formOpen = signal(false);
   protected readonly confirmTarget = signal<Invoice | null>(null);
   protected readonly localError = signal<string | null>(null);
   /** Becomes true on the first submit attempt; gates inline field errors. */
   protected readonly submitted = signal(false);
+
+  /** File is required only when adding (edits keep the existing Drive file). */
+  protected readonly fileError = computed<string | null>(() =>
+    this.editingId() === null && this.file() === null ? 'Choose an invoice file.' : null,
+  );
+
+  /** Flat list of error messages for the form summary (file + all field errors). */
+  protected readonly errorMessages = computed<string[]>(() => {
+    const messages: string[] = [];
+    const fe = this.fileError();
+    if (fe) messages.push(fe);
+    for (const err of this.form().errorSummary()) {
+      if (err.message) messages.push(err.message);
+    }
+    return messages;
+  });
 
   ngOnInit(): void {
     if (!this.masterReady() && !this.masterLoading() && this.masterError() === null) {
@@ -79,15 +119,14 @@ export class InvoicesComponent implements OnInit {
 
   protected onFileChange(event: Event): void {
     const input = event.target as HTMLInputElement;
-    this.file = input.files?.[0] ?? null;
+    this.file.set(input.files?.[0] ?? null);
   }
 
   protected openAddForm(): void {
     this.editingId.set(null);
-    this.formData = emptyForm();
-    this.file = null;
-    this.fileElRef.nativeElement.value = '';
-    this.localError.set(null);
+    this.resetForm();
+    const input = this.fileInput()?.nativeElement;
+    if (input) input.value = '';
     this.formOpen.set(true);
   }
 
@@ -97,39 +136,33 @@ export class InvoicesComponent implements OnInit {
 
   protected startEdit(invoice: Invoice): void {
     this.editingId.set(invoice.Id);
-    this.formData = {
+    this.model.set({
       fuelVendor: invoice.FuelVendor,
       invoiceDate: formatDateInput(invoice.InvoiceDate),
       quantityLiters: invoice.QuantityLiters,
       unitPrice: invoice.UnitPrice,
       totalAmount: invoice.TotalAmount,
       currency: invoice.Currency,
-    };
-    this.file = null;
+    });
+    this.file.set(null);
     this.localError.set(null);
+    this.submitted.set(false);
+    this.form().reset();
     this.formOpen.set(true);
   }
 
   protected cancelEdit(): void {
     this.editingId.set(null);
-    this.formData = emptyForm();
-    this.file = null;
-    this.localError.set(null);
-    this.submitted.set(false);
+    this.resetForm();
     this.formOpen.set(false);
   }
 
-  protected fieldErrors(): Record<string, string> {
-    const f = this.formData;
-    const isAdd = this.editingId() === null;
-    const errors: Record<string, string> = {};
-    if (isAdd && this.file === null) errors['file'] = 'Choose an invoice file.';
-    if (!f.fuelVendor.trim()) errors['fuelVendor'] = 'Fuel vendor is required.';
-    if (!f.invoiceDate || parseDateInput(f.invoiceDate) === null) errors['invoiceDate'] = 'Pick a valid invoice date.';
-    if (f.quantityLiters === null) errors['quantityLiters'] = 'Quantity is required.';
-    if (f.unitPrice === null) errors['unitPrice'] = 'Unit price is required.';
-    if (f.totalAmount === null) errors['totalAmount'] = 'Total amount is required.';
-    return errors;
+  private resetForm(): void {
+    this.model.set(emptyModel());
+    this.file.set(null);
+    this.localError.set(null);
+    this.submitted.set(false);
+    this.form().reset();
   }
 
   protected requestDelete(invoice: Invoice): void {
@@ -148,8 +181,7 @@ export class InvoicesComponent implements OnInit {
       this.confirmTarget.set(null);
       this.toast.show(`${target.FuelVendor} invoice deleted`, 'success');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.toast.show(`Delete failed: ${msg}`, 'error');
+      this.toast.show(`Delete failed: ${errorMessage(err)}`, 'error');
     }
   }
 
@@ -164,76 +196,64 @@ export class InvoicesComponent implements OnInit {
       return;
     }
 
-    const errors = this.fieldErrors();
-    if (Object.keys(errors).length > 0) {
-      // fieldErrors() drives inline messages; localError stays null so only the summary shows.
+    const editingId = this.editingId();
+    // File is validated outside the form; block before touching the form action.
+    if (editingId === null && this.file() === null) {
+      this.form().markAsTouched();
       return;
     }
 
-    const date = parseDateInput(this.formData.invoiceDate)!;
-    const quantity = this.formData.quantityLiters!;
-    const price = this.formData.unitPrice!;
-    const total = this.formData.totalAmount!;
+    await submit(this.form, async () => {
+      // Only reached when every field validator passes.
+      const m = this.model();
+      const date = parseDateInput(m.invoiceDate)!;
 
-    const editingId = this.editingId();
-    if (editingId !== null) {
-      const existing = this.invoices().find(i => i.Id === editingId);
-      if (!existing) {
-        this.localError.set('Invoice not found — it may have been deleted in another tab.');
+      if (editingId !== null) {
+        const existing = this.invoices().find(i => i.Id === editingId);
+        if (!existing) {
+          this.localError.set('Invoice not found — it may have been deleted in another tab.');
+          return;
+        }
+        try {
+          await this.invoiceService.update({
+            ...existing,
+            FuelVendor: m.fuelVendor.trim(),
+            InvoiceDate: date,
+            QuantityLiters: m.quantityLiters,
+            UnitPrice: m.unitPrice,
+            TotalAmount: m.totalAmount,
+            Currency: m.currency.trim(),
+          });
+          this.cancelEdit();
+          this.toast.show('Invoice updated', 'success');
+        } catch (err) {
+          this.toast.show(`Update failed: ${errorMessage(err)}`, 'error');
+        }
         return;
       }
+
+      const file = this.file()!;
       try {
-        await this.invoiceService.update({
-          ...existing,
-          FuelVendor: this.formData.fuelVendor.trim(),
-          InvoiceDate: date,
-          QuantityLiters: quantity,
-          UnitPrice: price,
-          TotalAmount: total,
-          Currency: this.formData.currency.trim(),
+        await this.invoiceService.upload({
+          companyId: company.Id,
+          reportingYear: company.ReportingYear,
+          vehicleId: vehicle.Id,
+          fuelVendor: m.fuelVendor.trim(),
+          invoiceDate: date,
+          quantityLiters: m.quantityLiters,
+          unitPrice: m.unitPrice,
+          totalAmount: m.totalAmount,
+          currency: m.currency.trim(),
+          file,
+          fileName: file.name,
         });
-        this.cancelEdit();
-        this.toast.show('Invoice updated', 'success');
+        this.resetForm();
+        this.formOpen.set(false);
+        this.toast.show('Invoice uploaded', 'success');
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        this.toast.show(`Update failed: ${msg}`, 'error');
+        this.toast.show(`Upload failed: ${errorMessage(err)}`, 'error');
       }
-      return;
-    }
-
-    if (this.file === null) {
-      this.localError.set('Pick an invoice file to upload.');
-      return;
-    }
-
-    try {
-      await this.invoiceService.upload({
-        companyId: company.Id,
-        reportingYear: company.ReportingYear,
-        vehicleId: vehicle.Id,
-        fuelVendor: this.formData.fuelVendor.trim(),
-        invoiceDate: date,
-        quantityLiters: quantity,
-        unitPrice: price,
-        totalAmount: total,
-        currency: this.formData.currency.trim(),
-        file: this.file,
-        fileName: this.file.name,
-      });
-      this.formData = emptyForm();
-      this.file = null;
-      this.submitted.set(false);
-      this.formOpen.set(false);
-      this.toast.show('Invoice uploaded', 'success');
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.toast.show(`Upload failed: ${msg}`, 'error');
-    }
-  }
-
-  // Keep for legacy spec compatibility — used in existing tests via instance()
-  protected async deleteInvoice(invoice: Invoice): Promise<void> {
-    this.requestDelete(invoice);
+    });
   }
 
   protected formatDate(d: Date): string {
@@ -241,31 +261,6 @@ export class InvoicesComponent implements OnInit {
   }
 }
 
-/** YYYY-MM-DD → local Date (avoids the UTC-midnight roll-back from `new Date('YYYY-MM-DD')`). */
-function parseDateInput(s: string): Date | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (!m) return null;
-  const y = Number(m[1]);
-  const mo = Number(m[2]);
-  const d = Number(m[3]);
-  const date = new Date(y, mo - 1, d);
-  if (date.getFullYear() !== y || date.getMonth() !== mo - 1 || date.getDate() !== d) {
-    return null;
-  }
-  return date;
-}
-
-/** Date → YYYY-MM-DD (local parts, for <input type="date">). */
-function formatDateInput(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-/** Date → DD.MM.YYYY (local parts, for display). */
-function formatDateDisplay(d: Date): string {
-  const day = String(d.getDate()).padStart(2, '0');
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  return `${day}.${m}.${d.getFullYear()}`;
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }
