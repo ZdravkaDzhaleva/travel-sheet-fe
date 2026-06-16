@@ -1,20 +1,20 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { TestBed, type ComponentFixture } from '@angular/core/testing';
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { ModalComponent } from './modal.component';
 
 @Component({
   imports: [ModalComponent],
   template: `
-    <app-modal [open]="open" [title]="title" (closed)="onClose()">
+    <app-modal [open]="open()" [title]="title()" (closed)="onClose()">
       <div modal-body><input id="body-input" /><button id="body-btn">OK</button></div>
       <div modal-footer><button id="footer-btn">Cancel</button></div>
     </app-modal>
   `,
 })
 class HostComponent {
-  open = false;
-  title = 'Test Modal';
+  readonly open = signal(false);
+  readonly title = signal('Test Modal');
   readonly onClose = vi.fn();
 }
 
@@ -23,7 +23,7 @@ function render(open = false): ComponentFixture<HostComponent> {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({ imports: [HostComponent] });
   const fixture = TestBed.createComponent(HostComponent);
-  fixture.componentInstance.open = open;
+  fixture.componentInstance.open.set(open);
   fixture.detectChanges();
   return fixture;
 }
@@ -83,5 +83,39 @@ describe('ModalComponent', () => {
     const fixture = render(false);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(fixture.componentInstance.onClose).not.toHaveBeenCalled();
+  });
+
+  it('moves focus into the dialog (first focusable) once it renders on open', () => {
+    const fixture = render(false);
+    fixture.componentInstance.open.set(true);
+    fixture.detectChanges();
+    // The close button is the first focusable element inside the dialog.
+    expect((document.activeElement as HTMLElement)?.classList.contains('modal-close')).toBe(true);
+  });
+
+  it('locks body scroll while open and restores it on close', () => {
+    const fixture = render(true);
+    expect(document.body.style.overflow).toBe('hidden');
+    fixture.componentInstance.open.set(false);
+    fixture.detectChanges();
+    expect(document.body.style.overflow).toBe('');
+  });
+
+  it('restores focus to the trigger element on close', () => {
+    const fixture = render(false);
+    const trigger = document.createElement('button');
+    document.body.appendChild(trigger);
+    trigger.focus();
+    expect(document.activeElement).toBe(trigger);
+
+    fixture.componentInstance.open.set(true);
+    fixture.detectChanges();
+    expect(document.activeElement).not.toBe(trigger); // focus moved into the dialog
+
+    fixture.componentInstance.open.set(false);
+    fixture.detectChanges();
+    expect(document.activeElement).toBe(trigger); // focus returned to the opener
+
+    trigger.remove();
   });
 });
