@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import {
   getRedirectResult,
   GoogleAuthProvider,
@@ -8,7 +8,7 @@ import {
   type UserCredential,
 } from 'firebase/auth';
 
-import { firebaseAuth } from '../../app.config';
+import { FIREBASE_AUTH } from './firebase.providers';
 import { OAUTH_SCOPES } from '../config/oauth.config';
 import { environment } from '../../../environments/environment';
 import {
@@ -79,6 +79,7 @@ function writeRedirectPending(pending: boolean): void {
  */
 @Injectable({ providedIn: 'root' })
 export class GoogleAuth {
+  private readonly auth = inject(FIREBASE_AUTH);
   private tokenClient: GisTokenClient | null = null;
   private cachedToken: CachedAccessToken | null = null;
 
@@ -94,11 +95,11 @@ export class GoogleAuth {
 
     if (isMobileBrowser()) {
       writeRedirectPending(true);
-      await signInWithRedirect(firebaseAuth, provider);
+      await signInWithRedirect(this.auth, provider);
       return null;
     }
 
-    const credential = await signInWithPopup(firebaseAuth, provider);
+    const credential = await signInWithPopup(this.auth, provider);
     this.cacheCredential(credential);
     return credential.user;
   }
@@ -115,7 +116,7 @@ export class GoogleAuth {
    */
   async completeRedirectSignIn(): Promise<User | null> {
     try {
-      const credential = await getRedirectResult(firebaseAuth);
+      const credential = await getRedirectResult(this.auth);
       if (!credential) return null;
       this.cacheCredential(credential);
       return credential.user;
@@ -145,7 +146,7 @@ export class GoogleAuth {
 
   async signOut(): Promise<void> {
     this.cachedToken = null;
-    await firebaseAuth.signOut();
+    await this.auth.signOut();
   }
 
   async getAccessToken(): Promise<string> {

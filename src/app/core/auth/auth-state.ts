@@ -1,11 +1,11 @@
-import { Injectable, signal } from '@angular/core';
-import { onAuthStateChanged, type Auth, type User } from 'firebase/auth';
+import { Injectable, inject, signal } from '@angular/core';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 
-import { firebaseAuth } from '../../app.config';
+import { FIREBASE_AUTH } from './firebase.providers';
 
 @Injectable({ providedIn: 'root' })
 export class AuthState {
-  private readonly auth: Auth = firebaseAuth;
+  private readonly auth = inject(FIREBASE_AUTH);
 
   private readonly _user = signal<User | null>(this.auth.currentUser);
   /** Current Firebase user (null when signed out), kept live via the SDK. */
