@@ -723,6 +723,70 @@ describe('generate — fuel events fill the tank to (near) full', () => {
   });
 });
 
+// ── Weekly special-location quotas (§6b) ────────────────────────────────────
+
+describe('generate — weekly visit quotas for special location types', () => {
+  function isoWeekOf(d: Date): string {
+    const thu = new Date(d);
+    thu.setDate(d.getDate() + 4 - (d.getDay() || 7));
+    const yearStart = new Date(thu.getFullYear(), 0, 1);
+    const week = Math.ceil(((thu.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+    return `${thu.getFullYear()}-W${week}`;
+  }
+
+  it('visits Architect / Constructor / Control at most once per ISO week (incl. look-ahead days)', () => {
+    // Six Projects + one each of Architect/Constructor/Control, with small legs so
+    // many multi-stop routes form — most candidate routes include a special stop.
+    // The look-ahead (which drives the final days before a fuel event) must honor
+    // the quota too, not just the greedy picker; with enough Project routes the
+    // quota is fully respected.
+    const locations: Location[] = [
+      { Id: 1, CompanyId: 1, Name: 'O', Type: 'Office', NameBg: 'O', Address: '' },
+    ];
+    for (let i = 2; i <= 7; i++)
+      locations.push({ Id: i, CompanyId: 1, Name: 'P' + i, Type: 'Project', NameBg: 'P' + i, Address: '' });
+    locations.push({ Id: 8, CompanyId: 1, Name: 'Arch', Type: 'Architect', NameBg: 'Arch', Address: '' });
+    locations.push({ Id: 9, CompanyId: 1, Name: 'Cons', Type: 'Constructor', NameBg: 'Cons', Address: '' });
+    locations.push({ Id: 10, CompanyId: 1, Name: 'Ctrl', Type: 'Control', NameBg: 'Ctrl', Address: '' });
+    const legs: RouteLeg[] = [];
+    let legId = 1;
+    for (let a = 1; a <= 10; a++)
+      for (let b = a + 1; b <= 10; b++)
+        legs.push({ Id: legId++, RouteName: '', StartPointId: a, EndPointId: b, DistanceKm: 10 + ((a * 5 + b * 3) % 12) });
+
+    const v = makeVehicle({ TankCapacityLiters: 60, AverageConsumptionLitersPer100Km: 12 });
+    // High-drive month: a full tank drained to a 50 L refill over 8 working days.
+    const workingDays = [9, 10, 11, 12, 13, 16, 17, 18].map(x => new Date(2026, 0, x));
+    const fuel = { date: new Date(2026, 0, 20), vendor: 'X', liters: 50, unitPrice: 1, totalAmount: 50 };
+
+    for (let run = 0; run < 25; run++) {
+      const rows = generate({
+        workingDays,
+        fuelEvents: [fuel],
+        locations,
+        routeLegs: legs,
+        vehicle: v,
+        openingBalance: 60,
+      });
+      const perWeek = new Map<string, { arch: number; cons: number; ctrl: number }>();
+      for (const r of rows) {
+        if (r.kind !== 'trip' || r.date === null) continue;
+        const wk = isoWeekOf(r.date);
+        const e = perWeek.get(wk) ?? { arch: 0, cons: 0, ctrl: 0 };
+        if (r.route!.includes('Arch')) e.arch++;
+        if (r.route!.includes('Cons')) e.cons++;
+        if (r.route!.includes('Ctrl')) e.ctrl++;
+        perWeek.set(wk, e);
+      }
+      for (const e of perWeek.values()) {
+        expect(e.arch).toBeLessThanOrEqual(1);
+        expect(e.cons).toBeLessThanOrEqual(1);
+        expect(e.ctrl).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+});
+
 // ── Formatter tests ─────────────────────────────────────────────────────────
 
 describe('formatFuelRow', () => {

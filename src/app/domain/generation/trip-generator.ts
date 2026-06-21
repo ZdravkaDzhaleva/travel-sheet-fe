@@ -210,7 +210,10 @@ export function generate(input: GenerateInput): GeneratedRow[] {
     let chosen: RouteCandidate;
     const approachStep =
       Number.isFinite(seg.Tmax) && R + 1 <= LOOKAHEAD_HORIZON
-        ? planApproachStep(balance, R + 1, seg.Tmin, seg.Tmax, candidates, routeCosts, desiredKm, pacedXMax, avg, maxDayCost)
+        ? planApproachStep(
+            balance, R + 1, seg.Tmin, seg.Tmax, candidates, routeCosts, desiredKm, pacedXMax, avg, maxDayCost,
+            locations, weekArchVisits, weekConsVisits, weekCtrlVisits,
+          )
         : null;
     if (approachStep !== null) {
       chosen = approachStep;
@@ -435,15 +438,9 @@ function pickCandidate(
     c => c.km >= xMin - 1e-9 && c.km <= xMax + 1e-9,
   );
 
-  const respectQuotas = inRange.filter(c => {
-    const hasArch = c.stopIds.some(id => locationTypeOf(locations, id) === 'Architect');
-    const hasCons = c.stopIds.some(id => locationTypeOf(locations, id) === 'Constructor');
-    const hasCtrl = c.stopIds.some(id => locationTypeOf(locations, id) === 'Control');
-    if (hasArch && weekArchVisits >= ARCH_VISITS_PER_WEEK) return false;
-    if (hasCons && weekConsVisits >= CONS_VISITS_PER_WEEK) return false;
-    if (hasCtrl && weekCtrlVisits >= CTRL_VISITS_PER_WEEK) return false;
-    return true;
-  });
+  const respectQuotas = inRange.filter(c =>
+    withinWeeklyQuota(c, locations, weekArchVisits, weekConsVisits, weekCtrlVisits),
+  );
   let pool = respectQuotas.length > 0 ? respectQuotas : inRange;
 
   // Brim-trap avoidance (soft): the balance must not be left in the band
@@ -595,7 +592,59 @@ function bestFinalAtMost(
  *     ≤ Tmax (closest to a full tank, never overflowing).
  *  3. If even ≤ Tmax is unreachable, return null (caller's safety net throws).
  */
+/**
+ * True if visiting this route's stops today would not exceed any special-location
+ * weekly quota (Architect / Constructor / Control, ~once per ISO week each).
+ * Routes with no such stop (incl. the zero-trip) always pass.
+ */
+function withinWeeklyQuota(
+  c: RouteCandidate,
+  locations: readonly Location[],
+  weekArchVisits: number,
+  weekConsVisits: number,
+  weekCtrlVisits: number,
+): boolean {
+  const hasType = (t: string): boolean => c.stopIds.some(id => locationTypeOf(locations, id) === t);
+  if (hasType('Architect') && weekArchVisits >= ARCH_VISITS_PER_WEEK) return false;
+  if (hasType('Constructor') && weekConsVisits >= CONS_VISITS_PER_WEEK) return false;
+  if (hasType('Control') && weekCtrlVisits >= CTRL_VISITS_PER_WEEK) return false;
+  return true;
+}
+
+/**
+ * Final-approach step honoring the weekly special-location quotas: try to choose
+ * today's trip from candidates that respect the quota first; only if no
+ * quota-respecting candidate keeps the pre-fuel balance feasible do we fall back
+ * to the full candidate set (soft quota — feasibility wins, matching §6b's
+ * "~once/week unless balancing needs more"). The look-ahead is re-run each day,
+ * so applying the quota to today's pick is enough to keep the weekly counts down.
+ */
 function planApproachStep(
+  balance: number,
+  daysLeft: number,
+  Tmin: number,
+  Tmax: number,
+  candidates: readonly RouteCandidate[],
+  costs: readonly number[],
+  desiredKm: number,
+  pacedKmMax: number,
+  avg: number,
+  maxCost: number,
+  locations: readonly Location[],
+  weekArchVisits: number,
+  weekConsVisits: number,
+  weekCtrlVisits: number,
+): RouteCandidate | null {
+  const quotaOk = candidates.filter(c =>
+    withinWeeklyQuota(c, locations, weekArchVisits, weekConsVisits, weekCtrlVisits),
+  );
+  return (
+    chooseApproach(balance, daysLeft, Tmin, Tmax, quotaOk, costs, desiredKm, pacedKmMax, avg, maxCost) ??
+    chooseApproach(balance, daysLeft, Tmin, Tmax, candidates, costs, desiredKm, pacedKmMax, avg, maxCost)
+  );
+}
+
+function chooseApproach(
   balance: number,
   daysLeft: number,
   Tmin: number,
