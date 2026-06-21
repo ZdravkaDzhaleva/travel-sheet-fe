@@ -9,6 +9,7 @@ import {
   ARCH_VISITS_PER_WEEK,
   BALANCE_MIN,
   CONS_VISITS_PER_WEEK,
+  CTRL_VISITS_PER_WEEK,
   FUEL_FILL_TOLERANCE_L,
   MAX_KM_PER_DAY,
   MAX_STOPS_PER_DAY,
@@ -126,6 +127,7 @@ export function generate(input: GenerateInput): GeneratedRow[] {
   let currentWeekKey = '';
   let weekArchVisits = 0;
   let weekConsVisits = 0;
+  let weekCtrlVisits = 0;
 
   for (const date of timeline) {
     const key = dateKey(date);
@@ -167,6 +169,7 @@ export function generate(input: GenerateInput): GeneratedRow[] {
       currentWeekKey = wk;
       weekArchVisits = 0;
       weekConsVisits = 0;
+      weekCtrlVisits = 0;
     }
 
     const seg = segments[segIdx]!;
@@ -220,6 +223,7 @@ export function generate(input: GenerateInput): GeneratedRow[] {
         locations,
         weekArchVisits,
         weekConsVisits,
+        weekCtrlVisits,
         balance,
         seg.Tmin,
         seg.Tmax,
@@ -267,6 +271,7 @@ export function generate(input: GenerateInput): GeneratedRow[] {
         });
         if (chosen.stopIds.some(id => locationTypeOf(locations, id) === 'Architect')) weekArchVisits++;
         if (chosen.stopIds.some(id => locationTypeOf(locations, id) === 'Constructor')) weekConsVisits++;
+        if (chosen.stopIds.some(id => locationTypeOf(locations, id) === 'Control')) weekCtrlVisits++;
       }
     }
     daysRemainingInSegment--;
@@ -403,6 +408,7 @@ function pickCandidate(
   locations: readonly Location[],
   weekArchVisits: number,
   weekConsVisits: number,
+  weekCtrlVisits: number,
   balance: number,
   Tmin: number,
   Tmax: number,
@@ -432,8 +438,10 @@ function pickCandidate(
   const respectQuotas = inRange.filter(c => {
     const hasArch = c.stopIds.some(id => locationTypeOf(locations, id) === 'Architect');
     const hasCons = c.stopIds.some(id => locationTypeOf(locations, id) === 'Constructor');
+    const hasCtrl = c.stopIds.some(id => locationTypeOf(locations, id) === 'Control');
     if (hasArch && weekArchVisits >= ARCH_VISITS_PER_WEEK) return false;
     if (hasCons && weekConsVisits >= CONS_VISITS_PER_WEEK) return false;
+    if (hasCtrl && weekCtrlVisits >= CTRL_VISITS_PER_WEEK) return false;
     return true;
   });
   let pool = respectQuotas.length > 0 ? respectQuotas : inRange;

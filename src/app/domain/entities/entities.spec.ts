@@ -20,7 +20,7 @@ describe('T1.1 entity types', () => {
       Address: 'ул. Примерна 1, Борово',
       ReportingYear: 2026,
     };
-    expectTypeOf(company).toMatchTypeOf<Company>();
+    expectTypeOf(company).toExtend<Company>();
   });
 
   it('Vehicle can be constructed from literals (SeatCount is string)', () => {
@@ -52,10 +52,14 @@ describe('T1.1 entity types', () => {
     const constr: Location = {
       Id: 4, CompanyId: 1, Name: 'Строител', Type: 'Constructor', NameBg: 'Строител', Address: '',
     };
-    expectTypeOf(office.Type).toEqualTypeOf<'Office' | 'Constructor' | 'Architect' | 'Project'>();
-    expectTypeOf(project).toMatchTypeOf<Location>();
-    expectTypeOf(arch).toMatchTypeOf<Location>();
-    expectTypeOf(constr).toMatchTypeOf<Location>();
+    const ctrl: Location = {
+      Id: 5, CompanyId: 1, Name: 'Контрол', Type: 'Control', NameBg: 'Контрол', Address: '',
+    };
+    expectTypeOf(office.Type).toEqualTypeOf<'Office' | 'Constructor' | 'Architect' | 'Project' | 'Control'>();
+    expectTypeOf(project).toExtend<Location>();
+    expectTypeOf(arch).toExtend<Location>();
+    expectTypeOf(constr).toExtend<Location>();
+    expectTypeOf(ctrl).toExtend<Location>();
   });
 
   it('RouteLeg can be constructed from literals', () => {
@@ -66,7 +70,7 @@ describe('T1.1 entity types', () => {
       EndPointId: 2,
       DistanceKm: 35,
     };
-    expectTypeOf(leg).toMatchTypeOf<RouteLeg>();
+    expectTypeOf(leg).toExtend<RouteLeg>();
   });
 
   it('Invoice can be constructed from literals', () => {
@@ -83,7 +87,7 @@ describe('T1.1 entity types', () => {
       Currency: 'EUR',
       DriveFileId: 'some-drive-id',
     };
-    expectTypeOf(invoice).toMatchTypeOf<Invoice>();
+    expectTypeOf(invoice).toExtend<Invoice>();
   });
 
   it('FuelEvent can be constructed from literals', () => {
@@ -94,12 +98,12 @@ describe('T1.1 entity types', () => {
       unitPrice: 2.89,
       totalAmount: 115.60,
     };
-    expectTypeOf(event).toMatchTypeOf<FuelEvent>();
+    expectTypeOf(event).toExtend<FuelEvent>();
   });
 
   it('Holiday can be constructed from a Date', () => {
     const holiday: Holiday = { date: new Date('2026-01-01') };
-    expectTypeOf(holiday).toMatchTypeOf<Holiday>();
+    expectTypeOf(holiday).toExtend<Holiday>();
   });
 
   it('GeneratedRow covers all four RowKinds', () => {
@@ -120,9 +124,9 @@ describe('T1.1 entity types', () => {
       km: null, avgConsumption: 11.5, consumed: 0, fueled: null, balance: 36.95,
     };
     expectTypeOf(opening.kind).toEqualTypeOf<'opening' | 'fuel' | 'trip' | 'zero'>();
-    expectTypeOf(fuel).toMatchTypeOf<GeneratedRow>();
-    expectTypeOf(trip).toMatchTypeOf<GeneratedRow>();
-    expectTypeOf(zero).toMatchTypeOf<GeneratedRow>();
+    expectTypeOf(fuel).toExtend<GeneratedRow>();
+    expectTypeOf(trip).toExtend<GeneratedRow>();
+    expectTypeOf(zero).toExtend<GeneratedRow>();
   });
 
   it('MonthSheet can be constructed from literals', () => {
@@ -141,6 +145,6 @@ describe('T1.1 entity types', () => {
       rows: [],
     };
     expectTypeOf(sheet.month).toEqualTypeOf<number>();
-    expectTypeOf(sheet.rows).toMatchTypeOf<readonly GeneratedRow[]>();
+    expectTypeOf(sheet.rows).toExtend<readonly GeneratedRow[]>();
   });
 });

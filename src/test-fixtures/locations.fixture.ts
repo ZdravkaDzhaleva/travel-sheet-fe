@@ -1,8 +1,8 @@
 import type { Location } from '../app/domain/entities/index';
 
-// 6 locations mirroring the real supporting sheet.
+// 7 locations mirroring the real supporting sheet.
 // Location 1 (Office, Борово) is the trip origin/terminus for every route.
-// IDs 2–4 are Project sites; 5 is the Architect; 6 is the Constructor.
+// IDs 2–4 are Project sites; 5 is the Architect; 6 is the Constructor; 7 is the Investor Control.
 export function makeLocations(): Location[] {
   return [
     {
@@ -52,6 +52,14 @@ export function makeLocations(): Location[] {
       Type: 'Constructor',
       NameBg: 'Плевен',
       Address: 'гр. Плевен, обл. Плевен',
+    },
+    {
+      Id: 7,
+      CompanyId: 1,
+      Name: 'Монтана',
+      Type: 'Control',
+      NameBg: 'Монтана',
+      Address: 'гр. Монтана, обл. Монтана',
     },
   ];
 }

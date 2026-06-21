@@ -153,10 +153,11 @@ describe('SheetsStore — loaders', () => {
       ['2', '1', 'P', 'Project', 'Kozloduy', ''],
       ['3', '1', 'A', 'Architect', 'Vratsa', ''],
       ['4', '1', 'C', 'Constructor', 'Pleven', ''],
+      ['5', '1', 'Ctrl', 'Control', 'Control', ''],
     ]);
     const { store } = makeStore({ sheets: client, sheetsState: state });
     const out = await store.loadLocations();
-    expect(out.map(l => l.Type)).toEqual(['Office', 'Project', 'Architect', 'Constructor']);
+    expect(out.map(l => l.Type)).toEqual(['Office', 'Project', 'Architect', 'Constructor', 'Control']);
   });
 
   it('loadRoutes parses every numeric field', async () => {

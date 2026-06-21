@@ -58,7 +58,7 @@ describe('MasterDataService.load — happy path', () => {
     await svc.load();
     expect(svc.company()?.Name).toBe('Уи Денс ЕООД');
     expect(svc.vehicle()?.RegistrationNumber).toBe('СА 1234 ВС');
-    expect(svc.locations()).toHaveLength(6);
+    expect(svc.locations()).toHaveLength(7);
     expect(svc.routeLegs()).toHaveLength(15);
     expect(svc.error()).toBeNull();
     expect(svc.loading()).toBe(false);

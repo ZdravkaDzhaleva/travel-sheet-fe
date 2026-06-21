@@ -40,8 +40,8 @@ describe('makeVehicle', () => {
 });
 
 describe('makeLocations', () => {
-  it('returns exactly 6 locations', () => {
-    expect(makeLocations()).toHaveLength(6);
+  it('returns exactly 7 locations', () => {
+    expect(makeLocations()).toHaveLength(7);
   });
 
   it('has exactly one Office', () => {

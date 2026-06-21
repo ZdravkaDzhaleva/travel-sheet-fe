@@ -46,6 +46,7 @@ const LOCATION_TYPES: ReadonlySet<LocationType> = new Set([
   'Constructor',
   'Architect',
   'Project',
+  'Control',
 ]);
 
 @Injectable({ providedIn: 'root' })

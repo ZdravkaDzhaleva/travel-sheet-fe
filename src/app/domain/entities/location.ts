@@ -1,4 +1,4 @@
-export type LocationType = 'Office' | 'Constructor' | 'Architect' | 'Project';
+export type LocationType = 'Office' | 'Constructor' | 'Architect' | 'Project' | 'Control';
 
 export interface Location {
   readonly Id: number;

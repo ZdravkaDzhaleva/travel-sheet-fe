@@ -15,3 +15,4 @@ export const MAX_KM_PER_DAY    = 110; // D1 default (from 2025 reference)
 
 export const ARCH_VISITS_PER_WEEK = 1;  // §6b: ~one architect visit/week
 export const CONS_VISITS_PER_WEEK = 1;  // §6b: ~one constructor visit/week
+export const CTRL_VISITS_PER_WEEK = 1;  // §6b: ~one control visit/week
