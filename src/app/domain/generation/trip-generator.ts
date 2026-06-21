@@ -441,7 +441,20 @@ function pickCandidate(
   const respectQuotas = inRange.filter(c =>
     withinWeeklyQuota(c, locations, weekArchVisits, weekConsVisits, weekCtrlVisits),
   );
-  let pool = respectQuotas.length > 0 ? respectQuotas : inRange;
+  let pool: readonly RouteCandidate[];
+  if (respectQuotas.length > 0) {
+    pool = respectQuotas;
+  } else {
+    // No quota-respecting route fits the paced window. Prefer ANY affordable
+    // quota-respecting route (even outside the window — under-pacing beats
+    // breaking a weekly special-visit quota) before resorting to one that does.
+    const quotaSafe = safe.filter(
+      c =>
+        withinWeeklyQuota(c, locations, weekArchVisits, weekConsVisits, weekCtrlVisits) &&
+        (c.km * avg) / 100 <= balance + 1e-9,
+    );
+    pool = quotaSafe.length > 0 ? quotaSafe : inRange;
+  }
 
   // Brim-trap avoidance (soft): the balance must not be left in the band
   // (Tmax, Tmin + minRouteCost) — from there the next day's cheapest trip
@@ -470,11 +483,18 @@ function pickCandidate(
     // emit a voluntary zero. Prefer the smallest safe route that still meets the floor
     // if none reaches it, burn the most we can to catch up.
     if (xMin > 1e-9) {
-      const eligible = safe.filter(c => c.km >= xMin - 1e-9);
+      // Prefer quota-respecting routes here too, so a forced drive doesn't quietly
+      // break a weekly special-visit quota; fall back to any safe route only when
+      // no quota-respecting route can meet the required burn.
+      const quotaSafe = safe.filter(c =>
+        withinWeeklyQuota(c, locations, weekArchVisits, weekConsVisits, weekCtrlVisits),
+      );
+      const pickSet = quotaSafe.length > 0 ? quotaSafe : safe;
+      const eligible = pickSet.filter(c => c.km >= xMin - 1e-9);
       if (eligible.length > 0) {
         return eligible.reduce((a, b) => (b.km < a.km ? b : a));
       }
-      return safe.reduce((a, b) => (b.km > a.km ? b : a), ZERO_CANDIDATE);
+      return pickSet.reduce((a, b) => (b.km > a.km ? b : a), ZERO_CANDIDATE);
     }
     // No burn required: any route would over-drain below the fill target (or the
     // balance is too low for even the shortest route), so hold with a zero-trip.
@@ -612,10 +632,30 @@ function withinWeeklyQuota(
   weekConsVisits: number,
   weekCtrlVisits: number,
 ): boolean {
+  return quotaAllowing(c, locations, weekArchVisits, weekConsVisits, weekCtrlVisits, EMPTY_ALLOW);
+}
+
+const EMPTY_ALLOW: ReadonlySet<string> = new Set<string>();
+
+/**
+ * Like `withinWeeklyQuota`, but a special type listed in `allowOver` may exceed
+ * its weekly quota. Used to relax the quota one type at a time — least-used type
+ * first — when heavy draining genuinely needs more special visits than the quota
+ * allows, so the forced extra visits spread across types instead of piling onto
+ * whichever route happens to drain best (e.g. always the Constructor).
+ */
+export function quotaAllowing(
+  c: { readonly stopIds: readonly number[] },
+  locations: readonly Location[],
+  weekArchVisits: number,
+  weekConsVisits: number,
+  weekCtrlVisits: number,
+  allowOver: ReadonlySet<string>,
+): boolean {
   const hasType = (t: string): boolean => c.stopIds.some(id => locationTypeOf(locations, id) === t);
-  if (hasType('Architect') && weekArchVisits >= ARCH_VISITS_PER_WEEK) return false;
-  if (hasType('Constructor') && weekConsVisits >= CONS_VISITS_PER_WEEK) return false;
-  if (hasType('Control') && weekCtrlVisits >= CTRL_VISITS_PER_WEEK) return false;
+  if (hasType('Architect') && weekArchVisits >= ARCH_VISITS_PER_WEEK && !allowOver.has('Architect')) return false;
+  if (hasType('Constructor') && weekConsVisits >= CONS_VISITS_PER_WEEK && !allowOver.has('Constructor')) return false;
+  if (hasType('Control') && weekCtrlVisits >= CTRL_VISITS_PER_WEEK && !allowOver.has('Control')) return false;
   return true;
 }
 
@@ -668,10 +708,41 @@ function planApproachStep(
     ),
   ];
   const projectMaxCost = projectCosts.reduce((m, c) => Math.max(m, c), 0);
-  return (
-    chooseApproach(balance, daysLeft, Tmin, Tmax, quotaOk, projectCosts, desiredKm, pacedKmMax, avg, projectMaxCost) ??
-    chooseApproach(balance, daysLeft, Tmin, Tmax, candidates, costs, desiredKm, pacedKmMax, avg, maxCost)
+  // 1) Strictly respect every quota, draining with pure-Project routes.
+  const strict = chooseApproach(
+    balance, daysLeft, Tmin, Tmax, quotaOk, projectCosts, desiredKm, pacedKmMax, avg, projectMaxCost,
   );
+  if (strict !== null) return strict;
+
+  // 2) Pure-Project routes can't finish — a special visit is genuinely needed.
+  // Relax the quota ONE type at a time, least-used-first, so the unavoidable
+  // extra visits spread across Architect/Constructor/Control instead of always
+  // landing on the same type. Each tier searches over only the routes it permits.
+  const order = (
+    [
+      ['Architect', weekArchVisits],
+      ['Constructor', weekConsVisits],
+      ['Control', weekCtrlVisits],
+    ] as const
+  )
+    .slice()
+    .sort((a, b) => a[1] - b[1])
+    .map(([t]) => t);
+  const allowOver = new Set<string>();
+  for (const t of order) {
+    allowOver.add(t);
+    const cands = candidates.filter(c =>
+      quotaAllowing(c, locations, weekArchVisits, weekConsVisits, weekCtrlVisits, allowOver),
+    );
+    const cCosts = [...new Set(cands.map(c => round2((c.km * avg) / 100)))];
+    const cMax = cCosts.reduce((m, c) => Math.max(m, c), 0);
+    const step = chooseApproach(balance, daysLeft, Tmin, Tmax, cands, cCosts, desiredKm, pacedKmMax, avg, cMax);
+    if (step !== null) return step;
+  }
+
+  // 3) Last resort — the full route set (should only happen if even allowing every
+  // special over quota cannot avoid overflow).
+  return chooseApproach(balance, daysLeft, Tmin, Tmax, candidates, costs, desiredKm, pacedKmMax, avg, maxCost);
 }
 
 function chooseApproach(

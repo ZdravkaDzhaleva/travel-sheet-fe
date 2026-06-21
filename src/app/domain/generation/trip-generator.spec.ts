@@ -3,6 +3,7 @@ import {
   generate,
   formatFuelRow,
   formatTripRoute,
+  quotaAllowing,
   InfeasibleMonthError,
 } from './trip-generator';
 import { workingDaysInMonth } from '../calendar/working-day-calendar';
@@ -720,6 +721,49 @@ describe('generate — fuel events fill the tank to (near) full', () => {
       }
       expect(maxRun).toBeLessThanOrEqual(2);
     }
+  });
+});
+
+// ── Quota decision logic (unit) ─────────────────────────────────────────────
+
+describe('quotaAllowing', () => {
+  const locs: Location[] = [
+    { Id: 1, CompanyId: 1, Name: 'O', Type: 'Office', NameBg: 'O', Address: '' },
+    { Id: 2, CompanyId: 1, Name: 'P', Type: 'Project', NameBg: 'P', Address: '' },
+    { Id: 3, CompanyId: 1, Name: 'A', Type: 'Architect', NameBg: 'A', Address: '' },
+    { Id: 4, CompanyId: 1, Name: 'C', Type: 'Constructor', NameBg: 'C', Address: '' },
+    { Id: 5, CompanyId: 1, Name: 'K', Type: 'Control', NameBg: 'K', Address: '' },
+  ];
+  const none = new Set<string>();
+  const proj = { stopIds: [2] };
+  const arch = { stopIds: [3] };
+  const cons = { stopIds: [4] };
+  const ctrl = { stopIds: [5] };
+  const consPlusProj = { stopIds: [4, 2] };
+
+  it('always allows Project-only routes regardless of counts', () => {
+    expect(quotaAllowing(proj, locs, 9, 9, 9, none)).toBe(true);
+    expect(quotaAllowing({ stopIds: [] }, locs, 9, 9, 9, none)).toBe(true);
+  });
+
+  it('allows a special route while its type is under quota, blocks it once at/over quota', () => {
+    expect(quotaAllowing(cons, locs, 0, 0, 0, none)).toBe(true);
+    expect(quotaAllowing(cons, locs, 0, 1, 0, none)).toBe(false); // constructor count = 1
+    expect(quotaAllowing(arch, locs, 1, 0, 0, none)).toBe(false); // architect count = 1
+    expect(quotaAllowing(ctrl, locs, 0, 0, 1, none)).toBe(false); // control count = 1
+  });
+
+  it('counts a multi-stop route by each special type it visits', () => {
+    expect(quotaAllowing(consPlusProj, locs, 0, 1, 0, none)).toBe(false);
+    expect(quotaAllowing(consPlusProj, locs, 0, 0, 0, none)).toBe(true);
+  });
+
+  it('relaxes ONLY the type(s) named in allowOver', () => {
+    // Constructor over quota, but allowed to exceed → permitted.
+    expect(quotaAllowing(cons, locs, 0, 1, 0, new Set(['Constructor']))).toBe(true);
+    // Allowing Constructor does NOT relax an over-quota Architect.
+    expect(quotaAllowing(arch, locs, 1, 0, 0, new Set(['Constructor']))).toBe(false);
+    expect(quotaAllowing(arch, locs, 1, 0, 0, new Set(['Architect']))).toBe(true);
   });
 });
 
