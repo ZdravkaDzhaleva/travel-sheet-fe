@@ -597,6 +597,14 @@ function bestFinalAtMost(
  * weekly quota (Architect / Constructor / Control, ~once per ISO week each).
  * Routes with no such stop (incl. the zero-trip) always pass.
  */
+/** True if the route visits any quota-limited special location type. */
+function hasSpecialStop(c: RouteCandidate, locations: readonly Location[]): boolean {
+  return c.stopIds.some(id => {
+    const t = locationTypeOf(locations, id);
+    return t === 'Architect' || t === 'Constructor' || t === 'Control';
+  });
+}
+
 function withinWeeklyQuota(
   c: RouteCandidate,
   locations: readonly Location[],
@@ -638,8 +646,30 @@ function planApproachStep(
   const quotaOk = candidates.filter(c =>
     withinWeeklyQuota(c, locations, weekArchVisits, weekConsVisits, weekCtrlVisits),
   );
+  // CRITICAL: the quota-respecting attempt must run its multi-day reachability
+  // search over ONLY quota-respecting route costs. Using the full cost set would
+  // let the search assume a FUTURE day uses a special (e.g. Constructor) route,
+  // so it defers the heavy draining to a quota-respecting trip today — then the
+  // deferred drain forces a special route on a later day. Restricting to
+  // quota-respecting costs makes it commit only to plans completable without
+  // exceeding the quota (using long non-special multi-stop routes); it falls back
+  // to the full set only when no such plan exists (true "balancing needs more").
+  // The reachability search for the quota attempt uses only NON-SPECIAL (Project)
+  // route costs — those are the routes usable on EVERY remaining day without any
+  // quota. (Each special type is allowed at most once per week, so the search
+  // must not assume it can lean on special routes day after day.) Today's pick
+  // may still be a quota-respecting special route (its single allowed visit); we
+  // only commit to it if pure-Project routes can finish the rest of the drain.
+  const projectCosts = [
+    ...new Set(
+      quotaOk
+        .filter(c => !hasSpecialStop(c, locations))
+        .map(c => round2((c.km * avg) / 100)),
+    ),
+  ];
+  const projectMaxCost = projectCosts.reduce((m, c) => Math.max(m, c), 0);
   return (
-    chooseApproach(balance, daysLeft, Tmin, Tmax, quotaOk, costs, desiredKm, pacedKmMax, avg, maxCost) ??
+    chooseApproach(balance, daysLeft, Tmin, Tmax, quotaOk, projectCosts, desiredKm, pacedKmMax, avg, projectMaxCost) ??
     chooseApproach(balance, daysLeft, Tmin, Tmax, candidates, costs, desiredKm, pacedKmMax, avg, maxCost)
   );
 }
