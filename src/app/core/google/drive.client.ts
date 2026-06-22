@@ -66,6 +66,26 @@ export class DriveClient {
     );
   }
 
+  /**
+   * Replaces a Drive file's content in-place (metadata unchanged).
+   * Uses `uploadType=media` (simple binary upload via PATCH).
+   */
+  async updateFileContent(fileId: string, content: Blob): Promise<DriveFile> {
+    const token = await this.auth.getAccessToken();
+    const url =
+      `https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(fileId)}` +
+      `?uploadType=media&fields=id,name,mimeType,kind`;
+    return googleFetch<DriveFile>(
+      url,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': content.type || 'application/octet-stream' },
+        body: content,
+      },
+      token,
+    );
+  }
+
   /** Returns the first non-trashed file matching `name` (and the optional parent / mime-type), or null. */
   async findByName(
     name: string,

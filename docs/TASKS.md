@@ -338,10 +338,11 @@ Add `SheetsStore.exportSheetAsPdf(workbookId, sheetId)`: fetch `https://docs.goo
 - **Done when:** calling export for a given month returns a valid PDF whose layout matches the workbook sheet; verified by opening the output.
 - `googleFetchBlob` added to `google-http.ts` (binary variant of `googleFetch`). `SheetsStore` injects `GoogleAuth` directly; `exportSheetAsPdf(sheetId)` resolves workbookId internally, builds export URL with all 8 params, returns `Blob`. 6 unit tests (URL shape, all params, Bearer header, Blob return, non-2xx → `GoogleApiError`, GET method). `makeStore` updated to provide stub `GoogleAuth`. 515 total tests pass, lint clean.
 
-### [ ] T8.3 — Save PDF to Drive (overwrite) in DriveStore
+### [x] T8.3 — Save PDF to Drive (overwrite) in DriveStore
 Add `DriveStore.savePdfToFolder(blob, filename)`: query the Drive folder for a file with the same name; if found, call `files.update` (content replace); if not, call `files.create`. Filename convention: `Patenlist_<YYYY>_<MM>.pdf` (year and zero-padded month extracted from the `м_MM` sheet name). Return the saved file's Drive URL.
 - **Deps:** T8.2, existing `DriveStore`
 - **Done when:** export saves the file with the correct name; re-exporting the same month replaces the existing file (no duplicate); returns a usable Drive link.
+- `DriveClient.updateFileContent(fileId, content)` added (`PATCH uploadType=media`). `DriveStore.savePdfToFolder(blob, filename)` resolves folder, finds existing PDF by name+mimeType+parentId, updates or creates, returns `https://drive.google.com/file/d/{id}/view`. Test stub updated with `existingPdf` + `updated` tracking; 8 new tests. 523 total tests pass, lint clean.
 
 ### [ ] T8.4 — ExportPdfService (application layer)
 Add an application service orchestrating: list months (T8.1) → export sheet (T8.2) → save to Drive (T8.3). Expose state for the UI (in-progress, success with filename + link, typed errors: sheet-not-found, export-failed, drive-write-failed). No domain logic involved.

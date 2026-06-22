@@ -9,7 +9,10 @@ import { DRIVE_FOLDER_NAME } from '../core/config/workspace.config';
 
 interface DriveStubState {
   readonly created: { metadata: DriveFileMetadata; content: Blob }[];
+  readonly updated: { fileId: string; content: Blob }[];
   folder: DriveFile | null;
+  /** Returned by findByName for any name that is NOT the Drive folder name. */
+  existingPdf: DriveFile | null;
   nextFileId: string;
 }
 
@@ -20,12 +23,16 @@ function makeDriveStub(opts: Partial<DriveStubState> = {}): {
 } {
   const state: DriveStubState = {
     created: [],
+    updated: [],
     folder: opts.folder !== undefined
       ? opts.folder
       : { id: 'folder-1', name: DRIVE_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' },
+    existingPdf: opts.existingPdf ?? null,
     nextFileId: opts.nextFileId ?? 'new-file-id',
   };
-  const findByNameSpy = vi.fn(async () => state.folder);
+  const findByNameSpy = vi.fn(async (name: string) =>
+    name === DRIVE_FOLDER_NAME ? state.folder : state.existingPdf,
+  );
   const client = {
     findByName: findByNameSpy,
     createFile: vi.fn(async (metadata: DriveFileMetadata, content: Blob) => {
@@ -35,6 +42,10 @@ function makeDriveStub(opts: Partial<DriveStubState> = {}): {
         name: metadata.name,
         mimeType: metadata.mimeType ?? 'application/octet-stream',
       };
+    }),
+    updateFileContent: vi.fn(async (fileId: string, content: Blob) => {
+      state.updated.push({ fileId, content });
+      return { id: fileId, name: 'updated.pdf', mimeType: 'application/pdf' };
     }),
   } as unknown as DriveClient;
   return { client, state, findByNameSpy };
@@ -138,5 +149,81 @@ describe('DriveStore.trashInvoiceFile', () => {
     });
     const store = makeStore(makeTrashStub(trashFile));
     await expect(store.trashInvoiceFile('x')).rejects.toBeInstanceOf(GoogleApiError);
+  });
+});
+
+// ── savePdfToFolder ──────────────────────────────────────────────────────────
+
+describe('DriveStore.savePdfToFolder', () => {
+  const PDF_BLOB = new Blob(['%PDF'], { type: 'application/pdf' });
+  const FILENAME = 'Patenlist_2026_01.pdf';
+
+  it('creates a new file when no file with the same name exists in the folder', async () => {
+    const { client, state } = makeDriveStub({ nextFileId: 'created-id' });
+    const store = makeStore(client);
+    await store.savePdfToFolder(PDF_BLOB, FILENAME);
+    expect(state.created).toHaveLength(1);
+    expect(state.updated).toHaveLength(0);
+  });
+
+  it('creates with correct name, mimeType=application/pdf, and parentId=folderId', async () => {
+    const { client, state } = makeDriveStub();
+    const store = makeStore(client);
+    await store.savePdfToFolder(PDF_BLOB, FILENAME);
+    expect(state.created[0].metadata.name).toBe(FILENAME);
+    expect(state.created[0].metadata.mimeType).toBe('application/pdf');
+    expect(state.created[0].metadata.parents).toEqual(['folder-1']);
+  });
+
+  it('returns the Drive web URL for the created file', async () => {
+    const { client } = makeDriveStub({ nextFileId: 'file-abc' });
+    const store = makeStore(client);
+    const url = await store.savePdfToFolder(PDF_BLOB, FILENAME);
+    expect(url).toBe('https://drive.google.com/file/d/file-abc/view');
+  });
+
+  it('updates content in-place when a file with the same name already exists', async () => {
+    const existingPdf: DriveFile = { id: 'existing-pdf-id', name: FILENAME, mimeType: 'application/pdf' };
+    const { client, state } = makeDriveStub({ existingPdf });
+    const store = makeStore(client);
+    await store.savePdfToFolder(PDF_BLOB, FILENAME);
+    expect(state.updated).toHaveLength(1);
+    expect(state.created).toHaveLength(0);
+  });
+
+  it('calls updateFileContent with the existing file id', async () => {
+    const existingPdf: DriveFile = { id: 'existing-pdf-id', name: FILENAME, mimeType: 'application/pdf' };
+    const { client, state } = makeDriveStub({ existingPdf });
+    const store = makeStore(client);
+    await store.savePdfToFolder(PDF_BLOB, FILENAME);
+    expect(state.updated[0].fileId).toBe('existing-pdf-id');
+    expect(state.updated[0].content).toBe(PDF_BLOB);
+  });
+
+  it('returns the Drive URL using the existing file id on overwrite', async () => {
+    const existingPdf: DriveFile = { id: 'existing-pdf-id', name: FILENAME, mimeType: 'application/pdf' };
+    const { client } = makeDriveStub({ existingPdf });
+    const store = makeStore(client);
+    const url = await store.savePdfToFolder(PDF_BLOB, FILENAME);
+    expect(url).toBe('https://drive.google.com/file/d/existing-pdf-id/view');
+  });
+
+  it('throws DriveFolderNotFoundError when the folder cannot be located', async () => {
+    const { client } = makeDriveStub({ folder: null });
+    const store = makeStore(client);
+    await expect(store.savePdfToFolder(PDF_BLOB, FILENAME)).rejects.toBeInstanceOf(
+      DriveFolderNotFoundError,
+    );
+  });
+
+  it('shares the cached folder id with uploadInvoice — folder looked up only once', async () => {
+    const { client, findByNameSpy } = makeDriveStub();
+    const store = makeStore(client);
+    await store.uploadInvoice(new Blob(['x']), 'inv.pdf');
+    await store.savePdfToFolder(PDF_BLOB, FILENAME);
+    const folderLookups = (findByNameSpy.mock.calls as string[][]).filter(
+      c => c[0] === DRIVE_FOLDER_NAME,
+    );
+    expect(folderLookups).toHaveLength(1);
   });
 });

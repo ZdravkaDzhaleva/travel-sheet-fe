@@ -6,6 +6,8 @@ import { DRIVE_FOLDER_NAME } from '../core/config/workspace.config';
 import { DriveFolderNotFoundError } from './drive-store.errors';
 
 const MIME_FOLDER = 'application/vnd.google-apps.folder';
+const MIME_PDF = 'application/pdf';
+const DRIVE_FILE_VIEW_BASE = 'https://drive.google.com/file/d';
 
 /** Identifier of a file in Google Drive (matches Invoice.DriveFileId). */
 export type DriveFileId = string;
@@ -31,6 +33,27 @@ export class DriveStore {
       file,
     );
     return created.id;
+  }
+
+  /**
+   * Saves a PDF blob to the configured Drive folder as `filename`.
+   * If a non-trashed file with the same name already exists in the folder,
+   * its content is replaced in-place (no duplicate). Otherwise a new file is created.
+   * Returns the Drive web URL (`https://drive.google.com/file/d/{id}/view`).
+   */
+  async savePdfToFolder(blob: Blob, filename: string): Promise<string> {
+    const folderId = await this.resolveFolderId();
+    const existing = await this.drive.findByName(filename, {
+      mimeType: MIME_PDF,
+      parentId: folderId,
+    });
+    const fileId = existing
+      ? (await this.drive.updateFileContent(existing.id, blob)).id
+      : (await this.drive.createFile(
+          { name: filename, mimeType: MIME_PDF, parents: [folderId] },
+          blob,
+        )).id;
+    return `${DRIVE_FILE_VIEW_BASE}/${encodeURIComponent(fileId)}/view`;
   }
 
   /**
