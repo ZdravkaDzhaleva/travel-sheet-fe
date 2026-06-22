@@ -356,12 +356,7 @@ On successful export, show (a) the persistent gold-left-border result card ("PDF
 - **Deps:** T8.5, existing toast + result-card components
 - **Done when:** a successful export shows both the result card and the toast in the real styles; the green left-border is applied to the toast; "Open PDF" opens the Drive file; errors surface via the existing error pattern.
 
-### [ ] T8.7 — Requirements doc in repo
-The screen mockup (`docs/mockups/generate-and-pdf-export.html`) is already committed. Ensure the Phase 1 requirements document (`docs/PDF_Export_Requirements.md`) is added to the repo as the narrative requirements reference, and that `TASKS.md` links to both.
-- **Deps:** none (can be done first)
-- **Done when:** `docs/PDF_Export_Requirements.md` exists with the Phase 1 FR/NFR text; this task entry links to both the doc and the mockup.
-
-### [ ] T8.8 — Scope check
+### [ ] T8.7 — Scope check
 Confirm the existing Drive OAuth scope permits the export + folder file creation/overwrite. If not, add the minimal scope and re-test sign-in (no broader scope than needed).
 - **Deps:** T8.2, T8.3
 - **Done when:** export + save work under the app's scopes; if a scope was added, sign-in still works and nothing else broke.
