@@ -638,7 +638,7 @@ export function groupByRow(cells: readonly CellModel[]): GroupedCells {
     const col = COL_INDEX.get(m[1])!;
     const row = Number(m[2]);
     if (row > maxRow) maxRow = row;
-    return { col, row, value: c.value };
+    return { col, row, value: c.formula ?? c.value };
   });
   const matrix: SheetCellValue[][] = Array.from({ length: maxRow }, () =>
     Array<SheetCellValue>(8).fill(null),

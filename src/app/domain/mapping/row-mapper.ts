@@ -47,7 +47,6 @@ import {
   ROW_OPENING_KM_MARK,
   ROW_TOTAL_LABEL,
 } from '../../core/config/workbook.template';
-import { round2 } from '../generation/round2';
 import type { CellModel } from './cell-model';
 
 export interface Period {
@@ -113,9 +112,6 @@ export function toSheetCells(
   // ── Data rows (from row 13) ──
   let rowNum = ROW_DATA_START;
   let lineNo = 1;
-  let sumConsumed = 0;
-  let sumFueled = 0;
-  let closingBalance = 0;
 
   for (const row of rows) {
     cells.push({ a1: `A${rowNum}`, value: lineNo });
@@ -141,8 +137,9 @@ export function toSheetCells(
     if (row.consumed !== null) {
       cells.push({
         a1: `F${rowNum}`,
-        value: row.consumed,
-        format: FMT_LITERS
+        value: null,
+        formula: `=ROUND((D${rowNum}*E${rowNum})/100,2)`,
+        format: FMT_LITERS,
       });
     }
 
@@ -154,16 +151,17 @@ export function toSheetCells(
       });
     }
 
-    cells.push({
-      a1: `H${rowNum}`,
-      value: row.balance,
-      format: FMT_LITERS,
-      bold: row.kind === 'fuel'
-    });
-
-    if (row.consumed !== null) sumConsumed += row.consumed;
-    if (row.fueled !== null) sumFueled += row.fueled;
-    closingBalance = row.balance;
+    if (row.kind === 'opening') {
+      cells.push({ a1: `H${rowNum}`, value: row.balance, format: FMT_LITERS });
+    } else {
+      cells.push({
+        a1: `H${rowNum}`,
+        value: null,
+        formula: `=ROUND(H${rowNum - 1}-F${rowNum}+G${rowNum},2)`,
+        format: FMT_LITERS,
+        bold: row.kind === 'fuel',
+      });
+    }
 
     lineNo++;
     rowNum++;
@@ -173,8 +171,9 @@ export function toSheetCells(
   cells.push({ a1: `C${rowNum}`, value: ROW_CLOSING_LABEL });
   cells.push({
     a1: `H${rowNum}`,
-    value: closingBalance,
-    format: FMT_LITERS
+    value: null,
+    formula: `=ROUND(H${rowNum - 1}-F${rowNum}+G${rowNum},2)`,
+    format: FMT_LITERS,
   });
   rowNum++;
 
@@ -182,13 +181,15 @@ export function toSheetCells(
   cells.push({ a1: `C${rowNum}`, value: ROW_TOTAL_LABEL, bold: true });
   cells.push({
     a1: `F${rowNum}`,
-    value: round2(sumConsumed),
-    format: FMT_LITERS
+    value: null,
+    formula: `=SUM(F${ROW_DATA_START}:F${rowNum - 2})`,
+    format: FMT_LITERS,
   });
   cells.push({
     a1: `G${rowNum}`,
-    value: round2(sumFueled),
-    format: FMT_LITERS
+    value: null,
+    formula: `=SUM(G${ROW_DATA_START}:G${rowNum - 2})`,
+    format: FMT_LITERS,
   });
   const lastTableRow = rowNum;
   rowNum++;

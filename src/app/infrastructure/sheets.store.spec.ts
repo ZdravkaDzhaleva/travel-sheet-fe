@@ -466,6 +466,11 @@ describe('groupByRow', () => {
   it('throws on unsupported A1 columns', () => {
     expect(() => groupByRow([{ a1: 'Z1', value: 'x' }])).toThrowError();
   });
+
+  it('uses formula string instead of value when formula is present', () => {
+    const out = groupByRow([{ a1: 'F15', value: null, formula: '=ROUND((D15*E15)/100,2)' }]);
+    expect(out.matrix[14][5]).toBe('=ROUND((D15*E15)/100,2)');
+  });
 });
 
 // ── workbook id resolution caching ──────────────────────────────────────────

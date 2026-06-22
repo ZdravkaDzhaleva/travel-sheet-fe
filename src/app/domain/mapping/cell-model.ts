@@ -6,6 +6,7 @@
 export interface CellModel {
   readonly a1: string;
   readonly value: string | number | null;
+  readonly formula?: string;
   readonly format?: string;
   readonly bold?: boolean;
   readonly italic?: boolean;

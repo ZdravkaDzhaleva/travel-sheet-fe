@@ -161,14 +161,15 @@ describe('toSheetCells — opening data row (13)', () => {
 });
 
 describe('toSheetCells — fuel data row (14)', () => {
-  it('A14 = 2; B14 = "10.01.2026"; C14 = byte-exact fuel string; G14 = 40; H14 = 45 - only C14 and H14 are bold', () => {
+  it('A14 = 2; B14 = "10.01.2026"; C14 = byte-exact fuel string; G14 = 40; H14 = formula; only C14 and H14 are bold', () => {
     expect(byA1(cells, 'A14').value).toBe(2);
     expect(byA1(cells, 'B14').value).toBe('10.01.2026');
     expect(byA1(cells, 'C14').value).toBe(
       'Зареждане гориво - Лукойл - 40.00 л * 2.89 лв/л = 115.60 лв общо',
     );
     expect(byA1(cells, 'G14').value).toBe(40);
-    expect(byA1(cells, 'H14').value).toBe(45);
+    expect(byA1(cells, 'H14').formula).toBe('=ROUND(H13-F14+G14,2)');
+    expect(byA1(cells, 'H14').value).toBeNull();
     expect(byA1(cells, 'C14').bold).toBe(true);
     expect(byA1(cells, 'H14').bold).toBe(true);
     expect(byA1(cells, 'D14').value).toBe('х');
@@ -181,14 +182,16 @@ describe('toSheetCells — fuel data row (14)', () => {
 });
 
 describe('toSheetCells — trip data row (15)', () => {
-  it('A15 = 3; B15 = "12.01.2026"; C15 = route string; D15 = 70; E15 = 11.5; F15 = 8.05; H15 = 36.95 — not bold', () => {
+  it('A15 = 3; B15 = "12.01.2026"; C15 = route string; D15 = 70; E15 = 11.5; F15 = formula; H15 = formula — not bold', () => {
     expect(byA1(cells, 'A15').value).toBe(3);
     expect(byA1(cells, 'B15').value).toBe('12.01.2026');
     expect(byA1(cells, 'C15').value).toBe('Борово - Козлодуй - Борово');
     expect(byA1(cells, 'D15').value).toBe(70);
     expect(byA1(cells, 'E15').value).toBe(11.5);
-    expect(byA1(cells, 'F15').value).toBe(8.05);
-    expect(byA1(cells, 'H15').value).toBe(36.95);
+    expect(byA1(cells, 'F15').formula).toBe('=ROUND((D15*E15)/100,2)');
+    expect(byA1(cells, 'F15').value).toBeNull();
+    expect(byA1(cells, 'H15').formula).toBe('=ROUND(H14-F15+G15,2)');
+    expect(byA1(cells, 'H15').value).toBeNull();
     expect(byA1(cells, 'C15').bold).toBe(false);
   });
 
@@ -198,14 +201,16 @@ describe('toSheetCells — trip data row (15)', () => {
 });
 
 describe('toSheetCells — zero-trip data row (16)', () => {
-  it('A16 = 4; B16 = "13.01.2026"; C16 absent; D16 absent; E16 = avg; F16 = 0; H16 = balance — not bold', () => {
+  it('A16 = 4; B16 = "13.01.2026"; C16 absent; D16 absent; E16 = avg; F16 = formula; H16 = formula — not bold', () => {
     expect(byA1(cells, 'A16').value).toBe(4);
     expect(byA1(cells, 'B16').value).toBe('13.01.2026');
     expect(maybeA1(cells, 'C16')).toBeUndefined();
     expect(maybeA1(cells, 'D16')).toBeUndefined();
     expect(byA1(cells, 'E16').value).toBe(11.5);
-    expect(byA1(cells, 'F16').value).toBe(0);
-    expect(byA1(cells, 'H16').value).toBe(36.95);
+    expect(byA1(cells, 'F16').formula).toBe('=ROUND((D16*E16)/100,2)');
+    expect(byA1(cells, 'F16').value).toBeNull();
+    expect(byA1(cells, 'H16').formula).toBe('=ROUND(H15-F16+G16,2)');
+    expect(byA1(cells, 'H16').value).toBeNull();
   });
 
   it('G16 is absent (no fuel)', () => {
@@ -217,16 +222,19 @@ describe('toSheetCells — zero-trip data row (16)', () => {
 
 describe('toSheetCells — closing and totals', () => {
   // After 4 data rows starting at 13, closing row is at 17, totals row at 18.
-  it('C17 = "Крайно количество"; H17 = closing balance 36.95', () => {
+  it('C17 = "Крайно количество"; H17 = closing balance formula', () => {
     expect(byA1(cells, 'C17').value).toBe('Крайно количество');
-    expect(byA1(cells, 'H17').value).toBe(36.95);
+    expect(byA1(cells, 'H17').formula).toBe('=ROUND(H16-F17+G17,2)');
+    expect(byA1(cells, 'H17').value).toBeNull();
   });
 
-  it('C18 = "Общо количество" (bold); F18 = Σ consumed = 8.05; G18 = Σ fueled = 40', () => {
+  it('C18 = "Общо количество" (bold); F18 = SUM formula for consumed; G18 = SUM formula for fueled', () => {
     expect(byA1(cells, 'C18').value).toBe('Общо количество');
     expect(byA1(cells, 'C18').bold).toBe(true);
-    expect(byA1(cells, 'F18').value).toBe(8.05);
-    expect(byA1(cells, 'G18').value).toBe(40);
+    expect(byA1(cells, 'F18').formula).toBe('=SUM(F13:F16)');
+    expect(byA1(cells, 'F18').value).toBeNull();
+    expect(byA1(cells, 'G18').formula).toBe('=SUM(G13:G16)');
+    expect(byA1(cells, 'G18').value).toBeNull();
   });
 });
 
