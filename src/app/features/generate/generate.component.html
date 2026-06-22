@@ -87,12 +87,6 @@
       </div>
     </form>
 
-    @if (pdfError(); as err) {
-      <div class="card card--pad card--error pdf-error" role="alert">
-        <p class="card__heading card__heading--error">Export failed</p>
-        <p class="card__detail">{{ err.message }}</p>
-      </div>
-    }
   </section>
 
   <!-- Already-generated guard (light surface, per T7.10) -->

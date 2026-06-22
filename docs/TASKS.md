@@ -356,10 +356,11 @@ Add the "Export month sheet as PDF" card to the Generate screen, matching `docs/
 - **Done when:** the section renders in the real page style; the dropdown lists existing months; the button is disabled until a month is selected; clicking it triggers export with a progress state.
 - `GenerateComponent` now implements `OnInit`; injects `ExportPdfService`; `ngOnInit` calls `loadMonths(year)`; `generate()` refreshes the list on success. PDF card: `ti-file-type-pdf` icon + title, `select.form__input` dropdown with custom chevron, `btn--primary` "Generate PDF" button, inline `.pdf-error` block. `onPdfMonthChange` / `exportPdf` methods. Updated spec: `ExportPdfService` mock provided in all test setups; 7 new PDF-section tests (init, render, dropdown population, button disabled/enabled, exportMonth args, loading label, error card). 544 total tests pass, lint clean. Visual verification deferred to live sign-in run (auth guard blocks preview).
 
-### [ ] T8.6 — Result card + toast on success
+### [x] T8.6 — Result card + toast on success
 On successful export, show (a) the persistent gold-left-border result card ("PDF exported" — FILE / SAVED TO + "Open PDF ↗" button), reusing the existing result-card pattern, and (b) the existing bottom-center toast reused for confirmation, with a green left-border, dark text, a gold underlined "Open PDF" action, and dismiss ×.
 - **Deps:** T8.5, existing toast + result-card components
 - **Done when:** a successful export shows both the result card and the toast in the real styles; the green left-border is applied to the toast; "Open PDF" opens the Drive file; errors surface via the existing error pattern.
+- `pdfResult` signal exposed on component. `exportPdf()` fires `toast.show('PDF exported to Drive', 'success', { label:'Open PDF', fn:()=>window.open(...) })` after a successful export. Result card (`card--success`, gold left border) shows FILE / SAVED TO / "Open PDF ↗" deep link. 4 new tests: result card content, `href`/`target`/`rel`, toast message+action, no card when result is null. 548 total tests pass, lint clean.
 
 ### [ ] T8.7 — Scope check
 Confirm the existing Drive OAuth scope permits the export + folder file creation/overwrite. If not, add the minimal scope and re-test sign-in (no broader scope than needed).

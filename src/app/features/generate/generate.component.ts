@@ -61,7 +61,6 @@ export class GenerateComponent implements OnInit, OnDestroy {
 
   protected readonly pdfLoading = this.exportService.loading;
   protected readonly pdfMonths = this.exportService.months;
-  protected readonly pdfError = this.exportService.error;
   protected readonly selectedPdfEntry = signal<MonthSheetEntry | null>(null);
 
   protected readonly model = signal<PeriodModel>(currentPeriod());
@@ -133,6 +132,16 @@ export class GenerateComponent implements OnInit, OnDestroy {
     const entry = this.selectedPdfEntry();
     if (!entry || this.pdfLoading()) return;
     await this.exportService.exportMonth(entry, this.model().year);
+    const result = this.exportService.result();
+    const error = this.exportService.error();
+    if (result) {
+      this.toast.show('PDF exported to Drive', 'success', {
+        label: 'Open PDF',
+        fn: () => window.open(result.driveUrl, '_blank', 'noopener'),
+      });
+    } else if (error) {
+      this.toast.show(error.message, 'error');
+    }
   }
 
   /** Whether the current result is for the period currently selected in the form. */

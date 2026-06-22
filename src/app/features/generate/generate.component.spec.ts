@@ -8,7 +8,7 @@ import {
   GenerateMonthService,
   type GenerateMonthResult,
 } from '../../application/generate-month.service';
-import { ExportPdfService, type MonthSheetEntry } from '../../application/export-pdf.service';
+import { ExportPdfService, type MonthSheetEntry, type ExportPdfResult } from '../../application/export-pdf.service';
 import { SheetNotFoundError } from '../../application/export-pdf.errors';
 import { ToastService } from '../../shared/ui/toast/toast.service';
 import { InfeasibleMonthError } from '../../domain/generation/infeasible-month.error';
@@ -26,6 +26,7 @@ interface Stubs {
   readonly pdfLoading: ReturnType<typeof signal<boolean>>;
   readonly pdfMonths: ReturnType<typeof signal<MonthSheetEntry[]>>;
   readonly pdfError: ReturnType<typeof signal<Error | null>>;
+  readonly pdfResult: ReturnType<typeof signal<ExportPdfResult | null>>;
   readonly loadMonths: ReturnType<typeof vi.fn>;
   readonly exportMonth: ReturnType<typeof vi.fn>;
   readonly pdfService: ExportPdfService;
@@ -74,20 +75,24 @@ function makeStubs(monthExistsValue = false): Stubs {
   const pdfLoading = signal<boolean>(false);
   const pdfMonths = signal<MonthSheetEntry[]>([]);
   const pdfError = signal<Error | null>(null);
+  const pdfResult = signal<ExportPdfResult | null>(null);
   const loadMonths = vi.fn(async () => undefined);
-  const exportMonth = vi.fn(async () => undefined);
+  const exportMonth = vi.fn(async () => {
+    // Default: simulate a successful export so the component can fire the toast.
+    pdfResult.set({ filename: 'Pyten_list_2026_01.pdf', driveUrl: 'https://drive.google.com/file/d/x/view' });
+  });
   const pdfService = {
     loading: pdfLoading.asReadonly() as Signal<boolean>,
     months: pdfMonths.asReadonly() as Signal<MonthSheetEntry[]>,
     error: pdfError.asReadonly() as Signal<Error | null>,
-    result: signal<null>(null).asReadonly(),
+    result: pdfResult.asReadonly() as Signal<ExportPdfResult | null>,
     loadMonths,
     exportMonth,
   } as unknown as ExportPdfService;
 
   return {
     loading, error, result, generateMonth, monthExists, clearError, clearResult, service,
-    pdfLoading, pdfMonths, pdfError, loadMonths, exportMonth, pdfService,
+    pdfLoading, pdfMonths, pdfError, pdfResult, loadMonths, exportMonth, pdfService,
   };
 }
 
@@ -447,13 +452,49 @@ describe('GenerateComponent — PDF export card', () => {
     expect(pdfBtn?.disabled).toBe(true);
   });
 
-  it('renders an error card when pdfError is set', () => {
+  // ── T8.6: toast-only feedback ─────────────────────────────────────────────
+
+  it('fires a success toast "PDF exported to Drive" with an "Open PDF" action on success', async () => {
     const stubs = makeStubs();
-    stubs.pdfError.set(new SheetNotFoundError('м_01'));
+    stubs.pdfMonths.set([{ sheetName: 'м_01', sheetId: 1, label: 'January 2026 (м_01)' }]);
     const fixture = render(stubs);
+    const cmp = fixture.componentInstance as unknown as { onPdfMonthChange(e: Event): void; exportPdf(): Promise<void> };
+    cmp.onPdfMonthChange({ target: { value: 'м_01' } } as unknown as Event);
+    await cmp.exportPdf();
+    const toasts = TestBed.inject(ToastService).toasts();
+    expect(toasts.length).toBe(1);
+    expect(toasts[0].type).toBe('success');
+    expect(toasts[0].message).toBe('PDF exported to Drive');
+    expect(toasts[0].action?.label).toBe('Open PDF');
+  });
+
+  it('fires an error toast when the export fails', async () => {
+    const stubs = makeStubs();
+    stubs.pdfMonths.set([{ sheetName: 'м_01', sheetId: 1, label: 'January 2026 (м_01)' }]);
+    stubs.exportMonth.mockImplementationOnce(async () => {
+      stubs.pdfResult.set(null);
+      stubs.pdfError.set(new SheetNotFoundError('м_01'));
+    });
+    const fixture = render(stubs);
+    const cmp = fixture.componentInstance as unknown as { onPdfMonthChange(e: Event): void; exportPdf(): Promise<void> };
+    cmp.onPdfMonthChange({ target: { value: 'м_01' } } as unknown as Event);
+    await cmp.exportPdf();
+    const toasts = TestBed.inject(ToastService).toasts();
+    expect(toasts.length).toBe(1);
+    expect(toasts[0].type).toBe('error');
+    expect(toasts[0].message).toContain('м_01');
+  });
+
+  it('renders no result or error card in the PDF section — toast only', async () => {
+    const stubs = makeStubs();
+    stubs.pdfMonths.set([{ sheetName: 'м_01', sheetId: 1, label: 'January 2026 (м_01)' }]);
+    const fixture = render(stubs);
+    const cmp = fixture.componentInstance as unknown as { onPdfMonthChange(e: Event): void; exportPdf(): Promise<void> };
+    cmp.onPdfMonthChange({ target: { value: 'м_01' } } as unknown as Event);
+    await cmp.exportPdf();
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.pdf-error')).not.toBeNull();
-    expect(el.querySelector('.pdf-error')?.textContent).toContain('Export failed');
+    expect(el.querySelector('#pdf-result-heading')).toBeNull();
+    expect(el.querySelector('.pdf-error')).toBeNull();
   });
 });
