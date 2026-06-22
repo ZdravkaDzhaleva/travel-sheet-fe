@@ -250,8 +250,8 @@ describe('GenerateComponent', () => {
     await instance(fixture).generate();
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    const errorCard = el.querySelector('.card--error');
-    expect(errorCard).not.toBeNull(); // light .card surface + danger rail (T7.10)
+    const errorCard = el.querySelector('.gen-feedback--error');
+    expect(errorCard).not.toBeNull(); // inline feedback panel nested in the generate card
     const text = errorCard?.textContent ?? '';
     expect(text).toContain('Infeasible month');
     expect(text).toContain("can't land in the allowed window");
@@ -301,8 +301,8 @@ describe('GenerateComponent', () => {
     await flush();
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.notice')).not.toBeNull();
-    expect(el.querySelector('.notice')?.textContent).toContain('already generated');
+    expect(el.querySelector('.gen-feedback--notice')).not.toBeNull();
+    expect(el.querySelector('.gen-feedback--notice')?.textContent).toContain('already generated');
     const btn = el.querySelector<HTMLButtonElement>('button[type="submit"]');
     expect(btn?.disabled).toBe(true);
   });
@@ -313,7 +313,7 @@ describe('GenerateComponent', () => {
     await flush();
     fixture.detectChanges();
     const el = fixture.nativeElement as HTMLElement;
-    expect(el.querySelector('.notice')).toBeNull();
+    expect(el.querySelector('.gen-feedback--notice')).toBeNull();
     const btn = el.querySelector<HTMLButtonElement>('button[type="submit"]');
     expect(btn?.disabled).toBe(false);
   });
@@ -332,12 +332,12 @@ describe('GenerateComponent', () => {
     stubs.error.set(new Error('boom'));
     const fixture = render(stubs);
     fixture.detectChanges();
-    expect((fixture.nativeElement as HTMLElement).querySelector('.card--error')).not.toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.gen-feedback--error')).not.toBeNull();
     instance(fixture).onPeriodChange();
     fixture.detectChanges();
     expect(stubs.clearError).toHaveBeenCalled();
-    expect((fixture.nativeElement as HTMLElement).querySelector('.card--error')).toBeNull();
-    expect((fixture.nativeElement as HTMLElement).querySelector('.card--success')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.gen-feedback--error')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).querySelector('.gen-feedback--success')).toBeNull();
   });
 
   it('clears the error and the success result when the page is left (ngOnDestroy)', () => {

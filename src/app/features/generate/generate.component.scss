@@ -31,10 +31,6 @@
   flex-shrink: 0;
 }
 
-.pdf-error {
-  margin-top: 1rem;
-}
-
 .card__body {
   margin: 0;
   line-height: 1.45;
@@ -47,22 +43,21 @@
   word-break: break-word;
 }
 
-.card--error {
-  border-left: 0.25rem solid var(--app-danger);
+// Generation feedback nested inside the "Generate month sheet" card.
+// Separated from the form above by a hairline divider (matches `.tech`),
+// rendered as inline panels rather than standalone cards.
+.gen-feedback {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 0.0625rem solid var(--hairline-on-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.card--error .card__heading,
+.gen-feedback--error .card__heading,
 .card__heading--error {
   color: var(--app-danger-text);
-}
-
-.card--success {
-  border-left: 0.25rem solid var(--app-accent);
-}
-
-// Already-generated guard — informational, light surface, accent rail.
-.notice {
-  border-left: 0.25rem solid var(--app-accent);
 }
 
 .notice__heading {
