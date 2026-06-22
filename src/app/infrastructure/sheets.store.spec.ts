@@ -7,6 +7,7 @@ import {
   buildTextFormatRequests,
   buildBorderRequests,
   buildRouteColumnLayoutRequests,
+  type MonthSheetEntry,
 } from './sheets.store';
 import { ROUTE_COLUMN_WIDTH_PX } from '../core/config/workbook.template';
 import {
@@ -856,6 +857,92 @@ describe('SheetsStore.sheetExists', () => {
     await expect(store.sheetExists('м_01')).resolves.toBe(true);
     await expect(store.sheetExists('м_05')).resolves.toBe(false);
     // Reads tab metadata only — never row values.
+    expect(client.valuesGet).not.toHaveBeenCalled();
+  });
+});
+
+// ── listMonthSheets ─────────────────────────────────────────────────────────
+
+describe('SheetsStore.listMonthSheets', () => {
+  it('returns an empty array when the workbook has no м_MM tabs', async () => {
+    const { store } = makeStore(); // default meta: only "Sheet1"
+    const result = await store.listMonthSheets(2026);
+    expect(result).toEqual([]);
+  });
+
+  it('returns a single entry with correct sheetName, sheetId, and label', async () => {
+    const { client, state } = makeSheetsStub({
+      meta: { sheets: [{ properties: { sheetId: 5, title: 'м_01' } }] },
+    });
+    const { store } = makeStore({ sheets: client, sheetsState: state });
+    const result = await store.listMonthSheets(2026);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual<MonthSheetEntry>({
+      sheetName: 'м_01',
+      sheetId: 5,
+      label: 'January 2026 (м_01)',
+    });
+  });
+
+  it('skips non-month tabs (Sheet1, Invoice, etc.)', async () => {
+    const { client, state } = makeSheetsStub({
+      meta: {
+        sheets: [
+          { properties: { sheetId: 0, title: 'Sheet1' } },
+          { properties: { sheetId: 1, title: 'Invoice' } },
+          { properties: { sheetId: 2, title: 'м_03' } },
+        ],
+      },
+    });
+    const { store } = makeStore({ sheets: client, sheetsState: state });
+    const result = await store.listMonthSheets(2026);
+    expect(result).toHaveLength(1);
+    expect(result[0].sheetName).toBe('м_03');
+  });
+
+  it('returns all twelve months when they all exist, sorted in calendar order', async () => {
+    const sheets = [3, 11, 1, 7, 12, 2].map((m, i) => ({
+      properties: { sheetId: i, title: `м_${String(m).padStart(2, '0')}` },
+    }));
+    const { client, state } = makeSheetsStub({ meta: { sheets } });
+    const { store } = makeStore({ sheets: client, sheetsState: state });
+    const result = await store.listMonthSheets(2026);
+    expect(result.map(e => e.sheetName)).toEqual(['м_01', 'м_02', 'м_03', 'м_07', 'м_11', 'м_12']);
+  });
+
+  it('builds the correct English month name for each of the 12 months', async () => {
+    const EXPECTED = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    const sheets = EXPECTED.map((_, i) => ({
+      properties: { sheetId: i, title: `м_${String(i + 1).padStart(2, '0')}` },
+    }));
+    const { client, state } = makeSheetsStub({ meta: { sheets } });
+    const { store } = makeStore({ sheets: client, sheetsState: state });
+    const result = await store.listMonthSheets(2026);
+    expect(result.map(e => e.label)).toEqual(
+      EXPECTED.map((name, i) => `${name} 2026 (м_${String(i + 1).padStart(2, '0')})`),
+    );
+  });
+
+  it('uses the supplied year in the label', async () => {
+    const { client, state } = makeSheetsStub({
+      meta: { sheets: [{ properties: { sheetId: 0, title: 'м_06' } }] },
+    });
+    const { store } = makeStore({ sheets: client, sheetsState: state });
+    const result2025 = await store.listMonthSheets(2025);
+    const result2027 = await store.listMonthSheets(2027);
+    expect(result2025[0].label).toBe('June 2025 (м_06)');
+    expect(result2027[0].label).toBe('June 2027 (м_06)');
+  });
+
+  it('never calls valuesGet — reads tab metadata only', async () => {
+    const { client, state } = makeSheetsStub({
+      meta: { sheets: [{ properties: { sheetId: 1, title: 'м_02' } }] },
+    });
+    const { store } = makeStore({ sheets: client, sheetsState: state });
+    await store.listMonthSheets(2026);
     expect(client.valuesGet).not.toHaveBeenCalled();
   });
 });

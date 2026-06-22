@@ -14,6 +14,7 @@ import {
 } from '../core/config/workspace.config';
 import {
   CELL_VEHICLE_PLATE,
+  MONTH_SHEET_PREFIX,
   ROUTE_COLUMN_WIDTH_PX,
   ROW_CLOSING_LABEL,
   SHEET_BORDERS,
@@ -41,6 +42,18 @@ import {
 
 const MIME_SPREADSHEET = 'application/vnd.google-apps.spreadsheet';
 const MIME_FOLDER = 'application/vnd.google-apps.folder';
+
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+] as const;
+
+/** One entry in the "GENERATED MONTH" export dropdown. */
+export interface MonthSheetEntry {
+  readonly sheetName: string;
+  readonly sheetId: number;
+  readonly label: string;
+}
 const LOCATION_TYPES: ReadonlySet<LocationType> = new Set([
   'Office',
   'Constructor',
@@ -189,6 +202,30 @@ export class SheetsStore {
     const workbookId = await this.resolveWorkbookId();
     const meta = await this.sheets.getSpreadsheet(workbookId);
     return meta.sheets.some(s => s.properties.title === sheetName);
+  }
+
+  /**
+   * Returns all `м_MM` tabs currently in the workbook as dropdown entries.
+   * Reads tab metadata only (no row content) — covered by read-back exception (b).
+   * Sorted alphabetically by sheet name so months appear in calendar order.
+   */
+  async listMonthSheets(year: number): Promise<MonthSheetEntry[]> {
+    const workbookId = await this.resolveWorkbookId();
+    const meta = await this.sheets.getSpreadsheet(workbookId);
+    return meta.sheets
+      .filter(s => s.properties.title.startsWith(MONTH_SHEET_PREFIX))
+      .map(s => {
+        const sheetName = s.properties.title;
+        const mm = sheetName.slice(MONTH_SHEET_PREFIX.length);
+        const monthIdx = parseInt(mm, 10) - 1;
+        const monthName = MONTH_NAMES[monthIdx] ?? sheetName;
+        return {
+          sheetName,
+          sheetId: s.properties.sheetId,
+          label: `${monthName} ${year} (${sheetName})`,
+        };
+      })
+      .sort((a, b) => a.sheetName.localeCompare(b.sheetName));
   }
 
   /**

@@ -326,10 +326,11 @@ End-of-Phase-7 cleanup: now that every page exists, extract the remaining repeat
 
 ---
 
-### [ ] T8.1 — List generated months
+### [x] T8.1 — List generated months
 Add a method to read the existing month sheets from the output workbook (the `м_MM` tabs) so the export dropdown only offers months that actually exist. Reuse `SheetsStore`; do not read sheet contents, only the tab list/metadata.
 - **Deps:** existing `SheetsStore`
 - **Done when:** a method returns the list of existing `м_MM` sheets (with a display label like "January 2026 (м_01)") from the real workbook; unit/smoke verified.
+- `SheetsStore.listMonthSheets(year)` + exported `MonthSheetEntry` interface; 7 unit tests (empty workbook, single entry, non-month tabs skipped, multi-tab calendar sort, all 12 month names, year in label, `valuesGet` never called); 509 total tests pass, lint clean.
 
 ### [ ] T8.2 — Sheet-to-PDF export in SheetsStore
 Add `SheetsStore.exportSheetAsPdf(workbookId, sheetId)`: fetch `https://docs.google.com/spreadsheets/d/{id}/export?format=pdf&gid={gid}&portrait=true&fitw=true&gridlines=false&single_sheet=true` with the GIS access token; return the response as a `Blob`. This is a direct `googleFetch` call — not via the `sheets.googleapis.com` client. Export params enforce portrait, fit-to-width, no gridlines, single tab.
