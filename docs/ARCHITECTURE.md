@@ -50,7 +50,8 @@ Three logical layers plus a thin Google infrastructure layer. Dependencies point
 ┌───────────────────────────▼────────────────────────────────┐
 │ Application (orchestration services)                         │
 │   GenerateMonthService · InvoiceService ·                    │
-│   MasterDataService · CalendarService                        │
+│   MasterDataService · CalendarService ·                      │
+│   ExportPdfService                                           │
 │   (fetch via stores → call domain → write via store)         │
 └───────────┬───────────────────────────────┬─────────────────┘
             │ passes plain data              │ uses
@@ -90,7 +91,8 @@ src/app/
 │   ├── master-data.service.ts    # loads Company/Vehicles/Locations/route legs
 │   ├── calendar.service.ts       # resolves working days for a month (provider + override)
 │   ├── invoice.service.ts
-│   └── generate-month.service.ts # the single generation entry point
+│   ├── generate-month.service.ts # the single generation entry point
+│   └── export-pdf.service.ts     # orchestrates list → export → Drive save (Phase 8)
 └── features/
     ├── sign-in/
     ├── company-info/         # READ-ONLY display of company data from supporting sheet
@@ -243,3 +245,49 @@ Still open (minor — won't block scaffolding):
 3. **Weekly Architect/Constructor visits** — now soft (the fuel target dominates). Confirm they can be dropped entirely if fuel-balancing doesn't need them, or kept as a soft preference.
 
 > These can be carried as explicit defaults in `TASKS.md` and refined; only the `TripGenerator` core task depends on #1.
+
+---
+
+## 10. PDF Export — Phase 8
+
+The PDF export feature is pure infrastructure + application orchestration — no domain logic is involved (no trip generation, no fuel balancing). It reads workbook tab metadata, exports a single sheet as a PDF, and saves the result into the Drive folder. The workbook is not modified.
+
+### Workbook reads
+
+Reading tab metadata for the GENERATED MONTH dropdown is already covered by **principle 1 exception (b)** (tab titles/gids only, no row content). The export endpoint reads the sheet's rendered view without touching the workbook data.
+
+### Three-step orchestration (`ExportPdfService`)
+
+`ExportPdfService` in `application/` sequences three infrastructure calls and exposes their combined state as Angular signals (`loading`, `result`, `error`). Nothing is saved if any step fails.
+
+1. **`SheetsStore.listMonthSheets()`** — reads the workbook's tab list and returns the existing `м_MM` sheets as `{ sheetName, sheetId, label }[]` (e.g. label `"January 2026 (м_01)"`). Reuses the existing tab-metadata read path; no new workbook exception.
+2. **`SheetsStore.exportSheetAsPdf(workbookId, sheetId)`** — fetches the Google Sheets export URL (`https://docs.google.com/spreadsheets/d/{id}/export?format=pdf&gid={gid}&...`) with the GIS access token and returns the PDF as a `Blob`. This is a direct HTTP fetch (not through the `sheets.googleapis.com` client) with an `Authorization: Bearer <token>` header. Export params enforce portrait orientation, fit-to-width, gridlines off, single sheet (`single_sheet=true`).
+3. **`DriveStore.savePdfToFolder(blob, filename)`** — saves the PDF blob into the hardcoded Drive folder. If a file with the same name already exists in the folder (found via `files.list` query), updates its content with `files.update`; otherwise creates it with `files.create`. Returns the saved file's Drive URL. The overwrite path ensures one file per month — no duplicates.
+
+### Filename convention
+
+`Patenlist_<YYYY>_<MM>.pdf` — year and two-digit month are extracted from the selected `м_MM` sheet name (e.g. `м_01` → `Patenlist_2026_01.pdf`). Re-exporting the same month overwrites the previous file; there is no versioning.
+
+### Typed errors
+
+| Error | Trigger |
+|---|---|
+| `SheetNotFoundError` | The selected `м_MM` tab no longer exists when export runs |
+| `ExportFailedError` | The Google export endpoint returns a non-2xx response |
+| `DriveWriteFailedError` | The Drive `files.create` or `files.update` call fails |
+
+### Result feedback
+
+On success the service emits `{ filename, driveUrl }`. The Generate screen renders:
+- A **persistent result card** (gold left border) showing the filename, "Drive folder" as the save location, and an **Open PDF ↗** button.
+- An **auto-dismissing toast** ("PDF exported to Drive" + **Open PDF** action) via `ToastService` — green left border, consistent with the existing toast primitive.
+
+On failure, the existing error-alert pattern is reused (light surface, danger rail, typed heading).
+
+### OAuth scope
+
+The Sheets export endpoint requires a valid access token with Drive read access. The Drive overwrite path requires Drive write access. Both are covered by the existing `https://www.googleapis.com/auth/drive` scope already granted for invoice uploads. **No new OAuth scope is required.**
+
+### UI placement
+
+The export card is a second, always-visible card on the Generate screen, below the generate-month card — regardless of whether a generation has just been done. Mockup: `docs/mockups/generate-and-pdf-export.html`.

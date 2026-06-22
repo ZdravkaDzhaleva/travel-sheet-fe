@@ -5,9 +5,10 @@
 > Section references (§6b, §7a, …) point into `ARCHITECTURE.md`.
 
 ## Defaults for the open questions (override here if needed)
-- **D1 — Per-day caps:** `MAX_STOPS_PER_DAY = 3`, `MAX_KM_PER_DAY = 80`. (From the 2025 reference.)
+- **D1 — Per-day caps:** `MAX_STOPS_PER_DAY = 5`, `MAX_KM_PER_DAY = 110`. (From the 2025 reference.)
 - **D2 — SeatCount:** write the value verbatim into the seats cell (so `"4+1"` appears as-is).
-- **D3 — Weekly Architect/Constructor visits:** kept as a *soft* preference only; the [0,8]L fuel target wins. The generator may skip them if balancing doesn't need them.
+- **D3 — Weekly Architect/Constructor visits:** kept as a *soft* preference only; the max tank capacity fuel target wins. The generator may skip them if balancing doesn't need them.
+
 
 If you change a default, update both this block and `generation.config.ts`.
 
@@ -318,4 +319,51 @@ End-of-Phase-7 cleanup: now that every page exists, extract the remaining repeat
 
 ---
 
-**Phase 7 complete.** All UI/UX tasks (T7.1–T7.13, incl. T7.4a/T7.6a/T7.8a) are done.
+## Phase 8 — PDF export & Drive storage
+
+> Builds on the completed base app (stores, generate flow, toast component, result-card pattern all exist).
+> Architecture: ARCHITECTURE §10. Mockup: `docs/mockups/generate-and-pdf-export.html`.
+
+---
+
+### [ ] T8.1 — List generated months
+Add a method to read the existing month sheets from the output workbook (the `м_MM` tabs) so the export dropdown only offers months that actually exist. Reuse `SheetsStore`; do not read sheet contents, only the tab list/metadata.
+- **Deps:** existing `SheetsStore`
+- **Done when:** a method returns the list of existing `м_MM` sheets (with a display label like "January 2026 (м_01)") from the real workbook; unit/smoke verified.
+
+### [ ] T8.2 — Sheet-to-PDF export in SheetsStore
+Add `SheetsStore.exportSheetAsPdf(workbookId, sheetId)`: fetch `https://docs.google.com/spreadsheets/d/{id}/export?format=pdf&gid={gid}&portrait=true&fitw=true&gridlines=false&single_sheet=true` with the GIS access token; return the response as a `Blob`. This is a direct `googleFetch` call — not via the `sheets.googleapis.com` client. Export params enforce portrait, fit-to-width, no gridlines, single tab.
+- **Deps:** existing Google clients (T3.2), T8.1
+- **Done when:** calling export for a given month returns a valid PDF whose layout matches the workbook sheet; verified by opening the output.
+
+### [ ] T8.3 — Save PDF to Drive (overwrite) in DriveStore
+Add `DriveStore.savePdfToFolder(blob, filename)`: query the Drive folder for a file with the same name; if found, call `files.update` (content replace); if not, call `files.create`. Filename convention: `Patenlist_<YYYY>_<MM>.pdf` (year and zero-padded month extracted from the `м_MM` sheet name). Return the saved file's Drive URL.
+- **Deps:** T8.2, existing `DriveStore`
+- **Done when:** export saves the file with the correct name; re-exporting the same month replaces the existing file (no duplicate); returns a usable Drive link.
+
+### [ ] T8.4 — ExportPdfService (application layer)
+Add an application service orchestrating: list months (T8.1) → export sheet (T8.2) → save to Drive (T8.3). Expose state for the UI (in-progress, success with filename + link, typed errors: sheet-not-found, export-failed, drive-write-failed). No domain logic involved.
+- **Deps:** T8.1, T8.2, T8.3
+- **Done when:** the service exports a selected month end-to-end and surfaces success (filename + link) or a clear typed error; nothing is saved on failure.
+
+### [ ] T8.5 — Export PDF UI section (Generate screen)
+Add the "Export month sheet as PDF" card to the Generate screen, matching `docs/mockups/generate-and-pdf-export.html`: section-heading icon (`ti-file-type-pdf`) + title, a single "GENERATED MONTH" dropdown (from T8.1), and a gold "Generate PDF" button (dark text, no icon). Match existing card/input/button styles exactly. Thin component — delegates to `ExportPdfService`.
+- **Deps:** T8.4
+- **Done when:** the section renders in the real page style; the dropdown lists existing months; the button is disabled until a month is selected; clicking it triggers export with a progress state.
+
+### [ ] T8.6 — Result card + toast on success
+On successful export, show (a) the persistent gold-left-border result card ("PDF exported" — FILE / SAVED TO + "Open PDF ↗" button), reusing the existing result-card pattern, and (b) the existing bottom-center toast reused for confirmation, with a green left-border, dark text, a gold underlined "Open PDF" action, and dismiss ×.
+- **Deps:** T8.5, existing toast + result-card components
+- **Done when:** a successful export shows both the result card and the toast in the real styles; the green left-border is applied to the toast; "Open PDF" opens the Drive file; errors surface via the existing error pattern.
+
+### [ ] T8.7 — Requirements doc in repo
+The screen mockup (`docs/mockups/generate-and-pdf-export.html`) is already committed. Ensure the Phase 1 requirements document (`docs/PDF_Export_Requirements.md`) is added to the repo as the narrative requirements reference, and that `TASKS.md` links to both.
+- **Deps:** none (can be done first)
+- **Done when:** `docs/PDF_Export_Requirements.md` exists with the Phase 1 FR/NFR text; this task entry links to both the doc and the mockup.
+
+### [ ] T8.8 — Scope check
+Confirm the existing Drive OAuth scope permits the export + folder file creation/overwrite. If not, add the minimal scope and re-test sign-in (no broader scope than needed).
+- **Deps:** T8.2, T8.3
+- **Done when:** export + save work under the app's scopes; if a scope was added, sign-in still works and nothing else broke.
+
+---
