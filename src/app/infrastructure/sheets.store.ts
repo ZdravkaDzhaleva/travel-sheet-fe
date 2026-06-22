@@ -6,6 +6,8 @@ import {
   type SheetsBatchRequest,
 } from '../core/google/sheets.client';
 import { DriveClient } from '../core/google/drive.client';
+import { GoogleAuth } from '../core/auth/google-auth';
+import { googleFetchBlob } from '../core/google/google-http';
 import { SUPPORTING_MAP } from '../core/config/supporting.map';
 import {
   DRIVE_FOLDER_NAME,
@@ -62,10 +64,13 @@ const LOCATION_TYPES: ReadonlySet<LocationType> = new Set([
   'Control',
 ]);
 
+const SHEETS_EXPORT_BASE = 'https://docs.google.com/spreadsheets/d';
+
 @Injectable({ providedIn: 'root' })
 export class SheetsStore {
   private readonly sheets = inject(SheetsClient);
   private readonly drive = inject(DriveClient);
+  private readonly auth = inject(GoogleAuth);
   private folderIdPromise: Promise<string | null> | null = null;
   private workbookIdPromise: Promise<string> | null = null;
   private supportingSheetIdPromise: Promise<string> | null = null;
@@ -226,6 +231,30 @@ export class SheetsStore {
         };
       })
       .sort((a, b) => a.sheetName.localeCompare(b.sheetName));
+  }
+
+  /**
+   * Exports a single workbook tab as a PDF blob via the Google Sheets export endpoint.
+   * Portrait, fit-to-width, gridlines off, single sheet. Read-only: does not modify the workbook.
+   * Throws GoogleApiError on non-2xx (including when the sheetId no longer exists).
+   */
+  async exportSheetAsPdf(sheetId: number): Promise<Blob> {
+    const [workbookId, token] = await Promise.all([
+      this.resolveWorkbookId(),
+      this.auth.getAccessToken(),
+    ]);
+    const params = new URLSearchParams({
+      format: 'pdf',
+      gid: String(sheetId),
+      portrait: 'true',
+      fitw: 'true',
+      gridlines: 'false',
+      single_sheet: 'true',
+      printtitle: 'false',
+      sheetnames: 'false',
+    });
+    const url = `${SHEETS_EXPORT_BASE}/${encodeURIComponent(workbookId)}/export?${params}`;
+    return googleFetchBlob(url, { method: 'GET' }, token);
   }
 
   /**

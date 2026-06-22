@@ -332,10 +332,11 @@ Add a method to read the existing month sheets from the output workbook (the `м
 - **Done when:** a method returns the list of existing `м_MM` sheets (with a display label like "January 2026 (м_01)") from the real workbook; unit/smoke verified.
 - `SheetsStore.listMonthSheets(year)` + exported `MonthSheetEntry` interface; 7 unit tests (empty workbook, single entry, non-month tabs skipped, multi-tab calendar sort, all 12 month names, year in label, `valuesGet` never called); 509 total tests pass, lint clean.
 
-### [ ] T8.2 — Sheet-to-PDF export in SheetsStore
+### [x] T8.2 — Sheet-to-PDF export in SheetsStore
 Add `SheetsStore.exportSheetAsPdf(workbookId, sheetId)`: fetch `https://docs.google.com/spreadsheets/d/{id}/export?format=pdf&gid={gid}&portrait=true&fitw=true&gridlines=false&single_sheet=true` with the GIS access token; return the response as a `Blob`. This is a direct `googleFetch` call — not via the `sheets.googleapis.com` client. Export params enforce portrait, fit-to-width, no gridlines, single tab.
 - **Deps:** existing Google clients (T3.2), T8.1
 - **Done when:** calling export for a given month returns a valid PDF whose layout matches the workbook sheet; verified by opening the output.
+- `googleFetchBlob` added to `google-http.ts` (binary variant of `googleFetch`). `SheetsStore` injects `GoogleAuth` directly; `exportSheetAsPdf(sheetId)` resolves workbookId internally, builds export URL with all 8 params, returns `Blob`. 6 unit tests (URL shape, all params, Bearer header, Blob return, non-2xx → `GoogleApiError`, GET method). `makeStore` updated to provide stub `GoogleAuth`. 515 total tests pass, lint clean.
 
 ### [ ] T8.3 — Save PDF to Drive (overwrite) in DriveStore
 Add `DriveStore.savePdfToFolder(blob, filename)`: query the Drive folder for a file with the same name; if found, call `files.update` (content replace); if not, call `files.create`. Filename convention: `Patenlist_<YYYY>_<MM>.pdf` (year and zero-padded month extracted from the `м_MM` sheet name). Return the saved file's Drive URL.

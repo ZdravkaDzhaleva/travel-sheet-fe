@@ -33,6 +33,26 @@ export async function googleFetch<T>(
   return (await resp.json()) as T;
 }
 
+/**
+ * Issues an authenticated fetch and returns the raw response as a Blob.
+ * Use for binary (non-JSON) responses such as PDF exports.
+ * Throws GoogleApiError on any non-2xx response.
+ */
+export async function googleFetchBlob(
+  url: string,
+  init: RequestInit,
+  accessToken: string,
+): Promise<Blob> {
+  const headers = new Headers(init.headers);
+  headers.set('Authorization', `Bearer ${accessToken}`);
+  const resp = await fetch(url, { ...init, headers });
+  if (!resp.ok) {
+    const body = await safeText(resp);
+    throw new GoogleApiError(resp.status, url, body);
+  }
+  return resp.blob();
+}
+
 async function safeText(resp: Response): Promise<string> {
   try {
     return await resp.text();

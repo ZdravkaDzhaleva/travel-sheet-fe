@@ -19,6 +19,8 @@ import {
 } from './sheets-store.errors';
 import { SheetsClient } from '../core/google/sheets.client';
 import { DriveClient } from '../core/google/drive.client';
+import { GoogleAuth } from '../core/auth/google-auth';
+import { GoogleApiError } from '../core/google/google-http';
 import {
   DRIVE_FOLDER_NAME,
   SUPPORTING_SHEET_NAME,
@@ -98,20 +100,27 @@ function makeDriveStub(
   } as unknown as DriveClient;
 }
 
+function makeAuthStub(token = 'test-token'): Pick<GoogleAuth, 'getAccessToken'> {
+  return { getAccessToken: vi.fn(async () => token) };
+}
+
 function makeStore(opts: {
   sheets?: ReturnType<typeof makeSheetsStub>['client'];
   drive?: DriveClient;
   sheetsState?: SheetsStubState;
+  auth?: Pick<GoogleAuth, 'getAccessToken'>;
 } = {}): { store: SheetsStore; state: SheetsStubState } {
   const stubbed = opts.sheets
     ? { client: opts.sheets, state: opts.sheetsState! }
     : makeSheetsStub();
   const drive = opts.drive ?? makeDriveStub();
+  const auth = opts.auth ?? makeAuthStub();
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({
     providers: [
       { provide: SheetsClient, useValue: stubbed.client },
       { provide: DriveClient, useValue: drive },
+      { provide: GoogleAuth, useValue: auth },
     ],
   });
   return { store: TestBed.inject(SheetsStore), state: stubbed.state };
@@ -944,6 +953,77 @@ describe('SheetsStore.listMonthSheets', () => {
     const { store } = makeStore({ sheets: client, sheetsState: state });
     await store.listMonthSheets(2026);
     expect(client.valuesGet).not.toHaveBeenCalled();
+  });
+});
+
+// ── exportSheetAsPdf ────────────────────────────────────────────────────────
+
+describe('SheetsStore.exportSheetAsPdf', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function stubFetch(response: Response): void {
+    vi.stubGlobal('fetch', vi.fn(async () => response));
+  }
+
+  function pdfResponse(body = '%PDF'): Response {
+    return new Response(new Blob([body], { type: 'application/pdf' }), { status: 200 });
+  }
+
+  it('builds the export URL with the resolved workbook id and the supplied sheetId', async () => {
+    stubFetch(pdfResponse());
+    const { store } = makeStore({ drive: makeDriveStub({ workbookId: 'my-wb-id' }) });
+    await store.exportSheetAsPdf(42);
+    const calledUrl = String((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]);
+    expect(calledUrl).toContain('/d/my-wb-id/export');
+    expect(calledUrl).toContain('gid=42');
+  });
+
+  it('includes all required export parameters', async () => {
+    stubFetch(pdfResponse());
+    const { store } = makeStore();
+    await store.exportSheetAsPdf(1);
+    const url = String((globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]);
+    expect(url).toContain('format=pdf');
+    expect(url).toContain('portrait=true');
+    expect(url).toContain('fitw=true');
+    expect(url).toContain('gridlines=false');
+    expect(url).toContain('single_sheet=true');
+    expect(url).toContain('printtitle=false');
+    expect(url).toContain('sheetnames=false');
+  });
+
+  it('sends the GIS access token as a Bearer Authorization header', async () => {
+    stubFetch(pdfResponse());
+    const auth = makeAuthStub('gis-token-xyz');
+    const { store } = makeStore({ auth });
+    await store.exportSheetAsPdf(1);
+    const init = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1] as RequestInit;
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer gis-token-xyz');
+  });
+
+  it('returns the response body as a Blob', async () => {
+    const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46]); // %PDF
+    // Pass Uint8Array directly — jsdom serialises Blob bodies to "[object Blob]" string.
+    stubFetch(new Response(pdfBytes, { status: 200 }));
+    const { store } = makeStore();
+    const result = await store.exportSheetAsPdf(1);
+    expect(result).toBeInstanceOf(Blob);
+    const buf = await result.arrayBuffer();
+    expect(new Uint8Array(buf)).toEqual(pdfBytes);
+  });
+
+  it('throws GoogleApiError on a non-2xx response', async () => {
+    stubFetch(new Response('Export failed', { status: 400 }));
+    const { store } = makeStore();
+    await expect(store.exportSheetAsPdf(99)).rejects.toBeInstanceOf(GoogleApiError);
+  });
+
+  it('uses GET method', async () => {
+    stubFetch(pdfResponse());
+    const { store } = makeStore();
+    await store.exportSheetAsPdf(1);
+    const init = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0][1] as RequestInit;
+    expect(init.method).toBe('GET');
   });
 });
 
