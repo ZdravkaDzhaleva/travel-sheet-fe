@@ -17,7 +17,7 @@ const ENTRY: MonthSheetEntry = {
   label: 'January 2026 (м_01)',
 };
 const YEAR = 2026;
-const FILENAME = 'Patenlist_2026_01.pdf';
+const FILENAME = 'Pyten_list_2026_01.pdf';
 const DRIVE_URL = 'https://drive.google.com/file/d/pdf-1/view';
 const PDF_BLOB = new Blob(['%PDF'], { type: 'application/pdf' });
 
@@ -90,14 +90,14 @@ describe('ExportPdfService.exportMonth — happy path', () => {
     expect(svc.error()).toBeNull();
   });
 
-  it('builds the filename as Patenlist_{year}_{MM}.pdf from the sheet name', async () => {
+  it('builds the filename as Pyten_list_{year}_{MM}.pdf from the sheet name', async () => {
     const entry: MonthSheetEntry = { sheetName: 'м_09', sheetId: 9, label: 'September 2026 (м_09)' };
     const stubs = makeStubs();
     const svc = makeService(stubs);
 
     await svc.exportMonth(entry, 2026);
 
-    expect(stubs.savePdfToFolder).toHaveBeenCalledWith(expect.any(Blob), 'Patenlist_2026_09.pdf');
+    expect(stubs.savePdfToFolder).toHaveBeenCalledWith(expect.any(Blob), 'Pyten_list_2026_09.pdf');
   });
 
   it('calls exportSheetAsPdf with entry.sheetId', async () => {

@@ -156,7 +156,7 @@ describe('DriveStore.trashInvoiceFile', () => {
 
 describe('DriveStore.savePdfToFolder', () => {
   const PDF_BLOB = new Blob(['%PDF'], { type: 'application/pdf' });
-  const FILENAME = 'Patenlist_2026_01.pdf';
+  const FILENAME = 'Pyten_list_2026_01.pdf';
 
   it('creates a new file when no file with the same name exists in the folder', async () => {
     const { client, state } = makeDriveStub({ nextFileId: 'created-id' });

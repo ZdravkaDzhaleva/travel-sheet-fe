@@ -76,7 +76,7 @@ export class ExportPdfService {
 
 function buildPdfFilename(sheetName: string, year: number): string {
   const mm = sheetName.slice(MONTH_SHEET_PREFIX.length);
-  return `Patenlist_${year}_${mm}.pdf`;
+  return `Pyten_list_${year}_${mm}.pdf`;
 }
 
 function asError(e: unknown): Error {

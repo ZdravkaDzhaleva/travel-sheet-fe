@@ -8,6 +8,8 @@ import {
   GenerateMonthService,
   type GenerateMonthResult,
 } from '../../application/generate-month.service';
+import { ExportPdfService, type MonthSheetEntry } from '../../application/export-pdf.service';
+import { SheetNotFoundError } from '../../application/export-pdf.errors';
 import { ToastService } from '../../shared/ui/toast/toast.service';
 import { InfeasibleMonthError } from '../../domain/generation/infeasible-month.error';
 
@@ -20,6 +22,13 @@ interface Stubs {
   readonly clearError: ReturnType<typeof vi.fn>;
   readonly clearResult: ReturnType<typeof vi.fn>;
   readonly service: GenerateMonthService;
+  // PDF export
+  readonly pdfLoading: ReturnType<typeof signal<boolean>>;
+  readonly pdfMonths: ReturnType<typeof signal<MonthSheetEntry[]>>;
+  readonly pdfError: ReturnType<typeof signal<Error | null>>;
+  readonly loadMonths: ReturnType<typeof vi.fn>;
+  readonly exportMonth: ReturnType<typeof vi.fn>;
+  readonly pdfService: ExportPdfService;
 }
 
 function makeResult(year: number, month: number, over: Partial<GenerateMonthResult> = {}): GenerateMonthResult {
@@ -60,7 +69,26 @@ function makeStubs(monthExistsValue = false): Stubs {
     clearError,
     clearResult,
   } as unknown as GenerateMonthService;
-  return { loading, error, result, generateMonth, monthExists, clearError, clearResult, service };
+
+  // PDF export stubs
+  const pdfLoading = signal<boolean>(false);
+  const pdfMonths = signal<MonthSheetEntry[]>([]);
+  const pdfError = signal<Error | null>(null);
+  const loadMonths = vi.fn(async () => undefined);
+  const exportMonth = vi.fn(async () => undefined);
+  const pdfService = {
+    loading: pdfLoading.asReadonly() as Signal<boolean>,
+    months: pdfMonths.asReadonly() as Signal<MonthSheetEntry[]>,
+    error: pdfError.asReadonly() as Signal<Error | null>,
+    result: signal<null>(null).asReadonly(),
+    loadMonths,
+    exportMonth,
+  } as unknown as ExportPdfService;
+
+  return {
+    loading, error, result, generateMonth, monthExists, clearError, clearResult, service,
+    pdfLoading, pdfMonths, pdfError, loadMonths, exportMonth, pdfService,
+  };
 }
 
 function render(stubs: Stubs): ComponentFixture<GenerateComponent> {
@@ -70,6 +98,7 @@ function render(stubs: Stubs): ComponentFixture<GenerateComponent> {
     providers: [
       provideRouter([]),
       { provide: GenerateMonthService, useValue: stubs.service },
+      { provide: ExportPdfService, useValue: stubs.pdfService },
     ],
   });
   const fixture = TestBed.createComponent(GenerateComponent);
@@ -322,5 +351,109 @@ describe('GenerateComponent', () => {
     await flush();
     await instance(fixture).generate();
     expect(stubs.generateMonth).not.toHaveBeenCalled();
+  });
+});
+
+// ── PDF export card ──────────────────────────────────────────────────────────
+
+describe('GenerateComponent — PDF export card', () => {
+  beforeEach(() => TestBed.resetTestingModule());
+
+  it('calls loadMonths on init with the current form year', () => {
+    const stubs = makeStubs();
+    render(stubs);
+    expect(stubs.loadMonths).toHaveBeenCalledWith(new Date().getFullYear());
+  });
+
+  it('renders the PDF export card with icon and title', () => {
+    const stubs = makeStubs();
+    const fixture = render(stubs);
+    const el = fixture.nativeElement as HTMLElement;
+    // Icon is an inline SVG inside the PDF heading
+    const pdfHeading = el.querySelector('#pdf-heading');
+    expect(pdfHeading?.querySelector('svg')).not.toBeNull();
+    expect(el.textContent).toContain('Export month sheet as PDF');
+  });
+
+  it('populates the dropdown with entries from pdfMonths signal', () => {
+    const stubs = makeStubs();
+    stubs.pdfMonths.set([
+      { sheetName: 'м_01', sheetId: 1, label: 'January 2026 (м_01)' },
+      { sheetName: 'м_03', sheetId: 3, label: 'March 2026 (м_03)' },
+    ]);
+    const fixture = render(stubs);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const options = Array.from(el.querySelectorAll<HTMLOptionElement>('select[aria-label*="PDF"] option'));
+    const labels = options.map(o => o.textContent?.trim());
+    expect(labels).toContain('January 2026 (м_01)');
+    expect(labels).toContain('March 2026 (м_03)');
+  });
+
+  it('disables the Generate PDF button when no month is selected', () => {
+    const stubs = makeStubs();
+    const fixture = render(stubs);
+    const allBtns = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button[type="submit"]'));
+    const pdfBtn = allBtns.find(b => b.textContent?.includes('Generate PDF'));
+    expect(pdfBtn?.disabled).toBe(true);
+  });
+
+  it('enables the Generate PDF button once a month entry is selected', async () => {
+    const stubs = makeStubs();
+    stubs.pdfMonths.set([{ sheetName: 'м_02', sheetId: 2, label: 'February 2026 (м_02)' }]);
+    const fixture = render(stubs);
+    fixture.detectChanges();
+    // Simulate selecting a month via the component method
+    const cmp = fixture.componentInstance as unknown as {
+      onPdfMonthChange(e: Event): void;
+      selectedPdfEntry: ReturnType<typeof signal>;
+    };
+    const fakeEvent = { target: { value: 'м_02' } } as unknown as Event;
+    cmp.onPdfMonthChange(fakeEvent);
+    fixture.detectChanges();
+    const allBtns = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button[type="submit"]'));
+    const pdfBtn = allBtns.find(b => b.textContent?.includes('Generate PDF'));
+    expect(pdfBtn?.disabled).toBe(false);
+  });
+
+  it('calls exportMonth with the selected entry and form year when button is clicked', async () => {
+    const entry: MonthSheetEntry = { sheetName: 'м_04', sheetId: 4, label: 'April 2026 (м_04)' };
+    const stubs = makeStubs();
+    stubs.pdfMonths.set([entry]);
+    const fixture = render(stubs);
+    fixture.detectChanges();
+    const cmp = fixture.componentInstance as unknown as {
+      onPdfMonthChange(e: Event): void;
+      exportPdf(): Promise<void>;
+      model: ReturnType<typeof signal<{ year: number; month: string }>>;
+    };
+    cmp.model.set({ year: 2026, month: '4' });
+    cmp.onPdfMonthChange({ target: { value: 'м_04' } } as unknown as Event);
+    await cmp.exportPdf();
+    expect(stubs.exportMonth).toHaveBeenCalledWith(entry, 2026);
+  });
+
+  it('shows "Generating PDF…" label and disables button while pdfLoading is true', () => {
+    const stubs = makeStubs();
+    stubs.pdfMonths.set([{ sheetName: 'м_01', sheetId: 1, label: 'January 2026 (м_01)' }]);
+    const fixture = render(stubs);
+    const pdfCmp = fixture.componentInstance as unknown as { onPdfMonthChange(e: Event): void };
+    pdfCmp.onPdfMonthChange({ target: { value: 'м_01' } } as unknown as Event);
+    stubs.pdfLoading.set(true);
+    fixture.detectChanges();
+    const allBtns = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>('button[type="submit"]'));
+    const pdfBtn = allBtns.find(b => b.textContent?.includes('Generating PDF'));
+    expect(pdfBtn).not.toBeNull();
+    expect(pdfBtn?.disabled).toBe(true);
+  });
+
+  it('renders an error card when pdfError is set', () => {
+    const stubs = makeStubs();
+    stubs.pdfError.set(new SheetNotFoundError('м_01'));
+    const fixture = render(stubs);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.pdf-error')).not.toBeNull();
+    expect(el.querySelector('.pdf-error')?.textContent).toContain('Export failed');
   });
 });

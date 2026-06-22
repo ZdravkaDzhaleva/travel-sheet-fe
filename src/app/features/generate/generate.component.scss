@@ -21,6 +21,18 @@
   font-size: 1.125rem;
   font-weight: 600;
   letter-spacing: -0.005em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card__heading-icon {
+  color: var(--app-accent);
+  flex-shrink: 0;
+}
+
+.pdf-error {
+  margin-top: 1rem;
 }
 
 .card__body {

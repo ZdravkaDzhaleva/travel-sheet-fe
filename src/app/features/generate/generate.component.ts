@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, computed, inject, resource, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnDestroy, OnInit, computed, inject, resource, signal } from '@angular/core';
 import { form, submit, min, max, FormField } from '@angular/forms/signals';
 
 import { GenerateMonthService, type GenerateMonthResult } from '../../application/generate-month.service';
+import { ExportPdfService, type MonthSheetEntry } from '../../application/export-pdf.service';
 import { ToastService } from '../../shared/ui/toast/toast.service';
 import { monthSheetName } from '../../core/config/workbook.template';
 import { InfeasibleMonthError } from '../../domain/generation/infeasible-month.error';
@@ -48,14 +49,20 @@ function currentPeriod(): PeriodModel {
   templateUrl: './generate.component.html',
   styleUrl: './generate.component.scss',
 })
-export class GenerateComponent implements OnDestroy {
+export class GenerateComponent implements OnInit, OnDestroy {
   private readonly service = inject(GenerateMonthService);
+  private readonly exportService = inject(ExportPdfService);
   private readonly toast = inject(ToastService);
 
   protected readonly loading = this.service.loading;
   protected readonly error = this.service.error;
   protected readonly result = this.service.result;
   protected readonly months = MONTHS;
+
+  protected readonly pdfLoading = this.exportService.loading;
+  protected readonly pdfMonths = this.exportService.months;
+  protected readonly pdfError = this.exportService.error;
+  protected readonly selectedPdfEntry = signal<MonthSheetEntry | null>(null);
 
   protected readonly model = signal<PeriodModel>(currentPeriod());
   protected readonly form = form(this.model, (path) => {
@@ -82,6 +89,10 @@ export class GenerateComponent implements OnDestroy {
   );
   protected readonly checkingExists = computed(() => this.existsResource.isLoading());
 
+  ngOnInit(): void {
+    void this.exportService.loadMonths(this.model().year);
+  }
+
   ngOnDestroy(): void {
     this.service.clearError();
     this.service.clearResult();
@@ -105,10 +116,23 @@ export class GenerateComponent implements OnDestroy {
           fn: () => this.openWorkbook(r),
         });
         this.existsResource.set(true); // the tab now exists → block re-generation
+        void this.exportService.loadMonths(year); // refresh: new tab is now exportable
       } catch {
         // Surfaced via service.error signal.
       }
     });
+  }
+
+  protected onPdfMonthChange(event: Event): void {
+    const sheetName = (event.target as HTMLSelectElement).value;
+    const entry = this.exportService.months().find(e => e.sheetName === sheetName) ?? null;
+    this.selectedPdfEntry.set(entry);
+  }
+
+  protected async exportPdf(): Promise<void> {
+    const entry = this.selectedPdfEntry();
+    if (!entry || this.pdfLoading()) return;
+    await this.exportService.exportMonth(entry, this.model().year);
   }
 
   /** Whether the current result is for the period currently selected in the form. */

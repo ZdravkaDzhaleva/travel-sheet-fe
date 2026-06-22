@@ -339,7 +339,7 @@ Add `SheetsStore.exportSheetAsPdf(workbookId, sheetId)`: fetch `https://docs.goo
 - `googleFetchBlob` added to `google-http.ts` (binary variant of `googleFetch`). `SheetsStore` injects `GoogleAuth` directly; `exportSheetAsPdf(sheetId)` resolves workbookId internally, builds export URL with all 8 params, returns `Blob`. 6 unit tests (URL shape, all params, Bearer header, Blob return, non-2xx → `GoogleApiError`, GET method). `makeStore` updated to provide stub `GoogleAuth`. 515 total tests pass, lint clean.
 
 ### [x] T8.3 — Save PDF to Drive (overwrite) in DriveStore
-Add `DriveStore.savePdfToFolder(blob, filename)`: query the Drive folder for a file with the same name; if found, call `files.update` (content replace); if not, call `files.create`. Filename convention: `Patenlist_<YYYY>_<MM>.pdf` (year and zero-padded month extracted from the `м_MM` sheet name). Return the saved file's Drive URL.
+Add `DriveStore.savePdfToFolder(blob, filename)`: query the Drive folder for a file with the same name; if found, call `files.update` (content replace); if not, call `files.create`. Filename convention: `Pyten_list_<YYYY>_<MM>.pdf` (year and zero-padded month extracted from the `м_MM` sheet name). Return the saved file's Drive URL.
 - **Deps:** T8.2, existing `DriveStore`
 - **Done when:** export saves the file with the correct name; re-exporting the same month replaces the existing file (no duplicate); returns a usable Drive link.
 - `DriveClient.updateFileContent(fileId, content)` added (`PATCH uploadType=media`). `DriveStore.savePdfToFolder(blob, filename)` resolves folder, finds existing PDF by name+mimeType+parentId, updates or creates, returns `https://drive.google.com/file/d/{id}/view`. Test stub updated with `existingPdf` + `updated` tracking; 8 new tests. 523 total tests pass, lint clean.
@@ -350,10 +350,11 @@ Add an application service orchestrating: list months (T8.1) → export sheet (T
 - **Done when:** the service exports a selected month end-to-end and surfaces success (filename + link) or a clear typed error; nothing is saved on failure.
 - `export-pdf.errors.ts` (`SheetNotFoundError`, `ExportFailedError`, `DriveWriteFailedError` with `originalCause`). `ExportPdfService` with `loading/months/result/error` readonly signals, `loadMonths(year)` + `exportMonth(entry, year)` (sheetExists pre-check → exportSheetAsPdf → savePdfToFolder with typed error wrapping). 13 tests across 4 suites. 536 total tests pass, lint clean.
 
-### [ ] T8.5 — Export PDF UI section (Generate screen)
+### [x] T8.5 — Export PDF UI section (Generate screen)
 Add the "Export month sheet as PDF" card to the Generate screen, matching `docs/mockups/generate-and-pdf-export.html`: section-heading icon (`ti-file-type-pdf`) + title, a single "GENERATED MONTH" dropdown (from T8.1), and a gold "Generate PDF" button (dark text, no icon). Match existing card/input/button styles exactly. Thin component — delegates to `ExportPdfService`.
 - **Deps:** T8.4
 - **Done when:** the section renders in the real page style; the dropdown lists existing months; the button is disabled until a month is selected; clicking it triggers export with a progress state.
+- `GenerateComponent` now implements `OnInit`; injects `ExportPdfService`; `ngOnInit` calls `loadMonths(year)`; `generate()` refreshes the list on success. PDF card: `ti-file-type-pdf` icon + title, `select.form__input` dropdown with custom chevron, `btn--primary` "Generate PDF" button, inline `.pdf-error` block. `onPdfMonthChange` / `exportPdf` methods. Updated spec: `ExportPdfService` mock provided in all test setups; 7 new PDF-section tests (init, render, dropdown population, button disabled/enabled, exportMonth args, loading label, error card). 544 total tests pass, lint clean. Visual verification deferred to live sign-in run (auth guard blocks preview).
 
 ### [ ] T8.6 — Result card + toast on success
 On successful export, show (a) the persistent gold-left-border result card ("PDF exported" — FILE / SAVED TO + "Open PDF ↗" button), reusing the existing result-card pattern, and (b) the existing bottom-center toast reused for confirmation, with a green left-border, dark text, a gold underlined "Open PDF" action, and dismiss ×.

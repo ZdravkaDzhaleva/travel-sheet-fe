@@ -266,7 +266,7 @@ Reading tab metadata for the GENERATED MONTH dropdown is already covered by **pr
 
 ### Filename convention
 
-`Patenlist_<YYYY>_<MM>.pdf` — year and two-digit month are extracted from the selected `м_MM` sheet name (e.g. `м_01` → `Patenlist_2026_01.pdf`). Re-exporting the same month overwrites the previous file; there is no versioning.
+`Pyten_list_<YYYY>_<MM>.pdf` — year and two-digit month are extracted from the selected `м_MM` sheet name (e.g. `м_01` → `Pyten_list_2026_01.pdf`). Re-exporting the same month overwrites the previous file; there is no versioning.
 
 ### Typed errors
 
