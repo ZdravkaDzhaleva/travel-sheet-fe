@@ -344,10 +344,11 @@ Add `DriveStore.savePdfToFolder(blob, filename)`: query the Drive folder for a f
 - **Done when:** export saves the file with the correct name; re-exporting the same month replaces the existing file (no duplicate); returns a usable Drive link.
 - `DriveClient.updateFileContent(fileId, content)` added (`PATCH uploadType=media`). `DriveStore.savePdfToFolder(blob, filename)` resolves folder, finds existing PDF by name+mimeType+parentId, updates or creates, returns `https://drive.google.com/file/d/{id}/view`. Test stub updated with `existingPdf` + `updated` tracking; 8 new tests. 523 total tests pass, lint clean.
 
-### [ ] T8.4 — ExportPdfService (application layer)
+### [x] T8.4 — ExportPdfService (application layer)
 Add an application service orchestrating: list months (T8.1) → export sheet (T8.2) → save to Drive (T8.3). Expose state for the UI (in-progress, success with filename + link, typed errors: sheet-not-found, export-failed, drive-write-failed). No domain logic involved.
 - **Deps:** T8.1, T8.2, T8.3
 - **Done when:** the service exports a selected month end-to-end and surfaces success (filename + link) or a clear typed error; nothing is saved on failure.
+- `export-pdf.errors.ts` (`SheetNotFoundError`, `ExportFailedError`, `DriveWriteFailedError` with `originalCause`). `ExportPdfService` with `loading/months/result/error` readonly signals, `loadMonths(year)` + `exportMonth(entry, year)` (sheetExists pre-check → exportSheetAsPdf → savePdfToFolder with typed error wrapping). 13 tests across 4 suites. 536 total tests pass, lint clean.
 
 ### [ ] T8.5 — Export PDF UI section (Generate screen)
 Add the "Export month sheet as PDF" card to the Generate screen, matching `docs/mockups/generate-and-pdf-export.html`: section-heading icon (`ti-file-type-pdf`) + title, a single "GENERATED MONTH" dropdown (from T8.1), and a gold "Generate PDF" button (dark text, no icon). Match existing card/input/button styles exactly. Thin component — delegates to `ExportPdfService`.
